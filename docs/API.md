@@ -8,12 +8,12 @@ Original game and integration code: **MIT, copyright 2026 Chris Cooley**. The em
 
 ## Install the prepared package
 
-The primary installation is the self-hosted drop-in ZIP described in [DROP-IN.md](./DROP-IN.md). No registry publication is required. The source also retains the optional local package API below; npm publication is deferred. The internal package name remains `@chriscooley/swarm-protocol@1.0.7`.
+The primary installation is the self-hosted drop-in ZIP described in [DROP-IN.md](./DROP-IN.md). No registry publication is required. The source also retains the optional local package API below; npm publication is deferred. The internal package name remains `@chriscooley/swarm-protocol@1.0.8`.
 
 After creating a local tarball with `npm pack`, you can install that file in your application:
 
 ```sh
-npm install ./chriscooley-swarm-protocol-1.0.7.tgz
+npm install ./chriscooley-swarm-protocol-1.0.8.tgz
 ```
 
 To create that tarball from this source repository:
@@ -255,7 +255,7 @@ Sound uses short, quiet Web Audio tones, with no audio asset or music download. 
 
 Offscreen button attacks display directional edge cues with “Other sections under attack — Scroll to squash.” These use the engine's existing target rectangles and attached-attacker state; offscreen travel alone does not show a warning. Multiple affected edges can show simultaneously. Partially visible targets do not warn. The separate Shadow DOM overlay is pointer-transparent, keeps working when the scoreboard is minimized, and clears on pause, game over, stop, or destroy. Both `reducedMotion` and the browser's reduced-motion preference suppress its pulse. No public API changes or additional integration options are required.
 
-Kill scores, burst fragments, and hit rings follow the system light/dark preference automatically. Light surfaces use darker feedback colors; scores have a contrasting outline and stay fully opaque for 0.7 seconds before a 0.4-second fade. A system theme change updates active effects on the next game frame. Reduced motion keeps score text stationary and removes burst fragments. No theme switch or extra configuration is needed.
+Kill scores, burst fragments, and hit rings follow the system light/dark preference automatically. Light-mode scores use brand pink (`#F4457A`) while bursts and rings retain their deeper colors; scores have a contrasting outline and stay fully opaque for 0.7 seconds before a 0.4-second fade. A system theme change updates active effects on the next game frame. Reduced motion keeps score text stationary and removes burst fragments. No theme switch or extra configuration is needed.
 
 ## Shadow DOM, page ownership, and CSP
 

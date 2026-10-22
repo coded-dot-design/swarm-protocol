@@ -155,7 +155,7 @@ function verifyFeedback(create) {
   page.shoot(bug);page.tick(1/60);
   const score=()=>page.feedback.find(p=>p.kind==='text'&&p.text.startsWith('+'));
   const first=score();assert.ok(first,'A real kill renders a score popup');
-  assert.equal(first.color,config.dark?'#b4fff0':'#075044');
+  assert.equal(first.color,config.dark?'#b4fff0':'#f4457a');
   assert.equal(first.alpha,1);assert.match(first.font,/700 16px/);
   const outline=page.feedback.find(p=>p.kind==='outline');
   assert.equal(outline.color,config.dark?'#101010':'#ffffff');
@@ -167,7 +167,7 @@ function verifyFeedback(create) {
   const queryCount=page.metrics.matchMedia;
   if(!config.noMedia){
    page.dark.matches=!config.dark;page.tick(1/60);
-   assert.equal(score().color,config.dark?'#075044':'#b4fff0','An existing popup follows a live system theme change');
+   assert.equal(score().color,config.dark?'#f4457a':'#b4fff0','An existing popup follows a live system theme change');
    const switched=page.feedback.filter(p=>p.kind==='shard');
    if(switched.length)assert.ok(switched.every(p=>p.color===(config.dark?'#b42332':'#ff6b6b')));
   }

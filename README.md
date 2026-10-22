@@ -4,11 +4,11 @@ A hidden, opt-in game that runs across a real webpage. Little agents eat selecte
 
 The supported installation is a **self-hosted drop-in ZIP**. Copy the built files into your website and serve them with your own assets. Visitors do not load the game from GitHub, npm, or a separate game server.
 
-**v1.0.7** makes kill scores and burst effects readable on light surfaces and follows the system light/dark setting, including changes during play. It includes v1.0.6 directional edge alerts when bugs attack buttons outside the viewport. The corrected keyboard activation remains **↑ ↑ ↓ ↓ ← → ← → B A Enter**. npm publication is not required to use this release.
+**v1.0.8** uses brand pink (`#F4457A`) for light-mode kill scores. Feedback continues to follow the system light/dark setting, including changes during play. It includes v1.0.6 directional edge alerts when bugs attack buttons outside the viewport. The corrected keyboard activation remains **↑ ↑ ↓ ↓ ← → ← → B A Enter**. npm publication is not required to use this release.
 
 ## Install in Astro
 
-Download `swarm-protocol-drop-in-1.0.7.zip` from the `v1.0.7` release, then extract it. Choose the built drop-in asset; GitHub's automatically generated source archives contain the development project.
+Download `swarm-protocol-drop-in-1.0.8.zip` from the `v1.0.8` release, then extract it. Choose the built drop-in asset; GitHub's automatically generated source archives contain the development project.
 
 1. Copy `public/swarm-protocol/` into your Astro project's `public/` folder.
 2. Copy `components/SwarmDropIn.astro` into your project's `src/components/` folder.
@@ -38,7 +38,7 @@ Mark your existing elements:
 </footer>
 ```
 
-Keep the CTA's current URL and handlers. Select static presentation text and lead-opening buttons outside forms/dialogs. You can configure exact CSS selectors instead of adding attributes; edit `public/swarm-protocol/1.0.7/install.js`.
+Keep the CTA's current URL and handlers. Select static presentation text and lead-opening buttons outside forms/dialogs. You can configure exact CSS selectors instead of adding attributes; edit `public/swarm-protocol/1.0.8/install.js`.
 
 Run your site's usual `npm run dev`, or `npm run build` followed by `npm run preview`. No commit, deployment, package install, or React integration is needed for this test.
 
@@ -58,16 +58,16 @@ No Caps Lock or modifier chord is used. On desktop, open the launcher and select
 
 When bugs attack a button outside the viewport, a thin pulsing border and arrow point toward it with **“Other sections under attack — Scroll to squash.”** Scroll in that direction to defend it. The cue clears when the button comes into view or the attack stops, remains visible with the scoreboard minimized, and becomes steady when reduced motion is enabled.
 
-Kill scores, burst fragments, and hit rings follow the system light/dark preference automatically. Light surfaces use darker feedback colors; scores have a contrasting outline and stay fully opaque for 0.7 seconds before a 0.4-second fade. A system theme change updates active effects on the next game frame. Reduced motion keeps score text stationary and removes burst fragments. No theme switch or extra configuration is needed.
+Kill scores, burst fragments, and hit rings follow the system light/dark preference automatically. Light-mode scores use brand pink (`#F4457A`) while bursts and rings retain their deeper colors; scores have a contrasting outline and stay fully opaque for 0.7 seconds before a 0.4-second fade. A system theme change updates active effects on the next game frame. Reduced motion keeps score text stationary and removes burst fragments. No theme switch or extra configuration is needed.
 
 ## Stay on a tested version
 
-Each published release has its own tag, ZIP, and static asset folder. A site using `/swarm-protocol/1.0.7/install.js` keeps using that version as this repository evolves.
+Each published release has its own tag, ZIP, and static asset folder. A site using `/swarm-protocol/1.0.8/install.js` keeps using that version as this repository evolves.
 
 The exact-version download pattern is:
 
 ```text
-https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.0.7/swarm-protocol-drop-in-1.0.7.zip
+https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.0.8/swarm-protocol-drop-in-1.0.8.zip
 ```
 
 That URL becomes available when the release is published. Download once and copy the files into your site; it is not a browser script URL. Avoid a `latest` download URL in automation that must stay pinned.

@@ -2,6 +2,11 @@
 
 Each published version keeps its original tag and release assets. Corrections are released under a new version.
 
+## 1.0.8 — Brand pink light-mode scores
+
+- Change only the light-mode squash score fill to the requested brand pink, `#F4457A`.
+- Retain the white outline, hold/fade timing, dark-mode palette, burst/ring colors, offscreen alerts, and gameplay.
+
 ## 1.0.7 — System-theme kill feedback
 
 - Follow the system light/dark setting for kill scores, burst fragments, and hit/miss rings. Effects already on screen adapt on the next frame when the system setting changes.

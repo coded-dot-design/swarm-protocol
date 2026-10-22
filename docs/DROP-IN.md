@@ -1,4 +1,4 @@
-# Swarm Protocol 1.0.7 — self-hosted drop-in
+# Swarm Protocol 1.0.8 — self-hosted drop-in
 
 The game is already built. Copy its files into your Astro site, add one component, and test locally. This method requires no package installation, package registry, or Git push. You can keep this same integration permanently and serve the game with your site's own static assets.
 
@@ -7,7 +7,7 @@ There are two ways to use this kit:
 - **Permanent integration:** copy the `public/` files and use the supplied Astro component. This preserves delayed loading and is the recommended way to test the complete integration.
 - **Temporary browser test:** run the separate script in `browser-test/` against a page already open in your browser. Only your browser session sees the game.
 
-Kill scores, burst fragments, and hit rings follow the system light/dark preference automatically. Light surfaces use darker feedback colors; scores have a contrasting outline and stay fully opaque for 0.7 seconds before a 0.4-second fade. A system theme change updates active effects on the next game frame. Reduced motion keeps score text stationary and removes burst fragments. No theme switch or extra configuration is needed.
+Kill scores, burst fragments, and hit rings follow the system light/dark preference automatically. Light-mode scores use brand pink (`#F4457A`) while bursts and rings retain their deeper colors; scores have a contrasting outline and stay fully opaque for 0.7 seconds before a 0.4-second fade. A system theme change updates active effects on the next game frame. Reduced motion keeps score text stationary and removes burst fragments. No theme switch or extra configuration is needed.
 
 ## 1. Copy the files into your Astro project
 
@@ -18,9 +18,9 @@ Copy `components/SwarmDropIn.astro` into your site's `src/components/` folder.
 You should have these paths in your site:
 
 ```text
-public/swarm-protocol/1.0.7/install.js
-public/swarm-protocol/1.0.7/deferred.js
-public/swarm-protocol/1.0.7/chunks/...
+public/swarm-protocol/1.0.8/install.js
+public/swarm-protocol/1.0.8/deferred.js
+public/swarm-protocol/1.0.8/chunks/...
 src/components/SwarmDropIn.astro
 ```
 
@@ -43,7 +43,7 @@ The component uses Astro's `BASE_URL`, including a configured path such as `/wor
 If your site is served from the domain root, you can instead put this one tag in the Astro layout:
 
 ```astro
-<script is:inline type="module" src="/swarm-protocol/1.0.7/install.js"></script>
+<script is:inline type="module" src="/swarm-protocol/1.0.8/install.js"></script>
 ```
 
 For ordinary HTML, omit `is:inline`. For an Astro site with a configured base path, use the supplied component. Include either the component or the tag, once. Remove any earlier Swarm installer from that layout before adding this one.
@@ -77,7 +77,7 @@ Keep your CTA's current URL or click handler. Choose buttons or links outside fo
 | `data-swarm-ui` | Protect a real form's outer panel or other controls. |
 | `data-swarm-ignore` | Exclude a region entirely. |
 
-You can also edit the selector constants at the top of `public/swarm-protocol/1.0.7/install.js` to match exact existing CSS selectors. The footer trigger, attack targets, text, and surfaces are independently configurable. Change `storageKey` there if you want a separate best-score history.
+You can also edit the selector constants at the top of `public/swarm-protocol/1.0.8/install.js` to match exact existing CSS selectors. The footer trigger, attack targets, text, and surfaces are independently configurable. Change `storageKey` there if you want a separate best-score history.
 
 ## 4. Test locally and test the production build
 
@@ -170,7 +170,7 @@ Your personal GitHub repository can hold the source and release downloads later.
 
 ## Verification included
 
-`verification/verification.txt` describes the checks performed for this release. `verification/runtime-manifest.json` records the hashes and sizes of the production runtime files, which are copied unchanged from version 1.0.7.
+`verification/verification.txt` describes the checks performed for this release. `verification/runtime-manifest.json` records the hashes and sizes of the production runtime files, which are copied unchanged from version 1.0.8.
 
 ## Astro references
 

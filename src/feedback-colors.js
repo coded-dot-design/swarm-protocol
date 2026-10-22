@@ -1,6 +1,6 @@
 // Internal canvas feedback palettes. The host follows the system color scheme.
 const light = {
-  score: '#075044', outline: '#ffffff',
+  score: '#f4457a', outline: '#ffffff',
   kill: '#127646', hit: '#036c8f', miss: '#384858',
   shards: ['#b42332', '#8523a7', '#5140b5'],
 };
