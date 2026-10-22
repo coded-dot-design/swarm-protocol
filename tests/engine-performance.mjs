@@ -23,7 +23,7 @@ const graphemes=new Intl.Segmenter(undefined,{granularity:'grapheme'});
 function emitter(){const listeners=new Map();return{listeners,addEventListener(n,f){if(!listeners.has(n))listeners.set(n,new Set());listeners.get(n).add(f)},removeEventListener(n,f){listeners.get(n)?.delete(f)},fire(n,e){for(const f of [...listeners.get(n)||[]])f(e)}}}
 function fixture(create,config={}){
  const metrics={hypot:0,abs:0,sortCalls:0,sortComparisons:0,filterCalls:0,sliceCalls:0,mapCalls:0,spliceCalls:0,arrayFromCalls:0,matchMedia:0,rangeCreated:0,rangeRects:0,elementRects:0,computedStyle:0,closest:0,styleWrites:0,attributeWrites:0,rafScheduled:0,maxRaf:0,maxRangePerFrame:0,frames:0};
- let seed=config.seed||0xdecafbad,now=0,nextId=0,canvas=null,arcs=[],lastDraw=[],cursorPoint=null,occluder=null;const rafs=new Map(),timers=new Map(),draws=new Map(),live=new Map(),events=[],allElements=[],nodes=[],storage=new Map();
+ let seed=config.seed||0xdecafbad,now=0,nextId=0,canvas=null,arcs=[],feedback=[],lastDraw=[],cursorPoint=null,occluder=null;const rafs=new Map(),timers=new Map(),draws=new Map(),live=new Map(),events=[],allElements=[],nodes=[],storage=new Map();
  const trace=crypto.createHash('sha256');
  function invoke(fn){const before=counting;counting=metrics;try{return fn()}finally{counting=before}}
  function rng(){seed=(1664525*seed+1013904223)>>>0;return seed/4294967296}
@@ -42,12 +42,13 @@ function fixture(create,config={}){
  const protectedLink=element('a',rectangle(20,30,100,20)),protectedNode={nodeValue:'Never eat this link',isConnected:true,parentElement:protectedLink};
  const controls=element('input',rectangle(20,480,100,20));
  let chosenTargets=config.noTargets?[]:config.footer?[lead,footer]:[lead],chosenText=config.noText?[]:areas,chosenSurfaces=[surface];
- const context={setTransform(){},clearRect(){draws.clear();live.clear();lastDraw=[];arcs=[]},fillRect(){},fillText(){},save(){},restore(){},beginPath(){},arc(x,y,r){arcs.push([x,y,r])},stroke(){},moveTo(){},lineTo(){}};
+ const context={setTransform(){},clearRect(){draws.clear();live.clear();lastDraw=[];arcs=[];feedback=[]},fillRect(x,y){if(config.feedback)feedback.push({kind:'shard',color:this.fillStyle,alpha:this.globalAlpha,x,y})},fillText(text,x,y){if(config.feedback)feedback.push({kind:'text',text,color:this.fillStyle,alpha:this.globalAlpha,font:this.font,x,y})},strokeText(text,x,y){if(config.feedback)feedback.push({kind:'outline',text,color:this.strokeStyle,alpha:this.globalAlpha,width:this.lineWidth,x,y})},save(){},restore(){},beginPath(){},arc(x,y,r){arcs.push([x,y,r])},stroke(){if(config.feedback)feedback.push({kind:'ring',color:this.strokeStyle,alpha:this.globalAlpha,width:this.lineWidth})},moveTo(){},lineTo(){}};
  const computedDefaults={'background-image':'none','background-color':'rgb(255, 255, 255)','background-size':'auto','background-position':'0% 0%','background-repeat':'repeat','background-origin':'padding-box','background-clip':'border-box','color':'rgb(21, 21, 21)','text-shadow':'none'};
- const coarse={matches:false};
- const win={...emitter(),innerWidth:width,innerHeight:height,devicePixelRatio:1,performance:{now:()=>now},matchMedia(q){if(counting)metrics.matchMedia++;return q==='(pointer: coarse)'?coarse:{matches:false}},getComputedStyle(el){if(counting)metrics.computedStyle++;return{getPropertyValue:n=>el.style.getPropertyValue(n)||computedDefaults[n]||''}},localStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v)},requestAnimationFrame(f){if(counting)metrics.rafScheduled++;rafs.set(++nextId,f);metrics.maxRaf=Math.max(metrics.maxRaf,rafs.size);return nextId},cancelAnimationFrame:id=>rafs.delete(id),setTimeout(f,ms){timers.set(++nextId,{f,at:now+ms});return nextId},clearTimeout:id=>timers.delete(id)};
+ const coarse={matches:false},dark={matches:config.dark??false};
+ const win={...emitter(),innerWidth:width,innerHeight:height,devicePixelRatio:1,performance:{now:()=>now},matchMedia(q){if(counting)metrics.matchMedia++;return q==='(pointer: coarse)'?coarse:q==='(prefers-color-scheme: dark)'?dark:{matches:false}},getComputedStyle(el){if(counting)metrics.computedStyle++;return{getPropertyValue:n=>el.style.getPropertyValue(n)||computedDefaults[n]||''}},localStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v)},requestAnimationFrame(f){if(counting)metrics.rafScheduled++;rafs.set(++nextId,f);metrics.maxRaf=Math.max(metrics.maxRaf,rafs.size);return nextId},cancelAnimationFrame:id=>rafs.delete(id),setTimeout(f,ms){timers.set(++nextId,{f,at:now+ms});return nextId},clearTimeout:id=>timers.delete(id)};
  function glyphRect(node,start,end){const units=[...graphemes.segment(node.nodeValue)],part=units.find(p=>p.index===start);assert.ok(part,'UTF-16 start must be a grapheme boundary');assert.equal(end,start+part.segment.length);let x=node.parentElement.rect.left+4,y=node.parentElement.rect.top+2,left=x;for(const unit of units){const w=/[01]/.test(unit.segment)?7:unit.segment.length>1?12:/\s/.test(unit.segment)?5:8;if(x-left+w>node.lineWidth){x=left;y+=20}if(unit.index===start)return rectangle(x,y,w,18);x+=w}throw Error('Missing glyph')}
  const doc={...emitter(),hidden:false,defaultView:win,body:element('body',rectangle(0,0,width,height)),querySelector(){return null},querySelectorAll(s){return s==='[data-swarm-target]'?chosenTargets:s==='[data-swarm-text]'?chosenText:s==='[data-swarm-surface]'?chosenSurfaces:s==='[data-swarm-ui]'?[hud]:[]},createTreeWalker(el){let i=0;const list=nodes.filter(n=>n.parentElement===el).concat(protectedNode);return{nextNode:()=>list[i++]||null}},createElement(tag){const el=element(tag,rectangle(0,0,width,height));if(tag==='canvas'){canvas=el;canvas.getContext=()=>context}return el},createRange(){if(counting)metrics.rangeCreated++;let node,start,end;return{setStart(n,i){node=n;start=i},setEnd(n,i){assert.equal(n,node);end=i},getBoundingClientRect(){if(counting)metrics.rangeRects++;return glyphRect(node,start,end)},detach(){}}},elementFromPoint(x,y){if(cursorPoint)return cursorPoint;if(occluder)return occluder;for(const area of areas){const r=area.rect;if(y>=r.top&&y<r.top+r.height&&x>=r.left&&x<r.right)return area}return areas[0]}};
+ if(config.noMedia)delete win.matchMedia;
  Math.random=rng;
  const engine=invoke(()=>create({document:doc,reducedMotion:config.reduced??false,drawBug(ctx,b){draws.set(b.id,{...b});live.set(b.id,b);lastDraw.push([b.id,b.x,b.y,b.angle,b.tier,b.hp,b.lettersEaten,b.chewing,b.attached,b.pursuit,b.scatterUntil])},onEvent:e=>{events.push(e);trace.update('E'+JSON.stringify(e))},onState:s=>trace.update('S'+JSON.stringify(s))}));
  function checkpoint(){trace.update('F'+JSON.stringify(lastDraw));trace.update('D'+JSON.stringify([chosenTargets.map(t=>[t.id,t.style.cssText,t.getAttribute('data-swarm-infected')]),nodes.map(n=>n.nodeValue)]))}
@@ -58,7 +59,7 @@ function fixture(create,config={}){
  function call(name){return invoke(()=>engine[name]())}
  function checkCanvasIsolation(){const root=canvas.parentNode,host=root?.host;assert.ok(host?.hasAttribute('data-swarm-overlay'),'Canvas is owned by a dedicated shadow host');assert.equal(host.hasAttribute('data-swarm-ui'),false,'Overlay never excludes the whole viewport from gameplay');assert.equal(host.parentElement,doc.body);assert.equal(host.getAttribute('aria-hidden'),'true');assert.ok(root.children.some(node=>node.tagName==='STYLE'&&node.textContent.includes('pointer-events:none!important')),'Overlay remains pointer transparent');return host}
  function finish(){call('destroy');assert.equal(rafs.size,0);assert.equal(timers.size,0);assert.ok(metrics.maxRaf<=1,'At most one pending animation frame');assert.equal([...win.listeners.values(),...doc.listeners.values()].reduce((n,set)=>n+set.size,0),0);assert.equal(canvas?.isConnected,false);assert.ok(chosenTargets.every(t=>!t.hasAttribute('style')),'Original empty target styles restored');assert.equal(protectedNode.nodeValue,'Never eat this link');return{metrics,trace:trace.digest('hex'),eventCounts:Object.fromEntries([...new Set(events.map(e=>e.type))].map(type=>[type,events.filter(e=>e.type===type).length]))}}
- return{engine,call,tick,fire,shoot,pointer,finish,checkCanvasIsolation,events,draws,live,nodes,originalsText,lead,footer,areas,hud,controls,win,doc,metrics,coarse,setCursorPoint:el=>cursorPoint=el,setOccluder:el=>occluder=el,get arcs(){return arcs},setText:arr=>chosenText=arr,setTargets:arr=>chosenTargets=arr};
+ return{engine,call,tick,fire,shoot,pointer,finish,checkCanvasIsolation,events,draws,live,nodes,originalsText,lead,footer,areas,hud,controls,win,doc,metrics,coarse,dark,get feedback(){return feedback},setCursorPoint:el=>cursorPoint=el,setOccluder:el=>occluder=el,get arcs(){return arcs},setText:arr=>chosenText=arr,setTargets:arr=>chosenTargets=arr};
 }
 function suite(create,expectShadow=false){
  const results={};
@@ -146,9 +147,44 @@ function verifyAttackCues(create) {
  assert.ok(!page.doc.body.children.includes(host),'Destroy removes the cue host');
  return true;
 }
-async function run(path,expectShadow=false){const source=fs.readFileSync(path,'utf8');const module=await import(path instanceof URL ? path.href : pathToFileURL(resolve(path)).href);const result=suite(module.createDomDefender,expectShadow);const styleOwnership=expectShadow?verifyStyleOwnership(module.createDomDefender):[];const attackCues=expectShadow?verifyAttackCues(module.createDomDefender):false;return{attackCues,styleOwnership,sourceHash:crypto.createHash('sha256').update(source).digest('hex'),sourceBytes:Buffer.byteLength(source),gzipBytes:zlib.gzipSync(source,{level:9}).length,results:result}}
+function verifyFeedback(create) {
+ for(const config of [{dark:false},{dark:true},{dark:false,reduced:true},{dark:false,noMedia:true}]){
+  const page=fixture(create,{...config,noText:true,feedback:true,seed:0x33});
+  page.call('start');page.tick(.12);
+  const bug=[...page.draws.values()][0];
+  page.shoot(bug);page.tick(1/60);
+  const score=()=>page.feedback.find(p=>p.kind==='text'&&p.text.startsWith('+'));
+  const first=score();assert.ok(first,'A real kill renders a score popup');
+  assert.equal(first.color,config.dark?'#b4fff0':'#075044');
+  assert.equal(first.alpha,1);assert.match(first.font,/700 16px/);
+  const outline=page.feedback.find(p=>p.kind==='outline');
+  assert.equal(outline.color,config.dark?'#101010':'#ffffff');
+  assert.equal(outline.text,first.text);assert.equal(outline.width,3.5);
+  assert.ok(page.feedback.some(p=>p.kind==='ring'&&p.color===(config.dark?'#74dfa1':'#127646')));
+  const shards=page.feedback.filter(p=>p.kind==='shard');
+  assert.equal(shards.length,config.reduced?0:7);
+  if(shards.length)assert.ok(shards.every(p=>p.color===(config.dark?'#ff6b6b':'#b42332')));
+  const queryCount=page.metrics.matchMedia;
+  if(!config.noMedia){
+   page.dark.matches=!config.dark;page.tick(1/60);
+   assert.equal(score().color,config.dark?'#075044':'#b4fff0','An existing popup follows a live system theme change');
+   const switched=page.feedback.filter(p=>p.kind==='shard');
+   if(switched.length)assert.ok(switched.every(p=>p.color===(config.dark?'#b42332':'#ff6b6b')));
+  }
+  page.tick(.55);assert.equal(score().alpha,1,'Points stay opaque long enough to read');
+  if(config.reduced)assert.equal(score().y,first.y,'Reduced motion keeps score text still');
+  else assert.ok(score().y<first.y,'Normal score text rises gently');
+  page.tick(.3);assert.ok(score().alpha>0&&score().alpha<1,'Points fade smoothly at the end');
+  page.tick(.3);assert.equal(score(),undefined,'Expired scores are removed');
+  assert.equal(page.metrics.matchMedia,queryCount,'Rendering reuses one media query');
+  assert.equal(page.events.filter(e=>e.type==='kill').length,1);
+  page.finish();
+ }
+ return true;
+}
+async function run(path,expectShadow=false){const source=fs.readFileSync(path,'utf8');const module=await import(path instanceof URL ? path.href : pathToFileURL(resolve(path)).href);const result=suite(module.createDomDefender,expectShadow);const styleOwnership=expectShadow?verifyStyleOwnership(module.createDomDefender):[];const attackCues=expectShadow?verifyAttackCues(module.createDomDefender):false;const feedback=expectShadow?verifyFeedback(module.createDomDefender):false;return{feedback,attackCues,styleOwnership,sourceHash:crypto.createHash('sha256').update(source).digest('hex'),sourceBytes:Buffer.byteLength(source),gzipBytes:zlib.gzipSync(source,{level:9}).length,results:result}}
 const before=await run(BASELINE);const after=await run(SOURCE,true);
 for(const name of Object.keys(before.results)){assert.equal(after.results[name].trace,before.results[name].trace,'Exact seeded gameplay/DOM trace: '+name);assert.deepEqual(after.results[name].eventCounts,before.results[name].eventCounts)}
 const totals=record=>{const out={};for(const scenario of Object.values(record.results))for(const[k,v]of Object.entries(scenario.metrics))out[k]=k.startsWith('max')?Math.max(out[k]||0,v):(out[k]||0)+v;return out};
-const report={nodeVersion:process.version,baselineSourceHash:before.sourceHash,engineSourceHash:after.sourceHash,exactTraceMatch:true,shadowCanvasOwnership:true,attackCues:after.attackCues,styleOwnership:after.styleOwnership,scenarios:Object.keys(before.results),beforeBytes:before.sourceBytes,afterBytes:after.sourceBytes,beforeGzip:before.gzipBytes,afterGzip:after.gzipBytes,before:totals(before),after:totals(after),events:Object.fromEntries(Object.entries(after.results).map(([name,r])=>[name,r.eventCounts])),traces:Object.fromEntries(Object.entries(after.results).map(([name,r])=>[name,r.trace]))};
+const report={nodeVersion:process.version,baselineSourceHash:before.sourceHash,engineSourceHash:after.sourceHash,exactTraceMatch:true,shadowCanvasOwnership:true,attackCues:after.attackCues,feedback:after.feedback,styleOwnership:after.styleOwnership,scenarios:Object.keys(before.results),beforeBytes:before.sourceBytes,afterBytes:after.sourceBytes,beforeGzip:before.gzipBytes,afterGzip:after.gzipBytes,before:totals(before),after:totals(after),events:Object.fromEntries(Object.entries(after.results).map(([name,r])=>[name,r.eventCounts])),traces:Object.fromEntries(Object.entries(after.results).map(([name,r])=>[name,r.trace]))};
 if(REPORT)fs.writeFileSync(REPORT,JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2));

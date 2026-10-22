@@ -2,6 +2,10 @@
 
 The optimization preserves the approved game rules and appearance. It reduces repeated work in the engine and defers the entire game behind a small installer. The report below measures deterministic operation counts, not hardware frame rate or elapsed performance.
 
+## Version 1.0.7 feedback contrast
+
+Kill feedback reads one retained `prefers-color-scheme: dark` media query during the existing draw loop. There are no theme polling timers, extra animation loops, DOM theme selectors, or per-frame layout reads. A score remains fully opaque for 0.7 seconds, then fades over 0.4 seconds; the existing particle cap still applies. The five historical gameplay and page-mutation traces remain unchanged; the canvas feedback colors and duration intentionally change.
+
 ## Version 1.0.6 edge cues
 
 Offscreen attack cues are included in the lazy game chunk, adding about 1.6 KB of gzip data after activation. The initial deferred scheduler and activation source are unchanged. The cue detector reads the bounded live-bug list and cached target rectangles within the existing frame loop; it adds no geometry reads, timers, or animation frames. Cue DOM is created only for an actual offscreen attack, and repeated frames with the same affected edges do not rewrite it. A CSS opacity pulse respects reduced motion. The historical gameplay and page-mutation traces still match.

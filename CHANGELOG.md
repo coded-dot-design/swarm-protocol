@@ -2,6 +2,14 @@
 
 Each published version keeps its original tag and release assets. Corrections are released under a new version.
 
+## 1.0.7 — System-theme kill feedback
+
+- Follow the system light/dark setting for kill scores, burst fragments, and hit/miss rings. Effects already on screen adapt on the next frame when the system setting changes.
+- Use dark teal score text on light surfaces and mint on dark surfaces, with a contrasting outline, heavier type, and a longer readable hold before fading.
+- Give light-mode bursts deeper tier colors and matching higher-contrast rings. Keep the existing game panel styling.
+- Slow the score rise slightly; keep it stationary and omit burst fragments under reduced motion.
+- Preserve scoring, wave timing, bug behavior, activation, cleanup, and offscreen alerts. Reuse one media query and the existing animation loop.
+
 ## 1.0.6 — Offscreen attack indicators
 
 - Show a thin pulsing border on the top, bottom, left, or right edge when bugs are attached to an offscreen button. Diagonal and simultaneous attacks can light multiple edges.

@@ -1,4 +1,5 @@
 import { createAttackIndicators, getAttackEdges } from './attack-indicators.js';
+import { feedbackColors } from './feedback-colors.js';
 
 /**
  * DOM Defender — a dependency-free, opt-in overlay.
@@ -33,6 +34,7 @@ export function createDomDefender(options = {}) {
   const active = () => state.status === 'running' || state.status === 'intermission';
   const reducedMotion = options.reducedMotion ?? (win.matchMedia?.('(prefers-reduced-motion: reduce)').matches || false);
   const coarseQuery = win.matchMedia?.('(pointer: coarse)');
+  const darkQuery = win.matchMedia?.('(prefers-color-scheme: dark)');
   const coarsePointer = () => width <= 640 || coarseQuery?.matches;
   let best = 0;
   try { best = Math.max(0, Number(win.localStorage.getItem(bestKey)) || 0); } catch {}
@@ -899,17 +901,27 @@ export function createDomDefender(options = {}) {
   }
   function draw() {
     if (!ctx) return;
+    // Retain one live media query; existing effects adapt on the next frame.
+    const colors = feedbackColors(darkQuery?.matches);
     ctx.clearRect(0, 0, width, height);
     for (const bug of bugs) drawBug(bug, state.elapsed);
     for (const p of particles) {
-      ctx.globalAlpha = clamp(p.life / p.total, 0, 1);
+      ctx.globalAlpha = clamp(p.life / (p.score ? .4 : p.total), 0, 1);
       if (p.text) {
-        ctx.font = p.score ? '600 15px ui-monospace, monospace' : '10px ui-monospace, monospace';
+        ctx.font = p.score ? '700 16px ui-monospace, monospace' : '10px ui-monospace, monospace';
         ctx.textAlign = 'center';
-        ctx.fillStyle = p.color;
+        ctx.fillStyle = p.score ? colors.score : p.color;
+        if (p.score) {
+          ctx.save();
+          ctx.strokeStyle = colors.outline;
+          ctx.lineWidth = 3.5;
+          ctx.lineJoin = 'round';
+          ctx.strokeText(p.text, p.x, p.y);
+          ctx.restore();
+        }
         ctx.fillText(p.text, p.x, p.y);
       } else {
-        ctx.fillStyle = p.color;
+        ctx.fillStyle = p.tier ? colors.shards[p.tier - 1] : p.color;
         ctx.fillRect(p.x - 1.5, p.y - 1.5, 3, 3);
       }
     }
@@ -921,10 +933,10 @@ export function createDomDefender(options = {}) {
       ctx.globalAlpha = (1 - progress) * (effect.kind === 'miss' ? .45 : .85);
       ctx.beginPath();
       ctx.arc(effect.x, effect.y, radius, 0, Math.PI * 2);
-      ctx.strokeStyle = '#101010';
+      ctx.strokeStyle = colors.outline;
       ctx.lineWidth = 3;
       ctx.stroke();
-      ctx.strokeStyle = effect.kind === 'kill' ? '#74dfa1' : effect.kind === 'hit' ? '#06c4ff' : '#ecfcff';
+      ctx.strokeStyle = colors[effect.kind];
       ctx.lineWidth = 1.25;
       ctx.stroke();
       if (effect.kind === 'kill') {
@@ -1050,9 +1062,9 @@ export function createDomDefender(options = {}) {
     const shards = reducedMotion ? 0 : 7;
     for (let i = 0; i < shards && particles.length < MAX_PARTICLES - 1; i++) {
       const angle = i / shards * Math.PI * 2;
-      particles.push({ x: bug.x, y: bug.y, vx: Math.cos(angle) * rand(25, 65), vy: Math.sin(angle) * rand(25, 65), life: .35, total: .35, color: bug.color });
+      particles.push({ x: bug.x, y: bug.y, vx: Math.cos(angle) * rand(25, 65), vy: Math.sin(angle) * rand(25, 65), life: .42, total: .42, color: bug.color, tier: bug.tier });
     }
-    if (particles.length < MAX_PARTICLES) particles.push({ x: bug.x, y: bug.y - 12, vx: 0, vy: -24, life: .75, total: .75, color: '#b4fff0', text: `+${points}`, score: true });
+    if (particles.length < MAX_PARTICLES) particles.push({ x: bug.x, y: bug.y - 12, vx: 0, vy: reducedMotion ? 0 : -18, life: 1.1, total: 1.1, text: `+${points}`, score: true });
     emit('kill', { points, x: bug.x, y: bug.y, combo: state.combo, speedBonus, tierBonus, tier: bug.tier, age: bug.age });
     notify(true);
   }
