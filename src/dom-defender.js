@@ -1,3 +1,5 @@
+import { createAttackIndicators, getAttackEdges } from './attack-indicators.js';
+
 /**
  * DOM Defender — a dependency-free, opt-in overlay.
  * All page mutations are recorded and reversed by stop(), restart or destroy().
@@ -50,6 +52,7 @@ export function createDomDefender(options = {}) {
   const textLedger = new Map();
   const attributeLedger = new Map();
   const listeners = [];
+  const attackIndicators = createAttackIndicators(doc, reducedMotion);
 
   function on(target, name, callback, settings) {
     target.addEventListener(name, callback, settings);
@@ -81,6 +84,7 @@ export function createDomDefender(options = {}) {
   }
   function status(value) {
     state.status = value;
+    if (value !== 'running') attackIndicators.update(0);
     if (value === 'running') syncCursor();
     else restoreCursor();
     if (!active()) {
@@ -979,6 +983,7 @@ export function createDomDefender(options = {}) {
       if (effect.life > 0) aimEffects[liveEffects++] = effect;
     }
     aimEffects.length = liveEffects;
+    attackIndicators.update(state.status === 'running' && !doc.hidden ? getAttackEdges(bugs, width, height) : 0);
     draw();
     notify();
     if (active()) raf = win.requestAnimationFrame(frame);
@@ -1146,6 +1151,7 @@ export function createDomDefender(options = {}) {
   }
   function start() {
     if (destroyed) throw new Error('Cannot restart a destroyed DOM Defender controller.');
+    attackIndicators.update(0);
     if (raf) win.cancelAnimationFrame(raf);
     if (gameoverTimeout) win.clearTimeout(gameoverTimeout);
     gameoverTimeout = 0;
@@ -1200,6 +1206,7 @@ export function createDomDefender(options = {}) {
     for (const off of listeners) off();
     canvasHost?.remove();
     canvasHost = null; canvas = null; ctx = null;
+    attackIndicators.destroy();
   }
   on(win, 'pointerdown', pointerDown, { capture: true, passive: false });
   on(win, 'pointermove', trackPointer, { capture: true, passive: true });

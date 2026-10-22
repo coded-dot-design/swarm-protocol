@@ -4,11 +4,11 @@ A hidden, opt-in game that runs across a real webpage. Little agents eat selecte
 
 The supported installation is a **self-hosted drop-in ZIP**. Copy the built files into your website and serve them with your own assets. Visitors do not load the game from GitHub, npm, or a separate game server.
 
-**v1.0.5** corrects the keyboard activation to **↑ ↑ ↓ ↓ ← → ← → B A Enter**. The mobile hold-then-tap gesture and gameplay are unchanged. npm publication is not required to use this release.
+**v1.0.6** adds directional edge alerts when bugs attack buttons outside the viewport. The corrected keyboard activation remains **↑ ↑ ↓ ↓ ← → ← → B A Enter**. npm publication is not required to use this release.
 
 ## Install in Astro
 
-Download `swarm-protocol-drop-in-1.0.5.zip` from the `v1.0.5` release, then extract it. Choose the built drop-in asset; GitHub's automatically generated source archives contain the development project.
+Download `swarm-protocol-drop-in-1.0.6.zip` from the `v1.0.6` release, then extract it. Choose the built drop-in asset; GitHub's automatically generated source archives contain the development project.
 
 1. Copy `public/swarm-protocol/` into your Astro project's `public/` folder.
 2. Copy `components/SwarmDropIn.astro` into your project's `src/components/` folder.
@@ -38,7 +38,7 @@ Mark your existing elements:
 </footer>
 ```
 
-Keep the CTA's current URL and handlers. Select static presentation text and lead-opening buttons outside forms/dialogs. You can configure exact CSS selectors instead of adding attributes; edit `public/swarm-protocol/1.0.5/install.js`.
+Keep the CTA's current URL and handlers. Select static presentation text and lead-opening buttons outside forms/dialogs. You can configure exact CSS selectors instead of adding attributes; edit `public/swarm-protocol/1.0.6/install.js`.
 
 Run your site's usual `npm run dev`, or `npm run build` followed by `npm run preview`. No commit, deployment, package install, or React integration is needed for this test.
 
@@ -56,14 +56,16 @@ See **[the complete drop-in guide](docs/DROP-IN.md)** for mobile testing, config
 
 No Caps Lock or modifier chord is used. On desktop, open the launcher and select **Release the swarm**. The mobile secret opens those instructions directly. Letter eating, time-based waves, scatter behavior, multi-hit agents, sound, and the target cursor are included.
 
+When bugs attack a button outside the viewport, a thin pulsing border and arrow point toward it with **“Other sections under attack — Scroll to squash.”** Scroll in that direction to defend it. The cue clears when the button comes into view or the attack stops, remains visible with the scoreboard minimized, and becomes steady when reduced motion is enabled.
+
 ## Stay on a tested version
 
-Each published release has its own tag, ZIP, and static asset folder. A site using `/swarm-protocol/1.0.5/install.js` keeps using that version as this repository evolves.
+Each published release has its own tag, ZIP, and static asset folder. A site using `/swarm-protocol/1.0.6/install.js` keeps using that version as this repository evolves.
 
 The exact-version download pattern is:
 
 ```text
-https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.0.5/swarm-protocol-drop-in-1.0.5.zip
+https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.0.6/swarm-protocol-drop-in-1.0.6.zip
 ```
 
 That URL becomes available when the release is published. Download once and copy the files into your site; it is not a browser script URL. Avoid a `latest` download URL in automation that must stay pinned.

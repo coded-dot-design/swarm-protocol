@@ -2,6 +2,10 @@
 
 The optimization preserves the approved game rules and appearance. It reduces repeated work in the engine and defers the entire game behind a small installer. The report below measures deterministic operation counts, not hardware frame rate or elapsed performance.
 
+## Version 1.0.6 edge cues
+
+Offscreen attack cues are included in the lazy game chunk, adding about 1.6 KB of gzip data after activation. The initial deferred scheduler and activation source are unchanged. The cue detector reads the bounded live-bug list and cached target rectangles within the existing frame loop; it adds no geometry reads, timers, or animation frames. Cue DOM is created only for an actual offscreen attack, and repeated frames with the same affected edges do not rewrite it. A CSS opacity pulse respects reduced motion. The historical gameplay and page-mutation traces still match.
+
 ## Loading boundary
 
 The recommended `./deferred` entry initially loads a small scheduler. It waits for page load, then a default 1,000 ms delay, then an idle opportunity with a 2,000 ms timeout. Browsers without idle callbacks use a timer fallback. Hidden tabs hold setup and restart the delay when visible. The bootstrap is dynamically imported only after these gates; the widget and engine remain another dynamic import on first open/start. Astro's copied component and the optional React adapter use this same path.

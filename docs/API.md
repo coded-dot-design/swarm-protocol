@@ -8,12 +8,12 @@ Original game and integration code: **MIT, copyright 2026 Chris Cooley**. The em
 
 ## Install the prepared package
 
-The primary installation is the self-hosted drop-in ZIP described in [DROP-IN.md](./DROP-IN.md). No registry publication is required. The source also retains the optional local package API below; npm publication is deferred. The internal package name remains `@chriscooley/swarm-protocol@1.0.5`.
+The primary installation is the self-hosted drop-in ZIP described in [DROP-IN.md](./DROP-IN.md). No registry publication is required. The source also retains the optional local package API below; npm publication is deferred. The internal package name remains `@chriscooley/swarm-protocol@1.0.6`.
 
 After creating a local tarball with `npm pack`, you can install that file in your application:
 
 ```sh
-npm install ./chriscooley-swarm-protocol-1.0.5.tgz
+npm install ./chriscooley-swarm-protocol-1.0.6.tgz
 ```
 
 To create that tarball from this source repository:
@@ -252,6 +252,8 @@ Button footsteps leave 1–3 CSS pixel vertical color strokes over the original 
 Mouse play has a 32-pixel target cursor. Native cursors and input remain over protected controls and return when play pauses or ends. Touch uses brief tap rings with no persistent cursor. Coarse pointers or widths up to 640 pixels use a 62-pixel hit diameter and 72% movement speed; desktop hit diameter is 46 pixels. Reduced motion shortens decorative feedback. Pause and tab hiding freeze gameplay clocks.
 
 Sound uses short, quiet Web Audio tones, with no audio asset or music download. It initializes only after a real user gesture. Mute preference and best score are stored locally, with a safe fallback when storage is unavailable. No scores, keys, or page text are transmitted.
+
+Offscreen button attacks display directional edge cues with “Other sections under attack — Scroll to squash.” These use the engine's existing target rectangles and attached-attacker state; offscreen travel alone does not show a warning. Multiple affected edges can show simultaneously. Partially visible targets do not warn. The separate Shadow DOM overlay is pointer-transparent, keeps working when the scoreboard is minimized, and clears on pause, game over, stop, or destroy. Both `reducedMotion` and the browser's reduced-motion preference suppress its pulse. No public API changes or additional integration options are required.
 
 ## Shadow DOM, page ownership, and CSP
 

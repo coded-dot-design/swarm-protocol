@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import zlib from 'node:zlib';
+import { pathToFileURL } from 'node:url';
+import { resolve } from 'node:path';
 // Run from any directory; optional paths are resolved by Node against cwd.
 const args=process.argv.slice(2);
 function option(name,fallback){const i=args.indexOf(name);if(i<0)return fallback;if(!args[i+1]||args[i+1].startsWith('--'))throw new Error('Missing value for '+name);return args[i+1]}
@@ -113,9 +115,40 @@ function verifyStyleOwnership(create){
  }
  return cases.map(test=>test.name);
 }
-async function run(path,expectShadow=false){const source=fs.readFileSync(path,'utf8');const module=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));const result=suite(module.createDomDefender,expectShadow);const styleOwnership=expectShadow?verifyStyleOwnership(module.createDomDefender):[];return{styleOwnership,sourceHash:crypto.createHash('sha256').update(source).digest('hex'),sourceBytes:Buffer.byteLength(source),gzipBytes:zlib.gzipSync(source,{level:9}).length,results:result}}
+function verifyAttackCues(create) {
+ const page=fixture(create,{noText:true,seed:0x567});
+ const cue=()=>page.doc.body.children.find(node=>node.hasAttribute?.('data-swarm-attack-cues'));
+ const move=(left,top)=>{page.lead.rect=rectangle(left,top,120,44);page.fire('scroll',{},page.doc);page.tick(.4)};
+ page.lead.rect=rectangle(100,900,120,44);
+ page.call('start');assert.equal(cue(),undefined,'No cue before an actual attack');
+ for(let n=0;n<900&&!cue();n++)page.tick(1/60);
+ assert.ok(cue(),'A real attached offscreen attacker creates its edge cue');
+ assert.equal(cue().getAttribute('data-swarm-directions'),'bottom');
+ assert.equal(cue().hidden,false);
+ for(const [left,top,expected] of [[100,-100,'top'],[-200,100,'left'],[900,100,'right'],[900,-100,'top right']]){
+  move(left,top);assert.equal(cue().getAttribute('data-swarm-directions'),expected);
+ }
+ page.call('pause');assert.equal(cue().hidden,true,'Pause clears cues immediately');
+ page.call('resume');page.tick(.4);assert.equal(cue().hidden,false);
+ move(100,100);assert.equal(cue().hidden,true,'Scrolling the button into view clears the cue');
+ move(100,900);
+ for(let n=0;n<900&&cue().hidden;n++)page.tick(1/60);
+ assert.equal(cue().hidden,false);
+ page.lead.isConnected=false;page.fire('scroll',{},page.doc);page.tick(.2);
+ assert.equal(cue().hidden,true,'Removed targets stop warning');
+ page.lead.isConnected=true;
+ page.call('stop');assert.equal(cue().hidden,true);
+ page.call('start');assert.equal(cue().hidden,true,'A new round does not retain old threats');
+ for(let n=0;n<3000&&page.engine.getSnapshot().status!=='gameover';n++)page.tick(1/60);
+ assert.equal(page.engine.getSnapshot().status,'gameover');
+ assert.equal(cue().hidden,true,'Game over clears warnings');
+ const host=cue();page.finish();assert.equal(host.isConnected,false);
+ assert.ok(!page.doc.body.children.includes(host),'Destroy removes the cue host');
+ return true;
+}
+async function run(path,expectShadow=false){const source=fs.readFileSync(path,'utf8');const module=await import(path instanceof URL ? path.href : pathToFileURL(resolve(path)).href);const result=suite(module.createDomDefender,expectShadow);const styleOwnership=expectShadow?verifyStyleOwnership(module.createDomDefender):[];const attackCues=expectShadow?verifyAttackCues(module.createDomDefender):false;return{attackCues,styleOwnership,sourceHash:crypto.createHash('sha256').update(source).digest('hex'),sourceBytes:Buffer.byteLength(source),gzipBytes:zlib.gzipSync(source,{level:9}).length,results:result}}
 const before=await run(BASELINE);const after=await run(SOURCE,true);
 for(const name of Object.keys(before.results)){assert.equal(after.results[name].trace,before.results[name].trace,'Exact seeded gameplay/DOM trace: '+name);assert.deepEqual(after.results[name].eventCounts,before.results[name].eventCounts)}
 const totals=record=>{const out={};for(const scenario of Object.values(record.results))for(const[k,v]of Object.entries(scenario.metrics))out[k]=k.startsWith('max')?Math.max(out[k]||0,v):(out[k]||0)+v;return out};
-const report={nodeVersion:process.version,baselineSourceHash:before.sourceHash,engineSourceHash:after.sourceHash,exactTraceMatch:true,shadowCanvasOwnership:true,styleOwnership:after.styleOwnership,scenarios:Object.keys(before.results),beforeBytes:before.sourceBytes,afterBytes:after.sourceBytes,beforeGzip:before.gzipBytes,afterGzip:after.gzipBytes,before:totals(before),after:totals(after),events:Object.fromEntries(Object.entries(after.results).map(([name,r])=>[name,r.eventCounts])),traces:Object.fromEntries(Object.entries(after.results).map(([name,r])=>[name,r.trace]))};
+const report={nodeVersion:process.version,baselineSourceHash:before.sourceHash,engineSourceHash:after.sourceHash,exactTraceMatch:true,shadowCanvasOwnership:true,attackCues:after.attackCues,styleOwnership:after.styleOwnership,scenarios:Object.keys(before.results),beforeBytes:before.sourceBytes,afterBytes:after.sourceBytes,beforeGzip:before.gzipBytes,afterGzip:after.gzipBytes,before:totals(before),after:totals(after),events:Object.fromEntries(Object.entries(after.results).map(([name,r])=>[name,r.eventCounts])),traces:Object.fromEntries(Object.entries(after.results).map(([name,r])=>[name,r.trace]))};
 if(REPORT)fs.writeFileSync(REPORT,JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2));

@@ -9,6 +9,7 @@ test('optimized engine preserves every seeded gameplay/DOM trace', () => {
     fileURLToPath(new URL('./engine-performance.mjs', import.meta.url)),
   ], { encoding: 'utf8', timeout: 60000, maxBuffer: 1024 * 1024 }));
   assert.equal(result.exactTraceMatch, true);
+  assert.equal(result.attackCues, true);
   assert.equal(result.scenarios.length, 5);
   assert.equal(result.after.frames, 8827);
   assert.equal(result.after.maxRaf, 1);

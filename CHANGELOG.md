@@ -2,6 +2,15 @@
 
 Each published version keeps its original tag and release assets. Corrections are released under a new version.
 
+## 1.0.6 — Offscreen attack indicators
+
+- Show a thin pulsing border on the top, bottom, left, or right edge when bugs are attached to an offscreen button. Diagonal and simultaneous attacks can light multiple edges.
+- Pair the border with a directional arrow and “Other sections under attack / Scroll to squash.”
+- Clear alerts when the target returns to view, attackers leave, the target is removed or breached, or the round pauses or ends. Alerts remain visible while the scoreboard is minimized.
+- Honor reduced motion with a steady border. Keep cues pointer-transparent and announce direction changes politely to assistive technology.
+- Reuse the existing game loop and cached geometry; add no background timers, animation loops, or layout reads. The cue UI mounts only on the first offscreen attack and is removed on destruction.
+- Retain the corrected v1.0.5 activation code and existing gameplay rules.
+
 ## 1.0.5 — Corrected keyboard activation
 
 - Correct the activation sequence to **↑ ↑ ↓ ↓ ← → ← → B A Enter**, removing the extra B A pair.

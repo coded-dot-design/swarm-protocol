@@ -1,4 +1,4 @@
-# Swarm Protocol 1.0.5 — self-hosted drop-in
+# Swarm Protocol 1.0.6 — self-hosted drop-in
 
 The game is already built. Copy its files into your Astro site, add one component, and test locally. This method requires no package installation, package registry, or Git push. You can keep this same integration permanently and serve the game with your site's own static assets.
 
@@ -16,9 +16,9 @@ Copy `components/SwarmDropIn.astro` into your site's `src/components/` folder.
 You should have these paths in your site:
 
 ```text
-public/swarm-protocol/1.0.5/install.js
-public/swarm-protocol/1.0.5/deferred.js
-public/swarm-protocol/1.0.5/chunks/...
+public/swarm-protocol/1.0.6/install.js
+public/swarm-protocol/1.0.6/deferred.js
+public/swarm-protocol/1.0.6/chunks/...
 src/components/SwarmDropIn.astro
 ```
 
@@ -41,7 +41,7 @@ The component uses Astro's `BASE_URL`, including a configured path such as `/wor
 If your site is served from the domain root, you can instead put this one tag in the Astro layout:
 
 ```astro
-<script is:inline type="module" src="/swarm-protocol/1.0.5/install.js"></script>
+<script is:inline type="module" src="/swarm-protocol/1.0.6/install.js"></script>
 ```
 
 For ordinary HTML, omit `is:inline`. For an Astro site with a configured base path, use the supplied component. Include either the component or the tag, once. Remove any earlier Swarm installer from that layout before adding this one.
@@ -75,7 +75,7 @@ Keep your CTA's current URL or click handler. Choose buttons or links outside fo
 | `data-swarm-ui` | Protect a real form's outer panel or other controls. |
 | `data-swarm-ignore` | Exclude a region entirely. |
 
-You can also edit the selector constants at the top of `public/swarm-protocol/1.0.5/install.js` to match exact existing CSS selectors. The footer trigger, attack targets, text, and surfaces are independently configurable. Change `storageKey` there if you want a separate best-score history.
+You can also edit the selector constants at the top of `public/swarm-protocol/1.0.6/install.js` to match exact existing CSS selectors. The footer trigger, attack targets, text, and surfaces are independently configurable. Change `storageKey` there if you want a separate best-score history.
 
 ## 4. Test locally and test the production build
 
@@ -115,6 +115,8 @@ No Caps Lock or modifier key is needed. Do not type it into an input. Enter succ
 **Mobile:** hold the marked copyright/date text for 900 ms, release, then tap the same text during its five-second color cue.
 
 The eye hides the scoreboard while play continues. The target button opens it again, and game-over results reopen automatically. Escape ends the game, restores the page, and fully hides/relocks it. Enter the secret again to return.
+
+Offscreen button attacks show a pulsing line at the corresponding screen edge, a directional arrow, and **“Other sections under attack — Scroll to squash.”** The cue appears only for attached attackers, clears when the button returns to view or the attack stops, and stays visible while the scoreboard is minimized. Pausing or ending the round clears the cues. Reduced-motion settings use a steady line. Cues do not capture clicks, taps, or scrolling.
 
 ## 6. Loading and isolation
 
@@ -166,7 +168,7 @@ Your personal GitHub repository can hold the source and release downloads later.
 
 ## Verification included
 
-`verification/verification.txt` describes the checks performed for this release. `verification/runtime-manifest.json` records the hashes and sizes of the production runtime files, which are copied unchanged from version 1.0.5.
+`verification/verification.txt` describes the checks performed for this release. `verification/runtime-manifest.json` records the hashes and sizes of the production runtime files, which are copied unchanged from version 1.0.6.
 
 ## Astro references
 
