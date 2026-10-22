@@ -2,6 +2,14 @@
 
 Each published version keeps its original tag and release assets. Corrections are released under a new version.
 
+## 1.0.9 — Glowing attack cues and exit guidance
+
+- Add the game’s bug icon beside each offscreen warning arrow, with a soft synchronized glow and pulse. Keep the warning text steady and all cue layers pointer-transparent.
+- Keep the icon and border steady for reduced motion, including system preference changes. Adjust side-card widths to fit the new icon on small screens.
+- Add “Press Esc to completely exit.” with an Esc keycap below the start-screen instructions.
+- Preserve v1.0.8 score colors, attack detection, game rules, and activation/cleanup behavior.
+- Attach the verified npm tarball and its checksum to GitHub releases, with a pinned URL install and migration instructions for Astro.
+
 ## 1.0.8 — Brand pink light-mode scores
 
 - Change only the light-mode squash score fill to the requested brand pink, `#F4457A`.

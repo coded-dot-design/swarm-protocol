@@ -6,6 +6,9 @@ const EDGES = [
   { bit: 8, name: 'right', arrow: '→', direction: 'to the right' },
 ];
 
+/*! @license Bug icon derived from Lucide, ISC License. See THIRD_PARTY_NOTICES.md. */
+const bugIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m8 2 1.88 1.88M14.12 3.88 16 2M9 7.13v-1a3.003 3.003 0 1 1 6 0v1M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6M12 20v-9M6.53 9C4.6 8.8 3 7.1 3 5M6 13H2M3 21c0-2.1 1.7-3.9 3.8-4M20.97 5c0 2.1-1.6 3.8-3.5 4M22 13h-4M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg>`;
+
 export function getAttackEdges(bugs, width, height) {
   let edges = 0;
   for (const bug of bugs) {
@@ -38,16 +41,22 @@ const styles = `
 .message{position:absolute;display:flex;align-items:center;justify-content:center;gap:9px;width:max-content;max-width:calc(100vw - 32px);padding:8px 12px;border:1px solid #ff806d55;border-radius:7px;background:#16171bf5;box-shadow:0 4px 18px #0005;text-align:left}
 .top .message{left:50%;top:max(12px,env(safe-area-inset-top));transform:translateX(-50%)}
 .bottom .message{left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%)}
-.left .message{left:max(12px,env(safe-area-inset-left));top:50%;transform:translateY(-50%);max-width:170px}
-.right .message{right:max(12px,env(safe-area-inset-right));top:50%;transform:translateY(-50%);max-width:170px}
+.left .message{left:max(12px,env(safe-area-inset-left));top:50%;transform:translateY(-50%);max-width:195px}
+.right .message{right:max(12px,env(safe-area-inset-right));top:50%;transform:translateY(-50%);max-width:195px}
 .arrow{font:18px/1 system-ui,sans-serif;color:#ff9d8d;flex-shrink:0}
-.copy{display:flex;flex-direction:column;gap:1px}.action{font-size:10px;font-weight:400;color:#b8bdc8}
+.bug-signal{position:relative;display:grid;place-items:center;width:28px;height:28px;flex:0 0 28px;border:1px solid #ff806d55;border-radius:8px;background:#ff806d0d;color:#ff9d8d}
+.bug-signal::before{content:'';position:absolute;inset:-3px;border-radius:inherit;background:#ff806d18;box-shadow:0 0 16px #ff6b6b66;animation:swarm-bug-glow 2.2s ease-in-out infinite}
+.bug-signal svg{display:block;width:19px;height:19px;filter:drop-shadow(0 0 4px #ff806d88);animation:swarm-bug-pulse 2.2s ease-in-out infinite}
+.copy{display:flex;flex-direction:column;gap:1px;min-width:0}.action{font-size:10px;font-weight:400;color:#b8bdc8}
 .announcement{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 @keyframes swarm-edge-pulse{0%,100%{opacity:.35}50%{opacity:1}}
+@keyframes swarm-bug-pulse{0%,100%{opacity:.5;transform:scale(.94)}50%{opacity:1;transform:scale(1.06)}}
+@keyframes swarm-bug-glow{0%,100%{opacity:.15}50%{opacity:1}}
 :host([data-reduced-motion]) .edge::before{animation:none;opacity:1}
-@media(prefers-reduced-motion:reduce){.edge::before{animation:none;opacity:1}}
+:host([data-reduced-motion]) .bug-signal svg,:host([data-reduced-motion]) .bug-signal::before{animation:none;opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){.edge::before,.bug-signal svg,.bug-signal::before{animation:none;opacity:1;transform:none}}
 @media(min-width:641px) and (max-width:1000px){.bottom .message{left:12px;transform:none}}
-@media(max-width:640px){.edge{font-size:10px}.message{padding:6px 9px;gap:7px}.left .message,.right .message{max-width:135px}.bottom .message{bottom:max(220px,calc(env(safe-area-inset-bottom) + 208px))}}
+@media(max-width:640px){.edge{font-size:10px}.message{padding:6px 9px;gap:7px}.bug-signal{width:24px;height:24px;flex-basis:24px}.bug-signal svg{width:17px;height:17px}.left .message,.right .message{max-width:min(165px,calc(50vw - 20px))}.bottom .message{bottom:max(220px,calc(env(safe-area-inset-bottom) + 208px))}}
 `;
 
 /** Lazy, pointer-transparent cues; no timers, listeners, layout reads, or RAF. */
@@ -72,6 +81,9 @@ export function createAttackIndicators(doc, reducedMotion = false) {
       const arrow = doc.createElement('span');
       arrow.setAttribute('class', 'arrow');
       arrow.textContent = edge.arrow;
+      const bug = doc.createElement('span');
+      bug.setAttribute('class', 'bug-signal');
+      bug.innerHTML = bugIcon;
       const copy = doc.createElement('span');
       copy.setAttribute('class', 'copy');
       const title = doc.createElement('span');
@@ -80,7 +92,7 @@ export function createAttackIndicators(doc, reducedMotion = false) {
       action.setAttribute('class', 'action');
       action.textContent = 'Scroll to squash';
       copy.append(title, action);
-      message.append(arrow, copy);
+      message.append(arrow, bug, copy);
       node.append(message);
       root.append(node);
       nodes.push(node);

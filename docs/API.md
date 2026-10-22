@@ -8,22 +8,26 @@ Original game and integration code: **MIT, copyright 2026 Chris Cooley**. The em
 
 ## Install the prepared package
 
-The primary installation is the self-hosted drop-in ZIP described in [DROP-IN.md](./DROP-IN.md). No registry publication is required. The source also retains the optional local package API below; npm publication is deferred. The internal package name remains `@chriscooley/swarm-protocol@1.0.8`.
-
-After creating a local tarball with `npm pack`, you can install that file in your application:
+For an npm-managed Astro integration, install the pinned package asset from the GitHub release:
 
 ```sh
-npm install ./chriscooley-swarm-protocol-1.0.8.tgz
+npm install https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.0.9/chriscooley-swarm-protocol-1.0.9.tgz
 ```
 
-To create that tarball from this source repository:
+This records the versioned URL in your package manifest and lockfile. Commit both so CI can install the same package. GitHub is contacted during dependency installation; the deployed game is bundled and served by your own website. Pushing to GitHub does not change an installed version automatically. npm registry publication is still deferred; the package name remains `@chriscooley/swarm-protocol`.
+
+See [Astro](#astro) below for the included component. When migrating from the drop-in, replace `SwarmDropIn` with `SwarmProtocol` in your shared layout, carry over selector/storage configuration, and remove the old installer include. Once no code references them, remove the old `SwarmDropIn.astro` and copied `public/swarm-protocol/` files. Preserve the existing `data-swarm-*` page attributes and CTA handlers. If upgrading from a local `file:vendor/...tgz` dependency, the URL install replaces that dependency; remove its unused vendor tarball after confirming the manifest and lockfile use the URL.
+
+The [self-hosted drop-in ZIP](./DROP-IN.md) remains available for sites that prefer copied static assets. You can also install a downloaded package file directly with `npm install ./chriscooley-swarm-protocol-1.0.9.tgz`.
+
+To create a tarball from the source repository:
 
 ```sh
 npm ci
 npm pack
 ```
 
-`npm pack` runs the typecheck, minified build, and tests first. The package is ESM, has **zero runtime dependencies**, and declares React as an optional peer. Only the `./react` entry requires React. Build and test dependencies are locked in `package-lock.json` and do not ship in the runtime package.
+`npm pack` runs type checking, the minified build, and tests first. The release workflow packages the same build after those checks have passed. The package is ESM, has **zero runtime dependencies**, and declares React as an optional peer. Only the `./react` entry requires React. Build and test dependencies do not ship in the runtime package.
 
 ## Plain JavaScript
 
@@ -253,7 +257,7 @@ Mouse play has a 32-pixel target cursor. Native cursors and input remain over pr
 
 Sound uses short, quiet Web Audio tones, with no audio asset or music download. It initializes only after a real user gesture. Mute preference and best score are stored locally, with a safe fallback when storage is unavailable. No scores, keys, or page text are transmitted.
 
-Offscreen button attacks display directional edge cues with “Other sections under attack — Scroll to squash.” These use the engine's existing target rectangles and attached-attacker state; offscreen travel alone does not show a warning. Multiple affected edges can show simultaneously. Partially visible targets do not warn. The separate Shadow DOM overlay is pointer-transparent, keeps working when the scoreboard is minimized, and clears on pause, game over, stop, or destroy. Both `reducedMotion` and the browser's reduced-motion preference suppress its pulse. No public API changes or additional integration options are required.
+Offscreen button attacks display directional edge cues with a softly pulsing bug icon and “Other sections under attack — Scroll to squash.” These use the engine's existing target rectangles and attached-attacker state; offscreen travel alone does not show a warning. Multiple affected edges can show simultaneously. Partially visible targets do not warn. The separate Shadow DOM overlay is pointer-transparent, keeps working when the scoreboard is minimized, and clears on pause, game over, stop, or destroy. Both `reducedMotion` and the browser's reduced-motion preference suppress its pulse. No public API changes or additional integration options are required.
 
 Kill scores, burst fragments, and hit rings follow the system light/dark preference automatically. Light-mode scores use brand pink (`#F4457A`) while bursts and rings retain their deeper colors; scores have a contrasting outline and stay fully opaque for 0.7 seconds before a 0.4-second fade. A system theme change updates active effects on the next game frame. Reduced motion keeps score text stationary and removes burst fragments. No theme switch or extra configuration is needed.
 
