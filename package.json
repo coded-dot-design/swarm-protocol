@@ -1,0 +1,94 @@
+{
+  "name": "@chriscooley/swarm-protocol",
+  "version": "1.0.4",
+  "description": "A small, opt-in DOM defense game with lazy loading and optional React integration.",
+  "license": "MIT",
+  "author": "Chris Cooley",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js",
+      "default": "./dist/react.js"
+    },
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js",
+      "default": "./dist/core.js"
+    },
+    "./widget": {
+      "types": "./dist/widget.d.ts",
+      "import": "./dist/widget.js",
+      "default": "./dist/widget.js"
+    },
+    "./package.json": "./package.json",
+    "./deferred": {
+      "types": "./dist/deferred.d.ts",
+      "import": "./dist/deferred.js",
+      "default": "./dist/deferred.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "PERFORMANCE.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "integration/SwarmProtocol.astro",
+    "docs/API.md",
+    "docs/DROP-IN.md"
+  ],
+  "sideEffects": false,
+  "peerDependencies": {
+    "react": "^18.2.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.mjs",
+    "check": "npm run typecheck && npm run build && npm test",
+    "prepack": "npm run check",
+    "size": "node scripts/size.mjs",
+    "release:build": "node scripts/build-release.mjs"
+  },
+  "keywords": [
+    "game",
+    "easter-egg",
+    "astro",
+    "react",
+    "canvas",
+    "dom"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "esbuild": "0.28.2",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "typescript": "7.0.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/coded-dot-design/swarm-protocol.git"
+  },
+  "homepage": "https://github.com/coded-dot-design/swarm-protocol#readme",
+  "bugs": {
+    "url": "https://github.com/coded-dot-design/swarm-protocol/issues"
+  }
+}

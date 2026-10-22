@@ -1,0 +1,112 @@
+{
+  "nodeVersion": "v24.19.0",
+  "baselineSourceHash": "c259578f9c205cdd2eedf8c0c8e9dcc86d666c242a7e94eea7df264e588d30e5",
+  "engineSourceHash": "8d0411215200fe8899ea8e764e61752f331f55faca35c378c6c921bde7c843e7",
+  "exactTraceMatch": true,
+  "shadowCanvasOwnership": true,
+  "styleOwnership": [
+    "new inline value survives later repaint and stop",
+    "same value with newer important priority survives repaint",
+    "priority-only update survives immediate stop",
+    "removed inline property stays removed through repaint and stop"
+  ],
+  "scenarios": [
+    "feeding",
+    "hunger",
+    "stripes",
+    "input",
+    "reduced"
+  ],
+  "beforeBytes": 55198,
+  "afterBytes": 58590,
+  "beforeGzip": 15865,
+  "afterGzip": 16837,
+  "before": {
+    "hypot": 446332,
+    "abs": 650883,
+    "sortCalls": 15963,
+    "sortComparisons": 280356,
+    "filterCalls": 375436,
+    "sliceCalls": 15755,
+    "mapCalls": 2845,
+    "spliceCalls": 188,
+    "arrayFromCalls": 741,
+    "matchMedia": 141,
+    "rangeCreated": 9484,
+    "rangeRects": 9484,
+    "elementRects": 2000,
+    "computedStyle": 11002,
+    "closest": 141681,
+    "styleWrites": 401,
+    "attributeWrites": 57,
+    "rafScheduled": 8835,
+    "maxRaf": 1,
+    "maxRangePerFrame": 34,
+    "frames": 8827
+  },
+  "after": {
+    "hypot": 216861,
+    "abs": 128819,
+    "sortCalls": 715,
+    "sortComparisons": 20388,
+    "filterCalls": 59020,
+    "sliceCalls": 655,
+    "mapCalls": 2845,
+    "spliceCalls": 188,
+    "arrayFromCalls": 0,
+    "matchMedia": 5,
+    "rangeCreated": 4,
+    "rangeRects": 9484,
+    "elementRects": 2000,
+    "computedStyle": 11002,
+    "closest": 141681,
+    "styleWrites": 202,
+    "attributeWrites": 24,
+    "rafScheduled": 8835,
+    "maxRaf": 1,
+    "maxRangePerFrame": 34,
+    "frames": 8827
+  },
+  "events": {
+    "feeding": {
+      "status": 13,
+      "wave-start": 6,
+      "bite": 116,
+      "evolve": 16,
+      "damage": 4,
+      "hit": 16,
+      "scatter": 9,
+      "kill": 12,
+      "wave-clear": 1
+    },
+    "hunger": {
+      "status": 4,
+      "wave-start": 3,
+      "bite": 513,
+      "evolve": 79
+    },
+    "stripes": {
+      "status": 5,
+      "wave-start": 3,
+      "damage": 72,
+      "gameover": 1,
+      "restored": 1
+    },
+    "input": {
+      "status": 4,
+      "wave-start": 1,
+      "kill": 1
+    },
+    "reduced": {
+      "status": 2,
+      "wave-start": 1
+    }
+  },
+  "traces": {
+    "feeding": "981b7de0b4d7e027bd3e404f0a0bfc48cb1c257afa4968fdd5204564b831b385",
+    "hunger": "e54a4b1ff02b1dcc61bb7c9ac4e385b920d69c0ecd74a8b4ff826a2961ee302d",
+    "stripes": "f6047f8a32a96a438538af42817964efd4f415d22346d956c3e2d6bf9fc9ffb9",
+    "input": "5fd9519c21147ce4e2e933b146815a8c0a7062085c9e164538eba4fc635886c0",
+    "reduced": "ad22b445dba522ea60c6040576807cb8b411bffe2b06644399c80c82dd369f00"
+  }
+}

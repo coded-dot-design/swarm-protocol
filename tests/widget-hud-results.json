@@ -1,0 +1,208 @@
+{
+  "methodology": "Stub engine, minimal shadow DOM, CSSOM color normalization; 500 identical snapshots across running/frenzy/paused/intermission/gameover. No browser frame-rate claim.",
+  "checkpoints": 16,
+  "snapshotCallbacks": 512,
+  "traceHash": "5a3e240b8f98d606af6dac9487102acd8aeea1b6d930e45102a2b56feb0f9a83",
+  "historicalParityScope": "All pre-existing HUD nodes and callbacks; new minus button excluded and verified by separate minimize lifecycle tests.",
+  "parity": true,
+  "normalAndHiddenLauncher": true,
+  "lifecycleCleanup": true,
+  "escapeExit": {
+    "captureBeforeCore": true,
+    "fullHide": true,
+    "hostEscapePreserved": true,
+    "normalClosePreserved": true,
+    "noAudioUnlock": true,
+    "cleanup": true
+  },
+  "failedMount": {
+    "scenarios": [
+      "constructor",
+      "initial-onState"
+    ],
+    "cleanup": true,
+    "originalErrorRethrown": true
+  },
+  "minimize": [
+    {
+      "showLauncher": true,
+      "keepsEngineState": true,
+      "liveCallbacks": true,
+      "intermission": true,
+      "pausedStatePreserved": true,
+      "reopenWithoutRestart": true,
+      "automaticResults": true,
+      "noLateReopen": true,
+      "focusTransferred": true,
+      "collapsedHostMarker": true,
+      "cleanup": true
+    },
+    {
+      "showLauncher": false,
+      "keepsEngineState": true,
+      "liveCallbacks": true,
+      "intermission": true,
+      "pausedStatePreserved": true,
+      "reopenWithoutRestart": true,
+      "automaticResults": true,
+      "noLateReopen": true,
+      "focusTransferred": true,
+      "collapsedHostMarker": true,
+      "cleanup": true
+    }
+  ],
+  "repeatedSnapshots": {
+    "before": {
+      "lookups": 11700,
+      "text": 4600,
+      "hidden": 4000,
+      "style": 1500
+    },
+    "after": {
+      "lookups": 0,
+      "text": 0,
+      "hidden": 0,
+      "style": 0
+    }
+  },
+  "repeatedByPhase": {
+    "before": {
+      "running-stable": {
+        "lookups": 2200,
+        "text": 800,
+        "hidden": 800,
+        "style": 300,
+        "className": 0,
+        "classToggle": 300,
+        "attribute": 0,
+        "innerHTML": 0,
+        "replaceChildren": 0
+      },
+      "frenzy-stable": {
+        "lookups": 2200,
+        "text": 800,
+        "hidden": 800,
+        "style": 300,
+        "className": 0,
+        "classToggle": 300,
+        "attribute": 0,
+        "innerHTML": 0,
+        "replaceChildren": 0
+      },
+      "paused-stable": {
+        "lookups": 2200,
+        "text": 800,
+        "hidden": 800,
+        "style": 300,
+        "className": 0,
+        "classToggle": 300,
+        "attribute": 0,
+        "innerHTML": 0,
+        "replaceChildren": 0
+      },
+      "intermission-stable": {
+        "lookups": 2400,
+        "text": 900,
+        "hidden": 800,
+        "style": 300,
+        "className": 100,
+        "classToggle": 300,
+        "attribute": 0,
+        "innerHTML": 0,
+        "replaceChildren": 0
+      },
+      "gameover-stable": {
+        "lookups": 2700,
+        "text": 1300,
+        "hidden": 800,
+        "style": 300,
+        "className": 0,
+        "classToggle": 300,
+        "attribute": 0,
+        "innerHTML": 0,
+        "replaceChildren": 0
+      }
+    },
+    "after": {
+      "running-stable": {
+        "lookups": 0,
+        "text": 0,
+        "hidden": 0,
+        "style": 0,
+        "className": 0,
+        "classToggle": 300,
+        "attribute": 0,
+        "innerHTML": 0,
+        "replaceChildren": 0
+      },
+      "frenzy-stable": {
+        "lookups": 0,
+        "text": 0,
+        "hidden": 0,
+        "style": 0,
+        "className": 0,
+        "classToggle": 300,
+        "attribute": 0,
+        "innerHTML": 0,
+        "replaceChildren": 0
+      },
+      "paused-stable": {
+        "lookups": 0,
+        "text": 0,
+        "hidden": 0,
+        "style": 0,
+        "className": 0,
+        "classToggle": 300,
+        "attribute": 0,
+        "innerHTML": 0,
+        "replaceChildren": 0
+      },
+      "intermission-stable": {
+        "lookups": 0,
+        "text": 0,
+        "hidden": 0,
+        "style": 0,
+        "className": 100,
+        "classToggle": 300,
+        "attribute": 0,
+        "innerHTML": 0,
+        "replaceChildren": 0
+      },
+      "gameover-stable": {
+        "lookups": 0,
+        "text": 0,
+        "hidden": 0,
+        "style": 0,
+        "className": 0,
+        "classToggle": 300,
+        "attribute": 0,
+        "innerHTML": 0,
+        "replaceChildren": 0
+      }
+    }
+  },
+  "totalOperations": {
+    "before": {
+      "lookups": 11990,
+      "text": 4704,
+      "hidden": 4097,
+      "style": 1544,
+      "className": 101,
+      "classToggle": 1544,
+      "attribute": 3,
+      "innerHTML": 2,
+      "replaceChildren": 6
+    },
+    "after": {
+      "lookups": 36,
+      "text": 40,
+      "hidden": 26,
+      "style": 22,
+      "className": 101,
+      "classToggle": 1544,
+      "attribute": 11,
+      "innerHTML": 2,
+      "replaceChildren": 6
+    }
+  }
+}
