@@ -2,7 +2,7 @@
  * Swarm Protocol — MIT © 2026 Chris Cooley.
  * A small, dormant entry point. The game imports only after open() or start().
  */
-const SEQUENCE = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a', 'b', 'a', 'Enter'];
+const SEQUENCE = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a', 'Enter'];
 const KEY_GUARD = 'input,textarea,select,button,a[href],form,dialog,[role="dialog"],[role="textbox"],[role="combobox"],[role="slider"],[role="button"],[role="menu"],[role="listbox"],[role="grid"],[role="tree"],[contenteditable],[data-swarm-ui],[data-swarm-ignore]';
 const TRIGGER_GUARD = 'input,textarea,select,a[href],form,dialog,[role="dialog"],[role="textbox"],[role="combobox"],[contenteditable],[data-swarm-ignore]';
 const HOLD_MS = 900, ARMED_MS = 5000, MOVE_LIMIT_SQUARED = 144;

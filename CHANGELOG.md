@@ -2,6 +2,13 @@
 
 Each published version keeps its original tag and release assets. Corrections are released under a new version.
 
+## 1.0.5 — Corrected keyboard activation
+
+- Correct the activation sequence to **↑ ↑ ↓ ↓ ← → ← → B A Enter**, removing the extra B A pair.
+- Require the final Enter; reject the old sequence with the extra B A pair.
+- Update the source, integration examples, installation guides, and generated browser test to the corrected sequence and versioned 1.0.5 paths.
+- Preserve mobile hold-then-tap activation, lazy loading, Escape cleanup, and gameplay.
+
 ## 1.0.4 — First public release candidate
 
 This version preserves the completed game and versioned paths from the tested `1.0.4` drop-in. Earlier `1.0.x` packages were development iterations, not earlier public GitHub releases.

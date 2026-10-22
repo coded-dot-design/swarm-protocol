@@ -76,7 +76,7 @@ test('installation stays dormant and destroy removes its bootstrap listeners', (
 test('the exact plain sequence unlocks only the lightweight floating button', () => {
   const b = browser();
   const swarm = installSwarm({ document: b.doc });
-  for (const key of ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a', 'b', 'a', 'Enter']) {
+  for (const key of ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a', 'Enter']) {
     b.advance(100);
     b.doc.emit('keydown', b.event(key));
   }

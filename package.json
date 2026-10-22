@@ -1,6 +1,6 @@
 {
   "name": "@chriscooley/swarm-protocol",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "A small, opt-in DOM defense game with lazy loading and optional React integration.",
   "license": "MIT",
   "author": "Chris Cooley",

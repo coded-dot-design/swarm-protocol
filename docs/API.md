@@ -8,12 +8,12 @@ Original game and integration code: **MIT, copyright 2026 Chris Cooley**. The em
 
 ## Install the prepared package
 
-The primary installation is the self-hosted drop-in ZIP described in [DROP-IN.md](./DROP-IN.md). No registry publication is required. The source also retains the optional local package API below; npm publication is deferred. The internal package name remains `@chriscooley/swarm-protocol@1.0.4`.
+The primary installation is the self-hosted drop-in ZIP described in [DROP-IN.md](./DROP-IN.md). No registry publication is required. The source also retains the optional local package API below; npm publication is deferred. The internal package name remains `@chriscooley/swarm-protocol@1.0.5`.
 
 After creating a local tarball with `npm pack`, you can install that file in your application:
 
 ```sh
-npm install ./chriscooley-swarm-protocol-1.0.4.tgz
+npm install ./chriscooley-swarm-protocol-1.0.5.tgz
 ```
 
 To create that tarball from this source repository:
@@ -110,7 +110,7 @@ For existing markup, replace either value with a specific selector, such as `'#f
 
 By default, enter this sequence with page content focused:
 
-**↑ ↑ ↓ ↓ ← → ← → B A B A Enter**
+**↑ ↑ ↓ ↓ ← → ← → B A Enter**
 
 Each next key must arrive within 2.2 seconds. Text fields, editable regions, controls, menus, and protected UI do not participate. The sequence reveals a 46-pixel floating target button, detached from the screen edge. It expands to show **Swarm Protocol** on hover or keyboard focus. Clicking it loads the game and shows instructions without starting a round.
 

@@ -643,7 +643,7 @@ test('destroy is idempotent and later public activation methods stay inert', asy
   f.assertClean();
 });
 
-const CODE = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a','b','a','Enter'];
+const CODE = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a','Enter'];
 function enterCode(f, target=f.doc.body, properties={}) {
   for (const value of CODE) { f.advance(80); f.key(value, false, target, properties); }
 }
@@ -667,6 +667,29 @@ function tap(f, trigger) {
 function copyright(f, attributes={}) { return f.element('span',{'data-swarm-trigger':'',...attributes}); }
 
 // The keyboard command is deliberately independent of Caps Lock state.
+test('the corrected Contra sequence requires the final Enter before revealing the launcher', () => {
+  const f=fixture(), installation=f.install();
+  for (const key of CODE.slice(0, -1)) f.key(key);
+  assert.equal(installation.isUnlocked(),false);
+  assert.equal(f.calls.imports,0);
+  f.key('Enter');
+  assert.equal(installation.isUnlocked(),true);
+  assert.equal(f.pill()?.hidden,false);
+  assert.equal(f.calls.imports,0);
+  installation.destroy(); f.assertClean();
+});
+
+test('the obsolete extra B A pair cannot unlock, and the corrected sequence works afterward', () => {
+  const f=fixture(), installation=f.install();
+  for (const key of [...CODE.slice(0, -1), 'b', 'a', 'Enter']) f.key(key);
+  assert.equal(installation.isUnlocked(),false);
+  assert.equal(f.calls.imports,0);
+  enterCode(f);
+  assert.equal(installation.isUnlocked(),true);
+  assert.equal(f.calls.imports,0);
+  installation.destroy(); f.assertClean();
+});
+
 test('the exact plain sequence reveals the FAB without downloading or starting the game', () => {
   const f=fixture(), installation=f.install();
   enterCode(f);
