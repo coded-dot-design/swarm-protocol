@@ -2,6 +2,16 @@
 
 Each published version keeps its original tag and release assets. Corrections are released under a new version.
 
+## 1.1.0 — Viewport defense and Jump + Zap
+
+- Spawn bugs inside the player's viewport near their pointer, avoiding protected UI. Small bugs stay with local food/buttons; grown hunters retain their mission and bite contacted letters without further growth.
+- Let native scrolling outrun free bugs instead of teleporting them to the viewport edge. Attached bugs remain anchored to their real button, including nested scroll containers.
+- Make offscreen alerts accessible rescue buttons: locked warning, Jump (50 points), or Jump + Zap (200 points). Every rescue adds 25 to both prices; each zap adds another 150 to the zap price. Reset prices each round.
+- Jump instantly to the nearest currently attacked base on that edge. Zap all tiers within a 140–220px radius for only one point per kill, with no combo or zap-finished wave-clear bonus. Revalidate before charging and guard double activation.
+- Keep the alert and flat blast in Shadow DOM / the existing canvas. Respect reduced motion, keyboard focus, native base clicks, pause, Escape, and full cleanup.
+- Reduce repeated target selection and food-search work, cull offscreen default drawing, avoid unnecessary canvas resizing, cache rescue offers, and remove alert shadows/filters. Retain the existing loop, budgets, mobile fill stability, and zero runtime dependencies.
+- Add rescue state/event declarations and document the game economy. Existing Astro integrations require only a package update.
+
 ## 1.0.13 — Steadier, lighter mobile button feedback
 
 - Use a native CSS gradient with three static radial bubble layers on viewports up to 640px or coarse-pointer devices. Update the fill with health changes instead of continuously replacing SVG images.

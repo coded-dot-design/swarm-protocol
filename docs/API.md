@@ -11,14 +11,14 @@ Original game and integration code: **MIT, copyright 2026 Chris Cooley**. The em
 For an npm-managed Astro integration, install the pinned package asset from the GitHub release:
 
 ```sh
-npm install https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.0.13/chriscooley-swarm-protocol-1.0.13.tgz
+npm install https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.1.0/chriscooley-swarm-protocol-1.1.0.tgz
 ```
 
 This records the versioned URL in your package manifest and lockfile. Commit both so CI can install the same package. GitHub is contacted during dependency installation; the deployed game is bundled and served by your own website. Pushing to GitHub does not change an installed version automatically. npm registry publication is still deferred; the package name remains `@chriscooley/swarm-protocol`.
 
 See [Astro](#astro) below for the included component. When migrating from the drop-in, replace `SwarmDropIn` with `SwarmProtocol` in your shared layout, carry over selector/storage configuration, and remove the old installer include. Once no code references them, remove the old `SwarmDropIn.astro` and copied `public/swarm-protocol/` files. Preserve the existing `data-swarm-*` page attributes and CTA handlers. If upgrading from a local `file:vendor/...tgz` dependency, the URL install replaces that dependency; remove its unused vendor tarball after confirming the manifest and lockfile use the URL.
 
-The [self-hosted drop-in ZIP](./DROP-IN.md) remains available for sites that prefer copied static assets. You can also install a downloaded package file directly with `npm install ./chriscooley-swarm-protocol-1.0.13.tgz`.
+The [self-hosted drop-in ZIP](./DROP-IN.md) remains available for sites that prefer copied static assets. You can also install a downloaded package file directly with `npm install ./chriscooley-swarm-protocol-1.1.0.tgz`.
 
 To create a tarball from the source repository:
 
@@ -276,7 +276,11 @@ Mouse play has a 32-pixel target cursor. Native cursors and input remain over pr
 
 Sound uses short, quiet Web Audio tones, with no audio asset or music download. It initializes only after a real user gesture. Mute preference and best score are stored locally, with a safe fallback when storage is unavailable. No scores, keys, or page text are transmitted.
 
-Offscreen button attacks display directional edge cues with a softly pulsing bug icon and “Other sections under attack — Scroll to squash.” These use the engine's existing target rectangles and attached-attacker state; offscreen travel alone does not show a warning. Multiple affected edges can show simultaneously. Partially visible targets do not warn. The separate Shadow DOM overlay is pointer-transparent, keeps working when the scoreboard is minimized, and clears on pause, game over, stop, or destroy. Both `reducedMotion` and the browser's reduced-motion preference suppress its pulse. No public API changes or additional integration options are required.
+Offscreen button attacks display directional edge cues with a pulsing bug icon and a points-funded rescue control. Only attached attackers produce a warning; partially visible targets do not. The control uses the strongest affordable action: locked warning, Jump, or Jump + Zap. The four control buttons accept keyboard/touch input; the remainder of the Shadow DOM overlay stays pointer-transparent. Minimized games retain the controls. Pause, game over, stop, and destroy clear them. Reduced motion disables warning pulses and replaces the expanding zap ring with a brief stationary ring.
+
+`getSnapshot().rescue` exposes `{ jumpCost, zapCost, mode, jumps, zaps }`. `jumps` counts all rescues, including zaps. Prices are `50 + jumps * 25` for Jump and `200 + zaps * 150 + jumps * 25` for Jump + Zap. Score is the spendable balance; best preserves the highest balance reached. A successful rescue emits `{ type: 'rescue', action: 'jump' | 'zap', targetId, cost, killed, points, x, y, radius }`. Coordinates and radius use CSS viewport pixels; jump-only radius is zero. Zaps return one point per kill, bypass normal kill events/combo rewards, and earn no bonus for a wave they finish. Normal manual kills retain existing rewards. The action has a shared 750ms gameplay-time cooldown and is revalidated against current target geometry before spending. A removed target or failed scroll does not charge.
+
+No integration changes or additional options are required. Native instant scrolling handles document and nested scroll containers without installing a scroll animation loop or changing site scroll CSS. Native base clicks remain separate; focus transfers with `preventScroll` after arrival. Small bugs favor visible food/buttons. Grown bugs retain their button mission, with contact-only letter bites and no extra growth beyond tier 3.
 
 Kill scores keep the exact color of the squashed bug in both system themes. A dark inner outline and theme-aware outer outline keep them distinct over page content, with 0.7 seconds fully opaque followed by a 0.4-second fade. Burst fragments and hit rings still adapt to the system light/dark setting. Reduced motion keeps scores stationary and removes fragments. No theme switch or extra configuration is needed.
 

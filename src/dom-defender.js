@@ -1,4 +1,4 @@
-import { createAttackIndicators, getAttackEdges } from './attack-indicators.js';
+import { createAttackIndicators, getAttackEdges, attackEdge, rescueOffer } from './attack-indicators.js';
 import { feedbackColors } from './feedback-colors.js';
 import { targetSignal, liquidFill, bubbleContrast } from './target-health.js';
 import { readTargetPalette, cssLayers } from './target-palette.js';
@@ -28,7 +28,7 @@ export function createDomDefender(options = {}) {
   const segmenter = typeof Intl.Segmenter === 'function' ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
   const bestKey = options.bestKey || 'swarm-protocol-best-v1';
   const tierColors = ['#ff6b6b', '#d984ff', '#8573ee'];
-  const protectedPointerSelector = '[data-swarm-ui],[data-swarm-ignore],dialog,[role="dialog"],[aria-modal="true"],form,input,textarea,select,option,[contenteditable]';
+  const protectedPointerSelector = '[data-swarm-attack-cues],[data-swarm-ui],[data-swarm-ignore],dialog,[role="dialog"],[aria-modal="true"],form,input,textarea,select,option,[contenteditable]';
   const cursorSVG = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><g fill="none" stroke-linecap="round"><circle cx="16" cy="16" r="8" stroke="#101010" stroke-width="4"/><path d="M16 3v3m0 20v3M3 16h3m20 0h3" stroke="#101010" stroke-width="4"/><circle cx="16" cy="16" r="8" stroke="#06c4ff" stroke-width="1.5"/><path d="M16 3v3m0 20v3M3 16h3m20 0h3" stroke="#ecfcff" stroke-width="1.5"/></g><circle cx="16" cy="16" r="2" fill="#fff" stroke="#101010" stroke-width="1.5"/></svg>';
   const reticleCursor = `url("data:image/svg+xml,${encodeURIComponent(cursorSVG)}") 16 16, crosshair`;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -48,6 +48,10 @@ export function createDomDefender(options = {}) {
   let pausedFrom = 'running', pausedForVisibility = false, destroyed = false;
   let geometryDirty = true, geometryAt = 0, roundId = 0, suppressedClick = null;
   let gameoverTimeout = 0;
+  let jumps = 0, zaps = 0, rescueUntil = 0, zapCleared = false;
+  let scrollX = win.scrollX || 0, scrollY = win.scrollY || 0;
+  let visibleTargets = [], availableTargets = [], localFood = false, foodSurveyed = 0;
+  let cachedOffer = null, offerScore = -1, offerJumps = -1, offerZaps = -1;
   let foodQueue = [], foodCandidates = [], foodCursor = 0, foodScanIn = 0, foodRevision = 0, foodBudget = 0;
   let glyphRange = null;
   let cursorRecord = null, lastPointer = null, aimEffects = [];
@@ -57,7 +61,7 @@ export function createDomDefender(options = {}) {
   const textLedger = new Map();
   const attributeLedger = new Map();
   const listeners = [];
-  const attackIndicators = createAttackIndicators(doc, reducedMotion);
+  const attackIndicators = createAttackIndicators(doc, reducedMotion, rescue);
 
   function on(target, name, callback, settings) {
     target.addEventListener(name, callback, settings);
@@ -71,6 +75,7 @@ export function createDomDefender(options = {}) {
     const health = enrolled.length ? enrolled.reduce((sum, t) => sum + t.health, 0) / enrolled.length : 100;
     return {
       ...state,
+      rescue: { ...getRescueOffer(), jumps, zaps },
       alive: bugs.length,
       offscreenBugs: bugs.filter(b => b.x < 0 || b.y < 0 || b.x > width || b.y > height).length,
       frenzy: state.status !== 'idle' && state.status !== 'gameover' && !targets.some(t => t.rendered && t.visible && t.health > 0),
@@ -211,7 +216,7 @@ export function createDomDefender(options = {}) {
     for (let offset = 0; records.some(record => offset < record.glyphs.length); offset += 8) {
       for (const record of records) foodQueue.push(...record.glyphs.slice(offset, offset + 8));
     }
-    foodCandidates = []; foodCursor = 0; foodScanIn = 0; foodRevision++;
+    foodCandidates = []; foodCursor = 0; foodScanIn = 0; foodRevision++; foodSurveyed = 0; localFood = false;
     surfaces = [...doc.querySelectorAll(selectors.surface)].filter(el => !el.closest(`${selectors.ui},[data-swarm-ignore]`)).slice(0, 16)
       .map(element => ({ element, rect: null, visible: false, damage: 0 }));
     geometryDirty = true;
@@ -223,11 +228,11 @@ export function createDomDefender(options = {}) {
     if (!force && now - geometryAt < (geometryDirty ? 80 : 600)) return;
     geometryDirty = false;
     geometryAt = now;
-    const newWidth = win.innerWidth, newHeight = win.innerHeight;
-    if (newWidth !== width || newHeight !== height || force) {
+    const newWidth = win.innerWidth, newHeight = win.innerHeight, newRatio = Math.min(win.devicePixelRatio || 1, 1.75);
+    if (newWidth !== width || newHeight !== height || newRatio !== ratio || canvas?.width !== Math.round(newWidth * newRatio)) {
       width = newWidth;
       height = newHeight;
-      ratio = Math.min(win.devicePixelRatio || 1, 1.75);
+      ratio = newRatio;
       if (canvas) {
         canvas.width = Math.round(width * ratio);
         canvas.height = Math.round(height * ratio);
@@ -236,10 +241,17 @@ export function createDomDefender(options = {}) {
         ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
       }
     }
-    for (const item of [...targets, ...textAreas, ...surfaces]) {
+    for (const group of [targets, textAreas, surfaces]) for (const item of group) {
       const previousRect = item.rect;
       item.visible = item.element.isConnected && !item.element.hidden;
       item.rect = item.element.getBoundingClientRect();
+      // Attached bugs belong to their button, including inside nested scrollers.
+      if ('enrolled' in item && previousRect) for (const bug of bugs) {
+        if (bug.attached && bug.target === item) {
+          bug.x += item.rect.left - previousRect.left;
+          bug.y += item.rect.top - previousRect.top;
+        }
+      }
       if ('records' in item && previousRect && ['left', 'top', 'width', 'height'].some(key => previousRect[key] !== item.rect[key])) item.revision++;
       if ('enrolled' in item) {
         const style = win.getComputedStyle?.(item.element);
@@ -255,6 +267,7 @@ export function createDomDefender(options = {}) {
     }
     uiRects = [...doc.querySelectorAll(selectors.ui)]
       .filter(el => !el.hidden).map(el => el.getBoundingClientRect()).filter(rectVisible);
+    cacheTargets();
     syncCursor();
   }
   function ensureCanvas() {
@@ -278,28 +291,37 @@ export function createDomDefender(options = {}) {
       throw new Error('DOM Defender requires a 2D canvas context.');
     }
   }
+  function cacheTargets() {
+    availableTargets.length = visibleTargets.length = 0;
+    for (const target of targets) if (target.rendered && target.element.isConnected && target.health > 0) {
+      availableTargets.push(target);
+      if (target.visible) visibleTargets.push(target);
+    }
+  }
   function chooseTarget(bug) {
-    if (!targets.length) return null;
-    const available = targets.filter(t => t.rendered && t.element.isConnected && t.health > 0);
-    if (!available.length) return null;
-    const visible = available.filter(t => t.visible);
-    const choices = visible.length ? visible : available;
+    const choices = bug.tier < 3 && visibleTargets.length ? visibleTargets : availableTargets;
     if (!choices.length) return null;
-    // Distance attracts the swarm; a little randomness prevents one identical queue.
-    choices.sort((a, b) => {
-      const cost = t => Math.hypot((t.rect.left + t.rect.right) / 2 - bug.x, (t.rect.top + t.rect.bottom) / 2 - bug.y) + t.health * .35;
-      return cost(a) - cost(b);
-    });
-    return Math.random() < .65 ? choices[0] : choices[Math.floor(Math.random() * choices.length)];
+    let nearest = null, distance = Infinity;
+    for (const target of choices) {
+      if (target.health <= 0) continue;
+      const r = target.rect;
+      const cost = Math.hypot((r.left + r.right) / 2 - bug.x, (r.top + r.bottom) / 2 - bug.y) + target.health * .35;
+      if (cost < distance) { distance = cost; nearest = target; }
+    }
+    const random = choices[Math.floor(Math.random() * choices.length)];
+    return random?.health > 0 && Math.random() >= .65 ? random : nearest;
   }
   function spawn() {
     if (bugs.length >= MAX_BUGS) return;
     let x = 0, y = 0;
+    const px = lastPointer?.x ?? width / 2, py = lastPointer?.y ?? height / 2;
     for (let attempt = 0; attempt < 12; attempt++) {
-      const edge = Math.floor(Math.random() * 4);
-      x = edge === 0 ? -18 : edge === 1 ? width + 18 : rand(24, width - 24);
-      y = edge === 2 ? -18 : edge === 3 ? height + 18 : rand(32, height - 32);
-      if (!uiRects.some(r => contains(r, clamp(x, 0, width), clamp(y, 0, height), 24))) break;
+      // Arrive on screen, near the player but never directly under their pointer.
+      const angle = rand(0, Math.PI * 2), radius = rand(90, Math.min(width, height) * .45 + 90);
+      x = clamp(px + Math.cos(angle) * radius, 22, Math.max(22, width - 22));
+      y = clamp(py + Math.sin(angle) * radius, 26, Math.max(26, height - 26));
+      if (!uiRects.some(r => contains(r, x, y, 24)) && Math.hypot(x - px, y - py) >= 60) break;
+      if (attempt === 11) return false; // Never spawn behind a full-screen host UI.
     }
     const bug = {
       id: ++roundId, x, y, angle: 0, phase: rand(0, Math.PI * 2),
@@ -313,9 +335,11 @@ export function createDomDefender(options = {}) {
     };
     bug.target = chooseTarget(bug);
     bugs.push(bug);
+    return true;
   }
   function startWave(reason = 'start') {
     state.wave++;
+    zapCleared = false;
     const arrivals = Math.max(0, Math.min(MAX_BUGS - bugs.length - remaining, 12 + (state.wave - 1) * 6));
     remaining += arrivals;
     spawnIn = .1;
@@ -529,11 +553,24 @@ export function createDomDefender(options = {}) {
     bug.chewing = false;
     bug.chewLeft = 0;
   }
+  function syncScroll() {
+    const x = win.scrollX || 0, y = win.scrollY || 0, dx = x - scrollX, dy = y - scrollY;
+    scrollX = x; scrollY = y;
+    if (!dx && !dy) return;
+    // Free bugs stay in document space. Scrolling can outrun them; no edge teleport.
+    for (const bug of bugs) {
+      if (!bug.attached) { bug.x -= dx; bug.y -= dy; }
+      bug.scatterX -= dx; bug.scatterY -= dy;
+    }
+    for (const p of particles) { p.x -= dx; p.y -= dy; }
+    for (const effect of aimEffects) { effect.x -= dx; effect.y -= dy; }
+  }
   function invalidateFoodGeometry() {
+    syncScroll();
     geometryDirty = true;
     foodRevision++;
     foodScanIn = 0;
-    foodCandidates = [];
+    foodCandidates = []; foodSurveyed = 0; localFood = false;
     for (const bug of bugs) {
       releaseFood(bug);
       bug.foodSearchIn = 0;
@@ -577,25 +614,28 @@ export function createDomDefender(options = {}) {
   function scanFood(dt) {
     foodBudget = 36;
     foodScanIn -= dt;
-    if (foodScanIn > 0 || !foodQueue.length || !bugs.some(bug => bug.tier < 3)) return;
+    if (foodScanIn > 0 || !foodQueue.length || !bugs.length) return;
     foodScanIn = .10;
     foodCandidates = foodCandidates.filter(glyph => edibleGlyph(glyph));
     let measured = 0, checked = 0;
     while (checked++ < Math.min(foodQueue.length, 96) && measured < 12) {
       const glyph = foodQueue[foodCursor++ % foodQueue.length];
+      foodSurveyed++;
       if (!edibleGlyph(glyph) || glyph.reservedBy) continue;
       measured++;
       const r = measureGlyph(glyph, true);
       if (!r) continue;
       if (!foodCandidates.includes(glyph)) foodCandidates.push(glyph);
     }
+    localFood = foodCandidates.some(glyph => edibleGlyph(glyph) && glyph.rect) ||
+      (foodSurveyed < foodQueue.length && textAreas.some(area => area.visible));
     if (foodCandidates.length > MAX_FOOD_CANDIDATES) foodCandidates.splice(0, foodCandidates.length - MAX_FOOD_CANDIDATES);
   }
   function chooseFood(bug) {
-    if (bug.tier >= 3) return null;
+    if (bug.tier >= 3 && (bug.attached || (bug.target && !bug.target.visible))) return null;
     // Continue along the same word/line before searching elsewhere. This makes
     // each changed letter readable as the result of the crawler touching it.
-    if (bug.lastFood && currentText(bug.lastFood.record)) {
+    if (bug.tier < 3 && bug.lastFood && currentText(bug.lastFood.record)) {
       const previous = bug.lastFood;
       const glyphs = previous.record.glyphs, nearby = [];
       // A letter within 12 graphemes must also be within 12 letter slots.
@@ -614,8 +654,12 @@ export function createDomDefender(options = {}) {
     // without sorting the whole cache or recomputing distances in a comparator.
     const nearest = [], distances = [];
     for (const glyph of foodCandidates) {
-      if (glyph.reservedBy || !edibleGlyph(glyph) || !glyph.rect) continue;
-      const distance = Math.hypot(glyph.rect.x - bug.x, glyph.rect.y - bug.y);
+      // Shortlist cheaply; measureGlyph still validates host ownership, protected
+      // ancestry and live contact before reserving or eating any candidate.
+      const record = glyph.record;
+      if (glyph.reservedBy || glyph.eaten || !glyph.rect || !record.owner.visible || record.abandoned || !record.node.isConnected || record.node.nodeValue !== record.latest) continue;
+      const dx = glyph.rect.x - bug.x, dy = glyph.rect.y - bug.y, distance = dx * dx + dy * dy;
+      if (bug.tier >= 3 && distance > (8 * bug.size + 4) ** 2) continue;
       let index = nearest.length;
       while (index && distance < distances[index - 1]) index--;
       if (index >= 5) continue;
@@ -626,7 +670,10 @@ export function createDomDefender(options = {}) {
       nearest[index] = glyph;
       distances[index] = distance;
     }
-    for (const glyph of nearest) if (measureGlyph(glyph)) return glyph;
+    for (const glyph of nearest) {
+      const r = measureGlyph(glyph);
+      if (r && (bug.tier < 3 || Math.hypot(r.x - bug.x, r.y - bug.y) <= 8 * bug.size + 4)) return glyph;
+    }
     return null;
   }
   function nickSurface(bug) {
@@ -688,21 +735,20 @@ export function createDomDefender(options = {}) {
   function stepBug(bug, dt) {
     bug.age += dt;
     bug.hitFlash = Math.max(0, bug.hitFlash - dt);
-    const visibleLive = targets.some(t => t.rendered && t.visible && t.health > 0);
-    if (!bug.target?.rendered || !bug.target.element.isConnected || bug.target.health <= 0 || (visibleLive && !bug.target.visible)) {
+    const visibleLive = visibleTargets.length > 0;
+    const stayLocal = bug.tier < 3 && (visibleLive || localFood);
+    if (!bug.target?.rendered || !bug.target.element.isConnected || bug.target.health <= 0 || (bug.tier < 3 && visibleLive && !bug.target.visible)) {
       const previous = bug.target;
       bug.target = chooseTarget(bug);
       if (bug.target !== previous) {
         bug.attached = false;
         bug.pursuit = null;
-        bug.x = clamp(bug.x, -30, width + 30);
-        bug.y = clamp(bug.y, -30, height + 30);
       }
     }
     let tx, ty;
     const scattering = state.elapsed < bug.scatterUntil;
     const target = bug.target;
-    if (!scattering && bug.tier < 3) {
+    if (!scattering) {
       if (bug.food && (!edibleGlyph(bug.food) || bug.food.reservedBy !== bug.id)) releaseFood(bug);
       bug.foodCheckIn -= dt;
       if (bug.food && !bug.chewing && (bug.foodCheckIn <= 0 || bug.food.areaRevision !== bug.food.record.owner.revision || bug.food.revision !== foodRevision)) {
@@ -714,10 +760,9 @@ export function createDomDefender(options = {}) {
       if (!bug.food && bug.foodSearchIn <= 0) {
         const glyph = chooseFood(bug);
         if (glyph) { bug.food = glyph; glyph.reservedBy = bug.id; bug.foodCheckIn = .16; }
-        bug.foodSearchIn = .14;
+        bug.foodSearchIn = bug.tier >= 3 ? .22 : .14;
       }
       if (bug.food) {
-        if (bug.pursuit) { bug.x = clamp(bug.x, -25, width + 25); bug.y = clamp(bug.y, -25, height + 25); }
         bug.pursuit = null;
         bug.attached = false;
         if (chewGlyph(bug, dt)) return;
@@ -748,14 +793,11 @@ export function createDomDefender(options = {}) {
       }
       return { x: bug.dashX, y: bug.dashY };
     };
-    if (visibleLive && bug.pursuit) {
+    if ((target?.visible || stayLocal) && bug.pursuit) {
       // An attacker stays on its actual button when scrolling brings it back.
       if (bug.pursuit === 'attack' && target?.visible) {
         const point = orbitPoint();
         bug.x = point.x; bug.y = point.y;
-      } else {
-        bug.x = clamp(bug.x, -30, width + 30);
-        bug.y = clamp(bug.y, -30, height + 30);
       }
       bug.pursuit = null;
     }
@@ -770,7 +812,11 @@ export function createDomDefender(options = {}) {
     } else if (bug.tier < 3 && state.elapsed < bug.foodWaitUntil) {
       bug.attached = false;
       const point = wildPoint(); tx = point.x; ty = point.y;
-    } else if (!visibleLive && target) {
+    } else if (stayLocal && !target?.visible) {
+      bug.pursuit = null;
+      bug.attached = false;
+      const point = wildPoint(); tx = point.x; ty = point.y;
+    } else if (target && !target.visible) {
       // Scrolling away does not suspend attacks. Visible crawlers dash around,
       // leave toward the real CTA, then finish the short journey off canvas.
       if (!bug.pursuit) {
@@ -835,16 +881,12 @@ export function createDomDefender(options = {}) {
       let angleDelta = desired - bug.angle;
       while (angleDelta > Math.PI) angleDelta -= Math.PI * 2;
       while (angleDelta < -Math.PI) angleDelta += Math.PI * 2;
-      bug.angle += angleDelta * Math.min(1, dt * (scattering || !visibleLive ? 16 : 11));
-      const travel = Math.min(distance, bug.speed * (scattering ? 1.8 : !visibleLive ? 1.6 : bug.attached ? .70 : 1) * dt);
+      bug.angle += angleDelta * Math.min(1, dt * (scattering || (!stayLocal && !target?.visible) ? 16 : 11));
+      const travel = Math.min(distance, bug.speed * (scattering ? 1.8 : !stayLocal && !target?.visible ? 1.3 : bug.attached ? .70 : 1) * dt);
       const sway = reducedMotion || foodPoint ? 0 : Math.sin(bug.age * 8 + bug.phase) * 9 * dt;
       bug.x += Math.cos(bug.angle) * travel + Math.sin(bug.angle) * sway;
       bug.y += Math.sin(bug.angle) * travel - Math.cos(bug.angle) * sway;
-      // Exit/transit crawlers must cross the canvas boundary rather than park on it.
-      if (bug.pursuit !== 'exit' && bug.pursuit !== 'transit') {
-        bug.x = clamp(bug.x, -25, width + 25);
-        bug.y = clamp(bug.y, -25, height + 25);
-      }
+      // Free crawlers return at their travel speed; never clamp scroll distance away.
     }
     if (!scattering && bug.food && !bug.chewing && Math.hypot(bug.food.rect.x - bug.x, bug.food.rect.y - bug.y) <= 8 * bug.size + 4) {
       // Only a fresh, unobscured glyph under the crawler's mouth can begin a
@@ -867,6 +909,9 @@ export function createDomDefender(options = {}) {
   let bugPaths;
   function drawBug(bug, time) {
     if (options.drawBug) { options.drawBug(ctx, bug, time); return; }
+    // Offscreen missions keep simulating, without issuing invisible canvas work.
+    const margin = 32 * bug.size;
+    if (bug.x < -margin || bug.x > width + margin || bug.y < -margin || bug.y > height + margin) return;
     ctx.save();
     ctx.translate(bug.x, bug.y);
     ctx.rotate(bug.angle + Math.PI / 2);
@@ -935,6 +980,7 @@ export function createDomDefender(options = {}) {
     drawTargetSignals();
     for (const bug of bugs) drawBug(bug, state.elapsed);
     for (const p of particles) {
+      if (p.x < -80 || p.x > width + 80 || p.y < -30 || p.y > height + 30) continue;
       ctx.globalAlpha = clamp(p.life / (p.score ? .4 : p.total), 0, 1);
       if (p.bubble) {
         const progress = 1 - p.life / p.total;
@@ -967,7 +1013,7 @@ export function createDomDefender(options = {}) {
     ctx.globalAlpha = 1;
     for (const effect of aimEffects) {
       const progress = 1 - effect.life / effect.total;
-      const radius = reducedMotion ? 10 : 6 + progress * (effect.kind === 'kill' ? 14 : effect.kind === 'hit' ? 10 : 6);
+      const radius = effect.kind === 'zap' ? (reducedMotion ? effect.radius : 12 + progress * (effect.radius - 12)) : reducedMotion ? 10 : 6 + progress * (effect.kind === 'kill' ? 14 : effect.kind === 'hit' ? 10 : 6);
       ctx.save();
       ctx.globalAlpha = (1 - progress) * (effect.kind === 'miss' ? .45 : .85);
       ctx.beginPath();
@@ -975,7 +1021,7 @@ export function createDomDefender(options = {}) {
       ctx.strokeStyle = colors.outline;
       ctx.lineWidth = 3;
       ctx.stroke();
-      ctx.strokeStyle = colors[effect.kind];
+      ctx.strokeStyle = effect.kind === 'zap' ? colors.kill : colors[effect.kind];
       ctx.lineWidth = 1.25;
       ctx.stroke();
       if (effect.kind === 'kill') {
@@ -997,7 +1043,9 @@ export function createDomDefender(options = {}) {
     lastNow = now;
     state.elapsed += dt;
     if (targets.some(target => target.interactionUntil > state.elapsed)) geometryDirty = true;
+    syncScroll();
     refreshGeometry();
+    cacheTargets();
     scanFood(dt);
     if (state.elapsed - comboTime > 1.5) state.combo = 1;
     if (state.status === 'intermission') {
@@ -1008,8 +1056,7 @@ export function createDomDefender(options = {}) {
       if (nextWaveIn <= 0) startWave('timer');
       spawnIn -= dt;
       if (remaining > 0 && spawnIn <= 0) {
-        spawn();
-        remaining--;
+        if (spawn()) remaining--;
         spawnIn = Math.max(.10, .27 - state.wave * .014);
       }
       for (const bug of bugs) {
@@ -1043,7 +1090,7 @@ export function createDomDefender(options = {}) {
       if (effect.life > 0) aimEffects[liveEffects++] = effect;
     }
     aimEffects.length = liveEffects;
-    attackIndicators.update(state.status === 'running' && !doc.hidden ? getAttackEdges(bugs, width, height) : 0);
+    updateAttackIndicators();
     draw();
     notify();
     if (active()) raf = win.requestAnimationFrame(frame);
@@ -1055,7 +1102,7 @@ export function createDomDefender(options = {}) {
     }
   }
   function clearWave() {
-    const bonus = state.wave * 50;
+    const bonus = zapCleared ? 0 : state.wave * 50;
     state.score += bonus;
     state.combo = 1;
     updateBest();
@@ -1096,6 +1143,7 @@ export function createDomDefender(options = {}) {
     if (count) emit('scatter', { count, x: killed.x, y: killed.y, ...(anchor ? { targetId: anchor.id } : {}) });
   }
   function kill(bug) {
+    zapCleared = false;
     scatterNeighbors(bug);
     releaseFood(bug);
     bugs.splice(bugs.indexOf(bug), 1);
@@ -1114,6 +1162,64 @@ export function createDomDefender(options = {}) {
     }
     if (particles.length < MAX_PARTICLES) particles.push({ x: bug.x, y: bug.y - 12, vx: 0, vy: reducedMotion ? 0 : -18, life: 1.1, total: 1.1, text: `+${points}`, color: bug.color, score: true });
     emit('kill', { points, x: bug.x, y: bug.y, combo: state.combo, speedBonus, tierBonus, tier: bug.tier, age: bug.age });
+    notify(true);
+  }
+  function getRescueOffer() {
+    if (offerScore !== state.score || offerJumps !== jumps || offerZaps !== zaps) {
+      cachedOffer = rescueOffer(state.score, jumps, zaps);
+      offerScore = state.score; offerJumps = jumps; offerZaps = zaps;
+    }
+    return cachedOffer;
+  }
+  function updateAttackIndicators() {
+    attackIndicators.update(state.status === 'running' && !doc.hidden ? getAttackEdges(bugs, width, height) : 0, getRescueOffer());
+  }
+  function rescue(edge) {
+    if (destroyed || state.status !== 'running' || doc.hidden || state.elapsed < rescueUntil) return;
+    syncScroll();
+    refreshGeometry(true);
+    const offer = getRescueOffer();
+    if (offer.mode === 'locked') return;
+    let target = null, distance = Infinity;
+    // Resolve the nearest still-attacked base now, not the one shown last frame.
+    for (const bug of bugs) if (attackEdge(bug, width, height) & edge) {
+      const r = bug.target.rect, d = Math.hypot((r.left + r.right) / 2 - width / 2, (r.top + r.bottom) / 2 - height / 2);
+      if (d < distance) { target = bug.target; distance = d; }
+    }
+    if (!target?.element.scrollIntoView) { updateAttackIndicators(); return; }
+    // One native instant scroll handles both page and nested containers, even on
+    // sites with CSS smooth scrolling. No extra animation loop or scroll lock.
+    target.element.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'center' });
+    invalidateFoodGeometry();
+    refreshGeometry(true);
+    if (!target.visible) { updateAttackIndicators(); return; }
+    const zap = offer.mode === 'zap', cost = zap ? offer.zapCost : offer.jumpCost;
+    state.score -= cost;
+    jumps++;
+    if (zap) zaps++;
+    rescueUntil = state.elapsed + .75;
+    const r = target.rect, x = (r.left + r.right) / 2, y = (r.top + r.bottom) / 2;
+    const radius = Math.min(220, Math.max(140, Math.min(width, height) * .36));
+    let killed = 0, survivors = 0;
+    if (zap) {
+      for (const bug of bugs) {
+        if (Math.hypot(bug.x - x, bug.y - y) <= radius) {
+          releaseFood(bug);
+          killed++;
+        } else bugs[survivors++] = bug;
+      }
+      bugs.length = survivors;
+      state.kills += killed;
+      state.score += killed; // One point each; no combos, speed or tier multiplier.
+      state.combo = 1; comboTime = -Infinity;
+      zapCleared = !bugs.length; // No wave-clear payout for a zap finishing the wave.
+      addAimEffect(x, y, 'zap');
+      aimEffects[aimEffects.length - 1].radius = radius;
+    }
+    // Move keyboard focus away from a cue that is about to disappear. No clicks.
+    target.element.focus?.({ preventScroll: true });
+    emit('rescue', { action: zap ? 'zap' : 'jump', targetId: target.id, cost, killed, points: killed, x, y, radius: zap ? radius : 0 });
+    updateAttackIndicators();
     notify(true);
   }
   function protectedPointer(path) {
@@ -1165,7 +1271,7 @@ export function createDomDefender(options = {}) {
     restoreCursor();
   }
   function addAimEffect(x, y, kind) {
-    const total = reducedMotion ? .16 : kind === 'kill' ? .36 : kind === 'hit' ? .28 : .24;
+    const total = reducedMotion ? .16 : kind === 'zap' ? .5 : kind === 'kill' ? .36 : kind === 'hit' ? .28 : .24;
     if (aimEffects.length >= MAX_AIM_EFFECTS) aimEffects.shift();
     aimEffects.push({ x, y, kind, life: total, total });
   }
@@ -1220,6 +1326,8 @@ export function createDomDefender(options = {}) {
     bugs = []; particles = []; remaining = 0; suppressedClick = null;
     Object.assign(state, { score: 0, wave: 0, kills: 0, combo: 1, elapsed: 0 });
     comboTime = -Infinity;
+    jumps = zaps = 0; rescueUntil = 0; zapCleared = false;
+    scrollX = win.scrollX || 0; scrollY = win.scrollY || 0;
     pausedForVisibility = false;
     ensureCanvas();
     canvas.style.display = 'block';
@@ -1259,6 +1367,7 @@ export function createDomDefender(options = {}) {
     bugs = []; particles = []; remaining = 0; nextWaveIn = 0; suppressedClick = null;
     restorePage();
     targets = []; textAreas = []; surfaces = [];
+    availableTargets = []; visibleTargets = []; localFood = false;
     if (ctx) ctx.clearRect(0, 0, width, height);
     if (canvas) canvas.style.display = 'none';
     pausedForVisibility = false;

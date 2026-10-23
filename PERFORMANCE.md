@@ -1,6 +1,40 @@
 # Performance and behavior preservation
 
-The optimization preserves the approved game rules and appearance. It reduces repeated work in the engine and defers the entire game behind a small installer. The report below measures deterministic operation counts, not hardware frame rate or elapsed performance.
+Version 1.1.0 changes spawning, pursuit, and rescue gameplay deliberately. Its performance work preserves those new rules. The numbers below distinguish operation counts from transfer sizes; they are not hardware FPS measurements. Earlier sections describe their archived releases.
+
+## Version 1.1.0 navigation and rescue audit
+
+The new action uses one native instant scroll and a single flat ring in the existing canvas/RAF. It performs two geometry refreshes only on activation, then scans at most 48 bugs for the blast. It does not spawn 48 independent kill popups or sound cues. Four lazy Shadow DOM buttons are the only interactive alert surfaces. The full-screen host remains pointer-transparent; button listeners are removed on destroy. Offers are cached, and unchanged edge/mode/price frames perform no alert DOM writes. Alert blur, drop shadows, and box shadows have been removed.
+
+Target availability is collected once per frame, rather than filtered and scanned independently for every bug. Selection finds the nearest target in one pass instead of sorting. Free bugs retain document position when the page scrolls; attached bugs track their target's cached geometry, including nested scrollers. Offscreen missions still simulate, but the default renderer skips invisible bugs and particles. Custom `drawBug` callbacks continue receiving every bug. Forced geometry refreshes no longer reset an unchanged canvas backing store; DPR changes still resize it correctly.
+
+Food selection now uses cheap ownership checks and squared distances to shortlist candidates. Protected ancestry and live geometry/contact checks still run before reservation and both stages of a bite. Grown bugs only bite letters already within contact range; they do not chase distant glyphs. The nearby cache remains capped at 240 glyphs, with at most 36 Range measurements per frame. The single reusable Range and existing 48-bug, 120-particle, eight-effect caps remain unchanged.
+
+A deterministic 43-second workload reached 48 bugs, 672 real letter bites, and 77 evolutions over 2,580 frames. Comparing the same v1.1.0 rules before and after the final food-shortlist optimization produced identical full gameplay/DOM traces and event counts:
+
+| Operation | Before shortlist optimization | After | Change |
+| --- | ---: | ---: | ---: |
+| DOM ancestry checks (`closest`) | 689,555 | 125,787 | −81.8% |
+| Euclidean distance calls (`Math.hypot`) | 623,546 | 59,778 | −90.4% |
+| Glyph Range measurements | 9,794 | 9,794 | unchanged |
+| Peak Range measurements per frame | 30 | 30 | below the 36 limit |
+| Reusable Range instances | 1 | 1 | unchanged |
+| Pending animation frames | 1 | 1 | unchanged |
+
+This is not a claim that v1.0.13 and v1.1.0 trajectories match, or that operation-count reductions equal an FPS gain. `tests/navigation-budget.test.mjs` runs the current 48-bug workload with conservative ancestry/distance ceilings. The existing historical optimization test remains pinned to v1.0.9; current behavior tests cover the changed rules separately.
+
+| Loaded JavaScript | Minified bytes | Gzip bytes |
+| --- | ---: | ---: |
+| Initial deferred scheduler | 1,954 | 1,120 |
+| Additional activation bootstrap | 9,160 | 4,045 |
+| Additional game on first open/start | 71,626 | 27,560 |
+| Complete deferred path | 82,740 | 32,725 |
+
+The complete path adds 1,560 compressed bytes (5.0%) over v1.0.13 for the new gameplay, accessible controls, and feedback. Initial loading remains about 1.1 kB compressed. These totals sum individually gzipped emitted files; a host bundler/server may produce different values. No runtime dependencies or extra game animation loops are added.
+
+The review retained the existing mobile native-CSS fill, quiet bubbles, DPR cap of 1.75, desktop 12Hz fill limit, hidden-tab pause, lazy loader, and cleanup ownership rules. Initial text discovery still scales with marked copy, and palette discovery with participating buttons/stylesheets. Keep selectors narrow; an entire application root can still make startup expensive. If physical-device profiling identifies more pressure, the next candidates are incremental initial text enrollment and a static desktop liquid-fill option. They are not implemented speculatively in this release.
+
+Verification covers 164 automated tests, strict package declarations, five current gameplay workloads, real-browser desktop/mobile rescue controls (including nested scrolling), protected native clicks, light/dark visuals, reduced motion, hover behavior, and Escape cleanup. Browser mobile contexts emulate touch and viewport conditions; they are not a physical iOS/Android FPS benchmark.
 
 ## Version 1.0.13 mobile stability
 
@@ -59,7 +93,7 @@ The new beacon uses two thin rounded strokes on the existing canvas, cached targ
 
 Floating scores keep their bug's color; only their outer outline follows the system theme. Button-bite digits are 15px rather than 10px. Both use the existing particle cap. The old column/stripe bookkeeping and painting have been removed. Text discovery still scales with marked text and target work with selected buttons; use explicit participating content rather than an entire application root.
 
-The benchmark below is the archived optimization comparison through v1.0.9, now pinned to `tests/fixtures/dom-defender-1.0.9.js`. It is not a claim that v1.0.10 visuals or random trajectories match the old stripes. `node tests/engine-performance.mjs --refined` runs the same five behavioral workloads against the current engine, verifies current health states, and retains exact no-target feeding traces. `tests/target-health.test.mjs` additionally checks palette stages, all tier score colors in both themes, real liquid damage, unchanged host typography/shadows, latching, native button state, pause, reduced motion, hover/focus priority and motion, newer host changes, and cleanup.
+The benchmark below is the archived optimization comparison through v1.0.9, now pinned to `tests/fixtures/dom-defender-1.0.9.js`. It is not a claim that v1.0.10 visuals or random trajectories match the old stripes. `node tests/engine-performance.mjs --refined` runs the same five behavioral workloads against the current engine, verifies current health states, and checks bounded work; v1.1.0 intentionally changes the no-target feeding trace. `tests/target-health.test.mjs` additionally checks palette stages, all tier score colors in both themes, real liquid damage, unchanged host typography/shadows, latching, native button state, pause, reduced motion, hover/focus priority and motion, newer host changes, and cleanup.
 
 The v1.0.10 production build measures:
 

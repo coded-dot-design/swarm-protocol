@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -77,4 +77,12 @@ test('all exported declarations resolve with strict NodeNext consumers', () => {
     resolve(root, 'node_modules/typescript/bin/tsc'),
     '--project', resolve(root, 'tests/tsconfig.json'),
   ], { cwd: root, stdio: 'pipe' });
+});
+
+
+test('package runtime contains exactly the current build outputs without stale hashed chunks', async () => {
+  const meta = JSON.parse(await readFile(resolve(root, 'artifacts/build-meta.json'), 'utf8'));
+  const actual = (await readdir(resolve(root, 'dist'), { recursive: true }))
+    .filter(name => name.endsWith('.js')).map(name => 'dist/' + name.replaceAll('\\', '/')).sort();
+  assert.deepEqual(actual, Object.keys(meta.outputs).filter(name => name.endsWith('.js')).sort());
 });

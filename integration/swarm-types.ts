@@ -29,6 +29,8 @@ export interface SwarmSnapshot {
   offscreenBugs: number;
   frenzy: boolean;
   targets: SwarmTarget[];
+  /** Spendable score funds the strongest affordable offscreen rescue. Resets each round. */
+  rescue: { jumpCost: number; zapCost: number; mode: 'locked' | 'jump' | 'zap'; jumps: number; zaps: number };
 }
 
 export type SwarmEvent =
@@ -60,6 +62,7 @@ export type SwarmEvent =
   | { type: 'wave-clear'; wave: number; bonus: number }
   | { type: 'damage'; targetId: string; health: number }
   | { type: 'scatter'; count: number; x: number; y: number; targetId?: string }
+  | { type: 'rescue'; action: 'jump' | 'zap'; targetId: string; cost: number; killed: number; points: number; x: number; y: number; radius: number }
   | { type: 'restored' }
   | ({ type: 'gameover' } & SwarmSnapshot);
 

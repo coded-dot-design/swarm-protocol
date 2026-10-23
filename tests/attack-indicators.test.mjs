@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createAttackIndicators, getAttackEdges } from '../src/attack-indicators.js';
+import { createAttackIndicators, getAttackEdges, rescueOffer } from '../src/attack-indicators.js';
 
 const rect = (left, top, width = 120, height = 44) => ({ left, top, width, height, right: left + width, bottom: top + height });
 const attacker = (bounds, options = {}) => ({ attached: true, target: { rect: bounds, rendered: true, health: 80, element: { isConnected: true }, ...options } });
@@ -38,8 +38,8 @@ test('scroll and resize use current cached geometry without querying the DOM', (
 function documentFixture() {
   let writes=0;
   function element(tag) {
-    const attributes=new Map();
-    return {tag, children:[], hidden:false,
+    const attributes=new Map(), listeners=new Map();
+    return {tag, listeners, addEventListener(n,f){listeners.set(n,f)},removeEventListener(n){listeners.delete(n)},click(){listeners.get('click')?.()}, children:[], hidden:false,
       setAttribute(name,value){writes++;attributes.set(name,value);},
       getAttribute:name=>attributes.get(name),
       append(...children){this.children.push(...children);for(const child of children)child.parent=this;},
@@ -60,7 +60,7 @@ test('cues mount only for a threat, retain stable DOM, clear directions, and cle
   assert.equal(host.getAttribute('data-swarm-ui'),undefined,'Full-screen cues must not block the game hit area');
   assert.equal(host.getAttribute('data-swarm-directions'),'bottom');
   assert.deepEqual(edgeNodes.map(node=>node.hidden),[true,false,true,true]);
-  assert.match(live.textContent,/below.*Scroll to squash/);
+  assert.match(live.textContent,/below.*scroll to squash/);
   const writes=doc.writes;
   for(let frame=0;frame<120;frame++)cues.update(2);
   assert.equal(doc.writes,writes,'Unchanged frames must not rewrite cue attributes');
@@ -74,7 +74,7 @@ test('cues mount only for a threat, retain stable DOM, clear directions, and cle
   assert.equal(doc.body.children.length,0);
 });
 
-test('cues honor reduced motion and keep all visual layers pointer-transparent', () => {
+test('cues honor reduced motion and only control buttons intercept input', () => {
   const doc=documentFixture(), cues=createAttackIndicators(doc,true);
   cues.update(2);
   const host=doc.body.children[0], css=host.shadowRoot.children[0].textContent;
@@ -84,4 +84,20 @@ test('cues honor reduced motion and keep all visual layers pointer-transparent',
   assert.match(css,/\*\{box-sizing:border-box;pointer-events:none!important\}/);
   assert.equal(host.shadowRoot.children.at(-1).getAttribute('aria-live'),'polite');
   cues.destroy();
+});
+
+
+test('alert modes disclose rising prices, update only on state changes, and activate one direction', () => {
+  const doc=documentFixture(), actions=[], cues=createAttackIndicators(doc,false,edge=>actions.push(edge));
+  cues.update(2,rescueOffer(49,0,0));
+  const host=doc.body.children[0], button=host.shadowRoot.children[2].children[0];
+  assert.equal(button.tag,'button'); assert.equal(button.getAttribute('type'),'button');
+  assert.equal(button.getAttribute('aria-disabled'),'true');button.click();assert.deepEqual(actions,[]);
+  cues.update(2,rescueOffer(50,0,0));
+  assert.match(button.getAttribute('aria-label'),/below.*Jump · 50/);button.click();assert.deepEqual(actions,[2]);
+  const writes=doc.writes;cues.update(2,rescueOffer(199,0,0));assert.equal(doc.writes,writes);
+  cues.update(2,rescueOffer(200,0,0));assert.match(button.getAttribute('aria-label'),/Jump \+ Zap · 200/);
+  assert.deepEqual(rescueOffer(350,1,1),{jumpCost:75,zapCost:375,mode:'jump'});
+  cues.update(0);button.click();assert.deepEqual(actions,[2]);
+  cues.destroy();assert.equal(button.listeners.size,0);
 });

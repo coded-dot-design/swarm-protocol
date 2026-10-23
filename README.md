@@ -4,11 +4,11 @@ A hidden, opt-in game that runs across a real webpage. Little agents eat selecte
 
 Install the versioned npm package or use the **self-hosted drop-in ZIP**. Both serve the built game with your own website assets. Visitors do not load the game from GitHub, npm, or a separate game server.
 
-**v1.0.13** gives phones and coarse-pointer devices a steady native CSS power fill, three quiet interior bubbles, and one softer/slower beacon. It removes continuous SVG background replacements, button shaking, sticky-touch boiling, and the powered button's native tap highlight on mobile. Desktop keeps its six-bubble simmer/hover boil. Both paths retain bug-colored bite particles and scores, native-hover-color power, yellow/pink health states, and complete cleanup. The corrected activation remains **↑ ↑ ↓ ↓ ← → ← → B A Enter**.
+**v1.1.0** adds points-funded **Jump / Jump + Zap** to offscreen attack alerts. Bugs arrive in your viewport near the pointer; small bugs stay near local food and buttons, while grown hunters keep their mission and bite letters in their path. Scrolling can outrun the swarm. Mobile keeps its steady CSS fill and lighter effects; desktop retains its hover boil. Activation remains **↑ ↑ ↓ ↓ ← → ← → B A Enter**.
 
 ## Install the drop-in ZIP in Astro
 
-Download `swarm-protocol-drop-in-1.0.13.zip` from the `v1.0.13` release, then extract it. Choose the built drop-in asset; GitHub's automatically generated source archives contain the development project.
+Download `swarm-protocol-drop-in-1.1.0.zip` from the `v1.1.0` release, then extract it. Choose the built drop-in asset; GitHub's automatically generated source archives contain the development project.
 
 1. Copy `public/swarm-protocol/` into your Astro project's `public/` folder.
 2. Copy `components/SwarmDropIn.astro` into your project's `src/components/` folder.
@@ -38,7 +38,7 @@ Mark your existing elements:
 </footer>
 ```
 
-Keep the CTA's current URL and handlers. Select static presentation text and lead-opening buttons outside forms/dialogs. You can configure exact CSS selectors instead of adding attributes; edit `public/swarm-protocol/1.0.13/install.js`.
+Keep the CTA's current URL and handlers. Select static presentation text and lead-opening buttons outside forms/dialogs. You can configure exact CSS selectors instead of adding attributes; edit `public/swarm-protocol/1.1.0/install.js`.
 
 Run your site's usual `npm run dev`, or `npm run build` followed by `npm run preview`. No commit, deployment, package install, or React integration is needed for this test.
 
@@ -56,7 +56,9 @@ See **[the complete drop-in guide](docs/DROP-IN.md)** for mobile testing, config
 
 No Caps Lock or modifier chord is used. On desktop, open the launcher and select **Release the swarm**. The mobile secret opens those instructions directly. Letter eating, time-based waves, scatter behavior, multi-hit agents, sound, and the target cursor are included.
 
-When bugs attack a button outside the viewport, a thin pulsing border, directional arrow, and glowing bug icon point toward it with **“Other sections under attack — Scroll to squash.”** Scroll in that direction to defend it. The cue clears when the button comes into view or the attack stops, remains visible with the scoreboard minimized, and becomes steady when reduced motion is enabled.
+When bugs attack an offscreen button, the edge alert offers the strongest action your score can afford. Below 50 points it warns you to scroll manually; from 50 points it offers **Jump**; from 200 points it offers **Jump + Zap**. Every rescue raises the jump price by 25 points and the zap price by 25 points; each zap raises its price by another 150 points. A zap clears a 140–220px radius around the destination, returning only 1 point per kill. It earns no combo multiplier or bonus for a wave it finishes. Prices reset on restart. Manual scrolling is always free.
+
+Alerts are keyboard/touch controls in a separate Shadow DOM. The rest of the overlay remains pointer-transparent. They clear when the attack stops, the target becomes visible, or the round pauses/ends; reduced motion uses a steady warning and a brief stationary zap ring.
 
 Kill scores keep the exact color of the squashed bug in both system themes. A dark inner outline and theme-aware outer outline keep them distinct over page content, with 0.7 seconds fully opaque followed by a 0.4-second fade. Burst fragments and hit rings still adapt to the system light/dark setting. Reduced motion keeps scores stationary and removes fragments. No theme switch or extra configuration is needed.
 
@@ -65,19 +67,19 @@ Kill scores keep the exact color of the squashed bug in both system themes. A da
 For an integration managed by your site's build, install the versioned npm package asset:
 
 ```sh
-npm install https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.0.13/chriscooley-swarm-protocol-1.0.13.tgz
+npm install https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.1.0/chriscooley-swarm-protocol-1.1.0.tgz
 ```
 
 Use the included `integration/SwarmProtocol.astro` template and the deferred package entry, following [the npm/Astro guide](./docs/API.md#astro). Keep one installer and preserve existing selector/storage configuration when migrating from the drop-in. Commit the package manifest and lockfile. The game is served by your website after building; GitHub is only a package source during installation. npm registry publication is not required.
 
 ## Stay on a tested version
 
-Each published release has its own tag, ZIP, and static asset folder. A site using `/swarm-protocol/1.0.13/install.js` keeps using that version as this repository evolves.
+Each published release has its own tag, ZIP, and static asset folder. A site using `/swarm-protocol/1.1.0/install.js` keeps using that version as this repository evolves.
 
 The exact-version download pattern is:
 
 ```text
-https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.0.13/swarm-protocol-drop-in-1.0.13.zip
+https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.1.0/swarm-protocol-drop-in-1.1.0.zip
 ```
 
 That URL becomes available when the release is published. Download once and copy the files into your site; it is not a browser script URL. Avoid a `latest` download URL in automation that must stay pinned.
