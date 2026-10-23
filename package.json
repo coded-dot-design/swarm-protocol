@@ -56,6 +56,9 @@
     }
   },
   "scripts": {
+    "dev": "vite --config playground/vite.config.mjs",
+    "playground:build": "vite build --config playground/vite.config.mjs",
+    "playground:preview": "vite preview --config playground/vite.config.mjs",
     "build": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit",
     "test": "node --test tests/*.test.mjs",
@@ -81,7 +84,8 @@
     "esbuild": "0.28.2",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "typescript": "7.0.2"
+    "typescript": "7.0.2",
+    "vite": "8.3.5"
   },
   "repository": {
     "type": "git",

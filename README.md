@@ -6,6 +6,17 @@ Install the versioned npm package or use the **self-hosted drop-in ZIP**. Both s
 
 **v1.1.0** adds points-funded **Jump / Jump + Zap** to offscreen attack alerts. Bugs arrive in your viewport near the pointer; small bugs stay near local food and buttons, while grown hunters keep their mission and bite letters in their path. Scrolling can outrun the swarm. Mobile keeps its steady CSS fill and lighter effects; desktop retains its hover boil. Activation remains **↑ ↑ ↓ ↓ ← → ← → B A Enter**.
 
+## Local playground
+
+Test on a standalone fictional webpage before updating your company site. From this repository, with Node 22.12+ (or Node 24):
+
+```bash
+npm ci
+npm run dev
+```
+
+Open **http://127.0.0.1:5173**. Start, pause, and reset the real game; test distant attacks, letters only, nested scrolling, system light/dark mode, and ordinary page interactions. Source edits reload directly. The playground and Vite are development-only and are excluded from the game package and drop-in ZIP. See **[playground setup and testing](playground/README.md)** for phone testing, updates, build preview, and adding future games.
+
 ## Install the drop-in ZIP in Astro
 
 Download `swarm-protocol-drop-in-1.1.0.zip` from the `v1.1.0` release, then extract it. Choose the built drop-in asset; GitHub's automatically generated source archives contain the development project.

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="A local playground for small games on real web pages." />
+    <title>Fieldwork — Game playground</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23c6ef86'/%3E%3Cpath d='M9 24V8h15v4H13v3h9v4h-9v5' fill='%23131710'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <a class="skip" href="#page">Skip to page</a>
+    <header class="lab" data-swarm-ui>
+      <a class="lab-brand" href="#top" aria-label="Game playground, back to top"><span class="brand-mark">✳</span><span>CODED<span class="brand-divider">/</span><span class="muted">PLAYGROUND</span></span></a>
+      <div class="lab-actions">
+        <label class="sr-only" for="game-select">Game</label>
+        <select id="game-select" aria-label="Game"></select>
+        <button class="tool-start" id="play" disabled>Start game <span aria-hidden="true">↗</span></button>
+        <button class="tool" id="pause" disabled>Pause</button>
+        <button class="tool" id="reset" disabled>Reset</button>
+      </div>
+    </header>
+
+    <div class="lab-sub" data-swarm-ui>
+      <div class="readouts"><span class="state"><i id="state-dot"></i><span id="state">Loading</span></span><span><b id="bugs">0</b> bugs</span><span><b id="score">0</b> points</span><span id="theme">System theme</span></div>
+      <details class="settings" id="test-controls">
+        <summary>Test controls <span aria-hidden="true">+</span></summary>
+        <div class="settings-panel">
+          <label for="scenario">Page scenario</label>
+          <select id="scenario"><option value="page">Full page · all bases</option><option value="remote">Distant base · jump / zap</option><option value="no-targets">Letters only · no bases</option></select>
+          <p id="scenario-help">Play across the whole page, including a nested scroll area.</p>
+          <label for="motion">Game motion</label>
+          <select id="motion"><option value="system">Follow system</option><option value="reduce">Reduced motion</option></select>
+          <p>Appearance follows your system. Use browser emulation to check light, dark, touch, and small screens.</p>
+          <div class="events-heading">Recent game events</div>
+          <ol id="events"><li>No events yet. Start a round.</li></ol>
+          <p class="source-note">Local source · no account or company services</p>
+        </div>
+      </details>
+    </div>
+    <div class="notice" id="notice" role="status" aria-live="polite">Choose Start game, then squash the swarm. Esc exits and restores the page.</div>
+
+    <div id="top"></div>
+    <nav class="site-nav wrap" aria-label="Fictional site">
+      <a class="site-brand" href="#top">fieldwork<span>®</span></a>
+      <div><a href="#collection">Collection</a><a href="#notes">Notes</a><a href="#contact">Say hello <span aria-hidden="true">↗</span></a></div>
+    </nav>
+
+    <main id="page">
+      <section class="hero wrap" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <div class="eyebrow"><span class="tiny-square"></span> AN OPEN FIELD FOR IDEAS</div>
+          <h1 id="hero-title" data-swarm-text>Ordinary page.<br><em>Extraordinary</em><br>little world.</h1>
+          <p class="lede" data-swarm-text>Lorem ipsum dolor sit amet, consectetur adipiscing elit. A little room to explore, a few things to discover, and something unexpected around the corner.</p>
+          <div class="hero-actions"><a class="button primary" id="base-hero" data-swarm-target data-swarm-label="Welcome" href="#collection">Explore the collection <span aria-hidden="true">↗</span></a><span class="quiet-label">SCROLL. EXPLORE. REPEAT.</span></div>
+        </div>
+        <div class="hero-art" data-swarm-surface aria-label="Abstract green orbital study">
+          <div class="art-top"><span>FIELD STUDY — 001</span><span>↗</span></div>
+          <svg class="orbit" viewBox="0 0 480 480" role="img" aria-label="Overlapping ellipses around a central circle">
+            <defs><pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="12" cy="12" r="1" fill="currentColor" opacity=".22" /></pattern></defs>
+            <rect width="480" height="480" fill="url(#dots)" />
+            <g fill="none" stroke="currentColor" stroke-width="1.2"><ellipse cx="240" cy="240" rx="180" ry="66" transform="rotate(-45 240 240)"/><ellipse cx="240" cy="240" rx="180" ry="66" transform="rotate(45 240 240)"/><ellipse cx="240" cy="240" rx="180" ry="66" transform="rotate(90 240 240)"/><ellipse cx="240" cy="240" rx="180" ry="66"/><circle cx="240" cy="240" r="94" opacity=".6" /></g>
+            <circle cx="240" cy="240" r="28" fill="currentColor" /><circle cx="365" cy="114" r="8" fill="currentColor" /><circle cx="115" cy="365" r="5" fill="currentColor" />
+          </svg>
+          <div class="art-bottom"><span>A study in<br>small possibilities.</span><span class="art-cross">+</span></div>
+        </div>
+        <div class="hero-foot"><span>INDEPENDENT IDEAS. SHARED SPACE.</span><span>EST. 2026 <span aria-hidden="true">↓</span></span></div>
+      </section>
+
+      <section class="collection wrap section" id="collection" aria-labelledby="collection-title">
+        <div class="section-head"><div><div class="eyebrow">01 / THE COLLECTION</div><h2 id="collection-title" data-swarm-text>A few things<br>worth a closer look.</h2></div><p data-swarm-text>Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.</p></div>
+        <div class="cards">
+          <article class="card"><div class="card-art art-lime" data-swarm-surface><span class="number">01</span><div class="sculpture stack" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div><span class="art-caption">FORM / FUNCTION</span></div><div class="card-copy"><div class="eyebrow">OBJECTS & POSSIBILITIES</div><h3 data-swarm-text>Simple by nature.</h3><p data-swarm-text>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae justo eget magna fermentum iaculis.</p><button class="button text-button" id="base-form" data-swarm-target data-swarm-label="Form" data-demo-action="Form study opened">View the study <span aria-hidden="true">↗</span></button></div></article>
+          <article class="card"><div class="card-art art-peach" data-swarm-surface><span class="number">02</span><div class="sculpture arches" aria-hidden="true"><i></i><i></i><i></i><i></i></div><span class="art-caption">SPACE / PERSPECTIVE</span></div><div class="card-copy"><div class="eyebrow">A DIFFERENT PERSPECTIVE</div><h3 data-swarm-text>Room to wander.</h3><p data-swarm-text>Quisque non tellus orci ac auctor augue mauris. Nisl tincidunt eget nullam non nisi est sit amet facilisis.</p><button class="button text-button peach" id="base-space" data-swarm-target data-swarm-label="Space" data-demo-action="Space study opened">View the study <span aria-hidden="true">↗</span></button></div></article>
+          <article class="card"><div class="card-art art-blue" data-swarm-surface><span class="number">03</span><div class="sculpture discs" aria-hidden="true"><i></i><i></i><i></i></div><span class="art-caption">RHYTHM / REPEAT</span></div><div class="card-copy"><div class="eyebrow">SMALL EVERYDAY DETAILS</div><h3 data-swarm-text>Find your rhythm.</h3><p data-swarm-text>Viverra suspendisse potenti nullam ac tortor vitae purus. Nulla aliquet enim tortor at auctor urna nunc.</p><button class="button text-button blue" id="base-rhythm" data-swarm-target data-swarm-label="Rhythm" data-demo-action="Rhythm study opened">View the study <span aria-hidden="true">↗</span></button></div></article>
+        </div>
+      </section>
+
+      <section class="notes section" id="notes" aria-labelledby="notes-title">
+        <div class="wrap notes-grid">
+          <div><div class="eyebrow">02 / NOTES FROM THE FIELD</div><h2 id="notes-title" data-swarm-text>Less noise.<br>More <em>curiosity.</em></h2><p class="lede" data-swarm-text>Faucibus purus in massa tempor nec feugiat nisl pretium fusce. Morbi tincidunt ornare massa eget egestas purus viverra accumsan.</p><a class="button secondary" id="base-notes" data-swarm-target data-swarm-label="Notes" href="#board">Keep exploring <span aria-hidden="true">↓</span></a></div>
+          <div class="editorial"><span class="eyebrow">A NOTE ON NOTHING IN PARTICULAR</span><p data-swarm-text>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vivamus consequat, sem at cursus luctus, ligula arcu finibus nunc, at dignissim libero velit ac augue.</p><p data-swarm-text>Donec imperdiet urna at turpis vulputate, vel pharetra augue pellentesque. Duis vitae neque sed justo ultricies volutpat. Curabitur blandit est vitae nunc malesuada, ut aliquam nisi consequat. Aliquam erat volutpat.</p><blockquote data-swarm-text>“Somewhere between an idea and a happy accident.”</blockquote><p data-swarm-text>Praesent commodo cursus magna, vel scelerisque nisl consectetur et. Maecenas faucibus mollis interdum. Cras mattis consectetur purus sit amet fermentum.</p><div class="byline"><span class="avatar" aria-hidden="true">f.</span><span>THE FIELDWORK JOURNAL<br><small>FICTIONAL WORDS, REAL SPACE.</small></span></div></div>
+        </div>
+      </section>
+
+      <section class="wrap section board-section" id="board" aria-labelledby="board-title">
+        <div class="section-head"><div><div class="eyebrow">03 / A SPACE TO PLAY</div><h2 id="board-title" data-swarm-text>Make room<br>for the unexpected.</h2></div><p data-swarm-text>Elementum tempus egestas sed sed risus pretium quam vulputate. Consequat interdum varius sit amet mattis vulputate enim.</p></div>
+        <div id="game-board" class="game-board" data-swarm-surface><span class="board-label">OPEN FIELD / 001</span><div class="board-symbol" aria-hidden="true">✳</div><div class="board-caption"><span>Nothing fixed.<br>Everything possible.</span><span aria-hidden="true">↗</span></div></div>
+        <div class="board-below"><div><h3 data-swarm-text>A little further inside.</h3><p data-swarm-text>Adipiscing commodo elit at imperdiet dui accumsan sit amet. Sed viverra ipsum nunc aliquet bibendum enim facilisis gravida.</p></div><div class="nested-shell"><div class="nested-header"><span>THE SCROLLING ROOM</span><span>SCROLL INSIDE ↓</span></div><div class="nested-scroll" tabindex="0" role="region" aria-label="Nested scrolling room"><div class="nested-content"><p data-swarm-text>There is always a little more to discover.</p><span class="nested-lines" aria-hidden="true"></span><div><p data-swarm-text>Velit egestas dui id ornare arcu. Integer malesuada nunc vel risus commodo viverra.</p><button class="button secondary" id="base-room" data-swarm-target data-swarm-label="Inner room" data-demo-action="Inner room reached">You found the room <span aria-hidden="true">↗</span></button></div></div></div></div></div>
+      </section>
+
+      <section class="contact section" id="contact" aria-labelledby="contact-title">
+        <div class="wrap contact-grid"><div><div class="eyebrow">04 / KEEP IN TOUCH</div><h2 id="contact-title" data-swarm-text>Something good<br>starts with <em>hello.</em></h2><p class="lede" data-swarm-text>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Tellus in metus vulputate eu scelerisque felis imperdiet proin.</p><button class="button primary" id="base-contact" data-swarm-target data-swarm-label="Contact" data-demo-action="Hello from the last base">Say hello <span aria-hidden="true">↗</span></button></div><form id="demo-form" data-swarm-ignore><span class="eyebrow">A PLACE FOR A THOUGHT</span><label for="your-name">Your name</label><input id="your-name" name="name" placeholder="Alex Example" autocomplete="off" required /><label for="your-note">A few words</label><textarea id="your-note" name="note" rows="3" placeholder="Something on your mind…" required></textarea><button class="form-button" type="submit">Leave a note <span aria-hidden="true">↗</span></button><p class="form-note">Just a local demo. Nothing is sent or saved.</p><p id="form-result" role="status"></p></form></div>
+      </section>
+    </main>
+    <footer class="footer wrap"><a class="site-brand" href="#top">fieldwork<span>®</span></a><span>AN ENTIRELY FICTIONAL PLACE.</span><span data-swarm-trigger tabindex="0" aria-label="Game secret: hold, release, then tap">© 2026 — Stay curious.</span></footer>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

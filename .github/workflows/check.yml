@@ -31,6 +31,8 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Check types, build, and test
         run: npm run check
+      - name: Build the local playground
+        run: npm run playground:build
       - name: Build the self-hosted release
         run: npm run release:build
       - name: Retain the checked download for review
