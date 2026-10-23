@@ -2,6 +2,13 @@
 
 Each published version keeps its original tag and release assets. Corrections are released under a new version.
 
+## 1.0.13 — Steadier, lighter mobile button feedback
+
+- Use a native CSS gradient with three static radial bubble layers on viewports up to 640px or coarse-pointer devices. Update the fill with health changes instead of continuously replacing SVG images.
+- Use one softer beacon with a 50% longer cycle and smaller spread on mobile. Skip mobile bite shaking/ripples and sticky-hover boiling; retain bug latching and solid bug-colored bite particles.
+- Suppress the native tap highlight only on powered mobile targets, restoring it on depletion, desktop-mode changes, and cleanup.
+- Preserve desktop liquid/hover animation, the 12Hz maximum background update rate, reduced motion, pause, offscreen behavior, and native clicks. Switch visual paths when viewport/pointer capability changes without resetting health.
+
 ## 1.0.12 — Boiling hover and visible bite bubbles
 
 - Replace opacity-only hover with a gentle simmer that eases up to a 4× boil on hover and settles on exit, without restarting bubble positions, health, or beacon timing.

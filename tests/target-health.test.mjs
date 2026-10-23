@@ -287,3 +287,63 @@ test('hover boils faster at the same bounded paint cadence and restores the guar
   }
   assert.ok(sample(true) > sample(false) * 2, 'Hover increases travel, not paint frequency');
 });
+
+for (const mobile of [true, false]) {
+  test(`${mobile ? 'narrow phone' : 'wide touch device'} keeps a native fill stable between bites and ignores sticky hover`, () => {
+    const p = fixture(createDomDefender, { mobile, footer: true });
+    p.coarse.matches = !mobile;
+    let hovered = false;
+    p.lead.matches = () => hovered;
+    p.call('start');
+    const background = p.lead.style.getPropertyValue('background-image');
+    assert.equal((background.match(/radial-gradient/g) || []).length, 3);
+    assert.ok(background.includes('linear-gradient(to top'));
+    assert.ok(!background.includes('data:image'));
+    assert.equal(p.lead.style.getPropertyValue('-webkit-tap-highlight-color'), 'transparent');
+    p.tick(.4);
+    assert.equal(p.engine.getSnapshot().targets[0].health, 100);
+    assert.equal(p.lead.style.getPropertyValue('background-image'), background);
+    hovered = true;
+    p.fire('pointerover', { target: p.lead, pointerType: 'touch' });
+    p.tick(.4);
+    assert.equal(p.lead.style.getPropertyValue('background-image'), background);
+    assert.equal(p.lead.style.getPropertyValue('translate'), '');
+    assert.equal(p.signals.length, 1);
+    assert.ok(p.signals.every(s => s.alpha <= .35));
+    p.finish();
+  });
+}
+
+test('mobile damage drains CSS fill without image swaps or shakes and keeps colored bite particles', () => {
+  const p = fixture(createDomDefender, { mobile: true, noText: true, footer: true, feedback: true });
+  p.call('start');
+  for (let i = 0; i < 900 && !p.events.some(e => e.type === 'damage'); i++) p.tick(1 / 60);
+  const bug = [...p.live.values()].find(b => b.siphonUntil > p.engine.getSnapshot().elapsed);
+  assert.ok(bug);
+  assert.ok(p.feedback.some(f => f.kind === 'bubble' && f.color === bug.color));
+  p.tick(.1);
+  assert.ok(p.engine.getSnapshot().targets[0].health < 100);
+  assert.ok(!p.lead.style.getPropertyValue('background-image').includes('data:image'));
+  assert.notEqual(p.lead.style.getPropertyValue('background-size').split(',')[0], '100% 100%');
+  assert.equal(p.lead.style.getPropertyValue('translate'), '');
+  assert.equal(p.lead.style.getPropertyValue('rotate'), '');
+  p.call('pause');
+  const styles = p.lead.style.cssText;
+  p.tick(1);
+  assert.equal(p.lead.style.cssText, styles);
+  p.finish();
+});
+
+test('changing pointer capability switches the fill path without resetting health', () => {
+  const p = fixture(createDomDefender, { footer: true });
+  p.call('start');
+  assert.ok(p.lead.style.getPropertyValue('background-image').includes('data:image'));
+  p.coarse.matches = true; p.tick(.12);
+  assert.ok(!p.lead.style.getPropertyValue('background-image').includes('data:image'));
+  assert.equal(p.engine.getSnapshot().targets[0].health, 100);
+  p.coarse.matches = false; p.tick(.12);
+  assert.ok(p.lead.style.getPropertyValue('background-image').includes('data:image'));
+  assert.equal(p.lead.style.getPropertyValue('-webkit-tap-highlight-color'), '');
+  assert.equal(p.engine.getSnapshot().targets[0].health, 100);
+  p.finish();
+});

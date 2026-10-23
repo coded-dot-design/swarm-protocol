@@ -2,6 +2,23 @@
 
 The optimization preserves the approved game rules and appearance. It reduces repeated work in the engine and defers the entire game behind a small installer. The report below measures deterministic operation counts, not hardware frame rate or elapsed performance.
 
+## Version 1.0.13 mobile stability
+
+Viewports up to 640px and coarse-pointer devices use native CSS gradients for the health fill and three static radial bubbles. The game no longer serializes/decodes a new SVG background continuously on those devices. The bubble layers are cached per target, remain behind the label, and scale into the remaining fill. Background changes are driven by health or mode changes, under the existing 12Hz maximum; unchanged health produces no ongoing background writes. Touch hover does not trigger boiling or an immediate background repaint.
+
+Mobile feedback uses one canvas beacon instead of two, with a 50% longer period, smaller spread, and alpha capped at .35 instead of .65. Per-frame button translation/rotation for bites is skipped. The existing bug latch, body response, and bug-colored solid particles remain in the shared canvas loop. The native tap highlight is disabled only while the target is powered. Depletion tilt is a one-time change; native styles return on cleanup. Desktop retains its six-bubble boil and liquid ripple behavior.
+
+All 152 automated tests pass, including narrow-phone and wide-touch stable-fill checks, sticky hover, health drain/particles, pointer capability transitions, and restoration. Browser checks use touch-emulated phone/tablet contexts and verify the absence of game SVG background swaps. These do not reproduce every physical mobile GPU/browser; the patch removes the repeatedly decoded image path implicated by the reported flashing.
+
+| Loaded JavaScript | Minified bytes | Gzip bytes |
+| --- | ---: | ---: |
+| Initial deferred scheduler | 1,956 | 1,120 |
+| Additional activation bootstrap | 9,162 | 4,046 |
+| Additional game on first open/start | 67,832 | 25,999 |
+| Complete deferred path | 78,950 | 31,165 |
+
+The complete path adds 313 compressed bytes (about 1.0%) to v1.0.12. Initial loading stays about 1.1 kB compressed. No runtime dependency, additional timer/RAF loop, blur, or button shadow is added. These sizes and operation bounds are not hardware FPS measurements.
+
 ## Version 1.0.12 boiling hover
 
 Six interior bubbles share one clipped SVG background layer, with varied radii of 1.25–5.2px. Hover eases their existing motion clock from 1× to 4× speed; the number of bubbles and the 12Hz paint cap do not increase. Motion clocks freeze offscreen, on pause, with hidden tabs, and with reduced motion. One shared radius table avoids per-bubble array allocations. The fill opacity no longer changes on hover.
