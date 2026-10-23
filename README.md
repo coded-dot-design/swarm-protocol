@@ -2,13 +2,13 @@
 
 A hidden, opt-in game that runs across a real webpage. Little agents eat selected letters into `0` and `1`, grow stronger, and hunt marked buttons. Squash them before the buttons lose their color.
 
-The supported installation is a **self-hosted drop-in ZIP**. Copy the built files into your website and serve them with your own assets. Visitors do not load the game from GitHub, npm, or a separate game server.
+Install the versioned npm package or use the **self-hosted drop-in ZIP**. Both serve the built game with your own website assets. Visitors do not load the game from GitHub, npm, or a separate game server.
 
-**v1.0.10** turns marked buttons into power beacons: a green liquid fill drains through yellow to pink, ripples at real bites, and pulses more slowly as health falls. Bugs briefly latch while feeding; drained buttons regain their original background with a slight tilt. Button text and existing shadows are untouched. Native hover and keyboard focus keep working without replacing the power fill; the beacon brightens during interaction. Kill scores match the bug's color in both themes, and button-bite digits are larger. The corrected keyboard activation remains **↑ ↑ ↓ ↓ ← → ← → B A Enter**.
+**v1.0.11** uses each button's native hover color for its liquid power fill, then drains through yellow to pink. Hover/focus softens only the fill's opacity; the underlying background stays stable during play. Small bubbles in the original button color move behind its label, and subtle bite bubbles replace floating button digits. Bug-colored kill scores, liquid ripples, slowing beacons, latching, and cleanup remain. Button text and existing shadows are untouched. The corrected keyboard activation remains **↑ ↑ ↓ ↓ ← → ← → B A Enter**.
 
-## Install in Astro
+## Install the drop-in ZIP in Astro
 
-Download `swarm-protocol-drop-in-1.0.10.zip` from the `v1.0.10` release, then extract it. Choose the built drop-in asset; GitHub's automatically generated source archives contain the development project.
+Download `swarm-protocol-drop-in-1.0.11.zip` from the `v1.0.11` release, then extract it. Choose the built drop-in asset; GitHub's automatically generated source archives contain the development project.
 
 1. Copy `public/swarm-protocol/` into your Astro project's `public/` folder.
 2. Copy `components/SwarmDropIn.astro` into your project's `src/components/` folder.
@@ -38,7 +38,7 @@ Mark your existing elements:
 </footer>
 ```
 
-Keep the CTA's current URL and handlers. Select static presentation text and lead-opening buttons outside forms/dialogs. You can configure exact CSS selectors instead of adding attributes; edit `public/swarm-protocol/1.0.10/install.js`.
+Keep the CTA's current URL and handlers. Select static presentation text and lead-opening buttons outside forms/dialogs. You can configure exact CSS selectors instead of adding attributes; edit `public/swarm-protocol/1.0.11/install.js`.
 
 Run your site's usual `npm run dev`, or `npm run build` followed by `npm run preview`. No commit, deployment, package install, or React integration is needed for this test.
 
@@ -65,19 +65,19 @@ Kill scores keep the exact color of the squashed bug in both system themes. A da
 For an integration managed by your site's build, install the versioned npm package asset:
 
 ```sh
-npm install https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.0.10/chriscooley-swarm-protocol-1.0.10.tgz
+npm install https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.0.11/chriscooley-swarm-protocol-1.0.11.tgz
 ```
 
 Use the included `integration/SwarmProtocol.astro` template and the deferred package entry, following [the npm/Astro guide](./docs/API.md#astro). Keep one installer and preserve existing selector/storage configuration when migrating from the drop-in. Commit the package manifest and lockfile. The game is served by your website after building; GitHub is only a package source during installation. npm registry publication is not required.
 
 ## Stay on a tested version
 
-Each published release has its own tag, ZIP, and static asset folder. A site using `/swarm-protocol/1.0.10/install.js` keeps using that version as this repository evolves.
+Each published release has its own tag, ZIP, and static asset folder. A site using `/swarm-protocol/1.0.11/install.js` keeps using that version as this repository evolves.
 
 The exact-version download pattern is:
 
 ```text
-https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.0.10/swarm-protocol-drop-in-1.0.10.zip
+https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.0.11/swarm-protocol-drop-in-1.0.11.zip
 ```
 
 That URL becomes available when the release is published. Download once and copy the files into your site; it is not a browser script URL. Avoid a `latest` download URL in automation that must stay pinned.

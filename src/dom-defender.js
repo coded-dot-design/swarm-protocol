@@ -1,6 +1,7 @@
 import { createAttackIndicators, getAttackEdges } from './attack-indicators.js';
 import { feedbackColors } from './feedback-colors.js';
 import { targetSignal, liquidFill } from './target-health.js';
+import { readTargetPalette, cssLayers } from './target-palette.js';
 
 /**
  * DOM Defender — a dependency-free, opt-in overlay.
@@ -171,7 +172,7 @@ export function createDomDefender(options = {}) {
       id: element.id || `swarm-target-${index + 1}`,
       label: element.getAttribute('data-swarm-label') || element.getAttribute('aria-label') || element.textContent.trim().slice(0, 48) || `Target ${index + 1}`,
       health: 100, rect: null, visible: false, rendered: false, enrolled: false, bites: 0,
-      originalBackground: null, cornerRadius: 8, pulsePhase: index * .17, interactive: false, interactionUntil: 0,
+      originalBackground: null, palette: null, cornerRadius: 8, pulsePhase: index * .17, interactive: false, interactionUntil: 0,
       hitUntil: 0, liquidUntil: 0, liquidBite: .5, liquidActive: false, moving: false, paintDirty: true, lastPaint: -Infinity,
     }));
     const seenNodes = new Set();
@@ -322,37 +323,12 @@ export function createDomDefender(options = {}) {
     state.best = state.score;
     try { win.localStorage.setItem(bestKey, String(state.best)); } catch {}
   }
-  function cssLayers(value) {
-    const layers = [];
-    let depth = 0, start = 0, quote = '';
-    for (let i = 0; i < value.length; i++) {
-      const c = value[i];
-      if (quote) { if (c === quote && value[i - 1] !== '\\') quote = ''; continue; }
-      if (c === '"' || c === "'") quote = c;
-      else if (c === '(') depth++;
-      else if (c === ')') depth--;
-      else if (c === ',' && !depth) { layers.push(value.slice(start, i).trim()); start = i + 1; }
-    }
-    layers.push(value.slice(start).trim());
-    return layers;
-  }
   function rememberBackground(target) {
     if (target.originalBackground) return;
-    // Sample the host's current :hover/:focus background without our layer.
-    // This read happens at interaction boundaries, never in the draw loop.
-    const saved = [];
-    for (const name of targetPaintProperties) {
-      const record = styleLedger.get(target.element)?.get(name);
-      if (!record || record.abandoned) continue;
-      const style = target.element.style;
-      if (style.getPropertyValue(name) !== record.latest || style.getPropertyPriority(name) !== record.latestPriority) continue;
-      saved.push([name, record.latest, record.latestPriority]);
-      if (record.original) style.setProperty(name, record.original, record.priority);
-      else style.removeProperty(name);
-    }
     const style = win.getComputedStyle?.(target.element) || target.element.style;
     const read = (name, fallback) => style.getPropertyValue(name) || fallback;
     const images = cssLayers(read('background-image', 'none'));
+    target.palette = readTargetPalette(target.element, doc);
     const expand = (name, fallback) => {
       const values = cssLayers(read(name, fallback));
       return images.map((_, i) => values[i % values.length]);
@@ -366,9 +342,8 @@ export function createDomDefender(options = {}) {
       origins: expand('background-origin', 'padding-box'),
       clips: expand('background-clip', 'border-box'),
     };
-    for (const [name, value, priority] of saved) target.element.style.setProperty(name, value, priority);
   }
-  const targetPaintProperties = ['background-image', 'background-size', 'background-position', 'background-repeat', 'background-origin', 'background-clip'];
+  const targetPaintProperties = ['background-color', 'background-image', 'background-size', 'background-position', 'background-repeat', 'background-origin', 'background-clip'];
   function restoreProperties(element, names, release = false) {
     const properties = styleLedger.get(element);
     if (!properties) return;
@@ -401,14 +376,19 @@ export function createDomDefender(options = {}) {
     }
     rememberBackground(target);
     const base = target.originalBackground;
-    const signal = targetSignal(target.health);
+    const signal = targetSignal(target.health, target.palette?.power);
     // One solid color with a hard horizontal edge: the fill drains downward.
     // Original background layers remain visible in the empty part of the tank.
     const appendBase = (value, originals) => [value, ...(base.images.length ? originals : [])].join(',');
     const ripple = !reducedMotion && target.visible ? Math.max(0, target.liquidUntil - state.elapsed) / .65 : 0;
     target.liquidActive = ripple > 0;
-    const layer = liquidFill(signal.fill, signal.color, ripple, .65 * (1 - ripple), target.liquidBite);
+    const bubbles = !reducedMotion && target.visible ? {
+      color: target.palette.base, time: state.elapsed,
+      width: Math.max(1, target.rect.width), height: Math.max(1, target.rect.height),
+    } : null;
+    const layer = liquidFill(signal.fill, signal.color, ripple, .65 * (1 - ripple), target.liquidBite, target.interactive ? .86 : 1, bubbles);
     // Only the power background outranks host hover rules, including !important.
+    setStyle(el, 'background-color', target.palette.base, 'important');
     setStyle(el, 'background-image', [layer, ...base.images].join(','), 'important');
     setStyle(el, 'background-size', appendBase('100% 100%', base.sizes), 'important');
     setStyle(el, 'background-position', appendBase('0% 0%', base.positions), 'important');
@@ -425,7 +405,6 @@ export function createDomDefender(options = {}) {
       if (target.interactive === interactive) continue;
       target.interactive = interactive;
       target.interactionUntil = state.elapsed + .35;
-      target.originalBackground = null;
       restoreProperties(el, ['translate', 'rotate'], true);
       target.moving = false;
       geometryDirty = true;
@@ -452,14 +431,14 @@ export function createDomDefender(options = {}) {
   function drawTargetSignals() {
     for (const target of targets) {
       if (!target.visible || !target.rendered || !target.element.isConnected || target.health <= 0) continue;
-      const signal = targetSignal(target.health), r = target.rect;
+      const signal = targetSignal(target.health, target.palette?.power), r = target.rect;
       ctx.save();
       ctx.strokeStyle = signal.color;
-      ctx.lineWidth = target.interactive ? 2 : 1.5;
+      ctx.lineWidth = 1.5;
       for (let band = 0; band < (reducedMotion ? 1 : 2); band++) {
         const phase = reducedMotion ? 0 : (target.pulsePhase + band * .5) % 1;
         const spread = 2 + phase * (12 + signal.fill * .08);
-        ctx.globalAlpha = (1 - phase) ** 2 * (target.interactive ? .95 : .65);
+        ctx.globalAlpha = (1 - phase) ** 2 * .65;
         ctx.beginPath();
         ctx.roundRect(r.left - spread, r.top - spread, r.width + spread * 2, r.height + spread * 2, target.cornerRadius + spread);
         ctx.stroke();
@@ -477,7 +456,7 @@ export function createDomDefender(options = {}) {
     target.paintDirty = true;
     if (target.health <= 0) paintTarget(target);
     if (!reducedMotion && particles.length < MAX_PARTICLES - 2) {
-      particles.push({ x: clamp(bug.x + Math.cos(bug.angle) * 8 * bug.size, target.rect.left, target.rect.right), y: clamp(bug.y + Math.sin(bug.angle) * 8 * bug.size, target.rect.top, target.rect.bottom), vx: rand(-12, 12), vy: -rand(18, 30), life: .8, total: .8, color: bug.color, bite: true, text: Math.random() > .5 ? '1' : '0' });
+      particles.push({ x: clamp(bug.x + Math.cos(bug.angle) * 8 * bug.size, target.rect.left, target.rect.right), y: clamp(bug.y + Math.sin(bug.angle) * 8 * bug.size, target.rect.top, target.rect.bottom), vx: rand(-12, 12), vy: -rand(18, 30), life: .8, total: .8, color: targetSignal(target.health, target.palette?.power).color, bubble: true, radius: rand(1.8, 3.2) });
     }
     emit('damage', { targetId: target.id, health: target.health });
     const playable = targets.filter(t => t.enrolled && t.rendered && t.element.isConnected);
@@ -922,19 +901,27 @@ export function createDomDefender(options = {}) {
     drawTargetSignals();
     for (const bug of bugs) drawBug(bug, state.elapsed);
     for (const p of particles) {
-      ctx.globalAlpha = clamp(p.life / (p.score ? .4 : p.bite ? .5 : p.total), 0, 1);
-      if (p.text) {
-        ctx.font = p.score ? '700 16px ui-monospace, monospace' : p.bite ? '600 15px ui-monospace, monospace' : '10px ui-monospace, monospace';
+      ctx.globalAlpha = clamp(p.life / (p.score ? .4 : p.total), 0, 1);
+      if (p.bubble) {
+        const progress = 1 - p.life / p.total;
+        ctx.globalAlpha *= .55;
+        ctx.beginPath();
+        ctx.arc(p.x + Math.sin(progress * 7) * 2, p.y, p.radius * (1 + progress * .4), 0, Math.PI * 2);
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = .8;
+        ctx.stroke();
+      } else if (p.text) {
+        ctx.font = p.score ? '700 16px ui-monospace, monospace' : '10px ui-monospace, monospace';
         ctx.textAlign = 'center';
         ctx.fillStyle = p.color;
-        if (p.score || p.bite) {
+        if (p.score) {
           ctx.save();
           ctx.strokeStyle = colors.outline;
-          ctx.lineWidth = p.score ? 6 : 4.5;
+          ctx.lineWidth = 6;
           ctx.lineJoin = 'round';
           ctx.strokeText(p.text, p.x, p.y);
           ctx.strokeStyle = '#101010';
-          ctx.lineWidth = p.score ? 3 : 2.5;
+          ctx.lineWidth = 3;
           ctx.strokeText(p.text, p.x, p.y);
           ctx.restore();
         }
@@ -1000,9 +987,9 @@ export function createDomDefender(options = {}) {
     }
     // Coalesce health paints; pulse drawing shares the existing canvas loop.
     for (const target of targets) {
-      const rippling = !reducedMotion && target.health > 0 && target.visible && target.liquidUntil > state.elapsed;
-      if (target.rendered && (target.paintDirty || rippling || target.liquidActive) && state.elapsed - target.lastPaint >= .05) paintTarget(target);
-      if (target.health > 0 && !reducedMotion) target.pulsePhase = (target.pulsePhase + dt / targetSignal(target.health).period) % 1;
+      const bubbling = !reducedMotion && target.health > 0 && target.visible;
+      if (target.rendered && (target.paintDirty || bubbling || target.liquidActive) && state.elapsed - target.lastPaint >= 1 / 12) paintTarget(target);
+      if (target.health > 0 && !reducedMotion) target.pulsePhase = (target.pulsePhase + dt / targetSignal(target.health, target.palette?.power).period) % 1;
       animateTargetHit(target);
     }
     let liveParticles = 0;

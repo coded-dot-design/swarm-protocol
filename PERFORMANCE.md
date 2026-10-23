@@ -2,6 +2,23 @@
 
 The optimization preserves the approved game rules and appearance. It reduces repeated work in the engine and defers the entire game behind a small installer. The report below measures deterministic operation counts, not hardware frame rate or elapsed performance.
 
+## Version 1.0.11 native colors and bubbles
+
+Native hover palette discovery runs once per target per round, using accessible stylesheet rules and one temporary background/custom-property probe. It preserves original stylesheets and removes its marker/style immediately. An explicit `--swarm-power-color` skips stylesheet discovery. This adds startup work proportional to selected targets and accessible rules; it is not per-frame or per-hover polling. Select only participating buttons. Palettes are stable for the round and sampled again on restart.
+
+Three tiny interior bubbles are part of the existing button background, behind labels. Their bounded animation and actual bite ripples update at most 12Hz on visible powered buttons. The flat liquid path skips wave calculations outside a bite. The shared SVG clip contains both the fill and bubbles, and there are no new live DOM children per bubble. This adds ongoing background paints while visible, including between bites; it is a deliberate visual cost, not a claim of zero overhead. Offscreen targets, pauses, hidden tabs, and reduced motion suspend decorative movement.
+
+External bite bubbles replace existing binary particles within the 120-particle cap. They use one thin canvas circle, without score outlines or text. Scores retain their existing color, outline, and timing. No runtime dependencies, JavaScript timers, additional RAF loop, button box shadows, or blur are added.
+
+| Loaded JavaScript | Minified bytes | Gzip bytes |
+| --- | ---: | ---: |
+| Initial deferred scheduler | 1,956 | 1,122 |
+| Additional activation bootstrap | 9,162 | 4,043 |
+| Additional game on first open/start | 65,050 | 24,711 |
+| Complete deferred path | 76,168 | 29,876 |
+
+The complete path adds 1,088 compressed bytes (about 3.8%) to v1.0.10. The initial scheduler remains about 1.1 kB compressed. Sizes sum separately compressed emitted files and do not measure device FPS.
+
 ## Version 1.0.10 target feedback
 
 The new beacon uses two thin rounded strokes on the existing canvas, cached target rectangles, and the existing frame loop. It adds no blur, box shadows, runtime dependencies, JavaScript timers, or separate animation frames. Each real bite briefly holds the attacker at its target and triggers a 0.65-second localized liquid ripple. Ripple backgrounds are repainted at most 20 times per second, only on visible recently bitten targets. Short button nudges use the same frame loop and individual translate/rotate properties; the site's transform and label styles remain intact. Hover/focus boundaries refresh the host background once and brighten the existing beacon; there is no per-frame hover-style lookup. Geometry uses its existing 80ms dirty-refresh limit briefly while native hover movement settles. Game motion yields to native hover/focus, and damage/pulse timing is unchanged. Pause and hidden tabs freeze time-based effects with the game; explicit hover/focus may still update a paused target. Reduced motion removes ripple, shake, body pulse, and tilt, and draws a steady ring.

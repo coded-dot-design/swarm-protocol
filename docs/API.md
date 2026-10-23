@@ -11,14 +11,14 @@ Original game and integration code: **MIT, copyright 2026 Chris Cooley**. The em
 For an npm-managed Astro integration, install the pinned package asset from the GitHub release:
 
 ```sh
-npm install https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.0.10/chriscooley-swarm-protocol-1.0.10.tgz
+npm install https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.0.11/chriscooley-swarm-protocol-1.0.11.tgz
 ```
 
 This records the versioned URL in your package manifest and lockfile. Commit both so CI can install the same package. GitHub is contacted during dependency installation; the deployed game is bundled and served by your own website. Pushing to GitHub does not change an installed version automatically. npm registry publication is still deferred; the package name remains `@chriscooley/swarm-protocol`.
 
 See [Astro](#astro) below for the included component. When migrating from the drop-in, replace `SwarmDropIn` with `SwarmProtocol` in your shared layout, carry over selector/storage configuration, and remove the old installer include. Once no code references them, remove the old `SwarmDropIn.astro` and copied `public/swarm-protocol/` files. Preserve the existing `data-swarm-*` page attributes and CTA handlers. If upgrading from a local `file:vendor/...tgz` dependency, the URL install replaces that dependency; remove its unused vendor tarball after confirming the manifest and lockfile use the URL.
 
-The [self-hosted drop-in ZIP](./DROP-IN.md) remains available for sites that prefer copied static assets. You can also install a downloaded package file directly with `npm install ./chriscooley-swarm-protocol-1.0.10.tgz`.
+The [self-hosted drop-in ZIP](./DROP-IN.md) remains available for sites that prefer copied static assets. You can also install a downloaded package file directly with `npm install ./chriscooley-swarm-protocol-1.0.11.tgz`.
 
 To create a tarball from the source repository:
 
@@ -251,11 +251,20 @@ Each bug starts with one hit point. It must reach a visible Unicode letter and v
 
 Kills award `(10 + speed bonus + tier bonus) × combo`. The speed bonus is 20 before age 3 seconds or 10 before age 6 seconds; each tier above the first adds 10. Kills within 1.5 seconds build up to a ×4 combo. Waves arrive every 18 active seconds, starting at 12 arrivals and adding 6 per wave, capped at 48 live plus queued bugs. Clearing early gives `50 × wave` points, repairs surviving targets by 9, and starts a 3-second intermission. A timed advance grants no clear bonus or repair.
 
-Rendered targets start with a solid green (`#74DFA1`) power fill. It drains vertically, turns yellow (`#CDDE00`) at 60% health, and becomes pink (`#F4457A`) at 25%. Two thin canvas bands pulse from the button, slowing from a 0.7-second to a 2.8-second cycle as health falls. Every real bite briefly latches the bug, disturbs the liquid near the contact point, nudges the button, and releases a larger binary digit. At zero, the fill and beacon disappear; the original background returns with a slight tilt. Labels, font colors, text shadows, existing box shadows, handlers, and disabled state are never changed by this effect. Stop/Escape restores owned changes while preserving newer site edits.
+Rendered targets start with their native hover background color as the liquid power fill. It drains vertically, turns yellow (`#CDDE00`) at 60% health, and becomes pink (`#F4457A`) at 25%. Two thin canvas bands pulse from the button, slowing from a 0.7-second to a 2.8-second cycle as health falls. Every real bite briefly latches the bug, disturbs the liquid near the contact point, nudges the button, and releases a small, thin circle. These bite bubbles replace the previous floating button digits; letter-feeding digits and kill scores are unchanged. Three small circles in the button's original surface color rise/fade inside the liquid, behind its real label.
 
-Hover and focus do not reset health or replace the power fill, even when a site uses an `!important` hover background. The six background-layer properties owned by the game take priority while power remains. Native text/border/outline/transform rules still apply; the underlying hover background is sampled at interaction boundaries and shows through the drained portion. The beacon brightens without changing cadence. During hover or focus within the target, game nudges/tilt yield to native movement; the liquid and actual damage continue. At zero health the complete native background, including hover, takes over. Newer inline edits by the host still take ownership, as with all game mutations.
+During play, the original background remains stable under the fill. Hover/focus reduces the fill opacity to 86% without changing its color, level, or pulse phase, including when the site has `!important` hover backgrounds. The game owns seven background properties until depletion or cleanup. Native text/border/outline/transform rules still apply, and game nudges/tilt yield to native hover/focus movement. Labels, font colors, text shadows, existing box shadows, handlers, and disabled state are never changed by this effect. At zero health the fill and beacon disappear, the complete native background/hover returns, and the slight depleted tilt remains. Stop/Escape restores owned changes while preserving newer inline site edits.
 
-The rings share the existing canvas/frame loop; no box shadows, blur, extra animation loops, or timers are added. Liquid backgrounds repaint at most 20 times per second for 0.65 seconds after a bite, and only while visible. Reduced motion uses a steady border and static fill, without shaking, ripples, body pulses, or a tilt. All rendered targets must reach zero to end the round; offscreen pursuit continues. The page automatically restores after a loss while retaining results.
+The palette is sampled once when the round first paints a target, using accessible stylesheets and the active system theme. Solid hover colors, CSS variables, media queries, nesting, selector specificity, and named cascade layers are supported. The temporary color probe is removed immediately; original stylesheets are never changed. It does not continuously re-read styles on hover or animate a second loop. For cross-origin stylesheets that cannot be read, pseudo-element/JavaScript hover surfaces, or gradient-only hover designs, the current background is the fallback (then border/text color if transparent). Set `--swarm-power-color` on the target to use its exact existing hover token without discovery:
+
+```css
+/* Use your site's existing hover-color token here. */
+[data-swarm-target] {
+  --swarm-power-color: var(--button-hover-background);
+}
+```
+
+The rings and external bite bubbles share the existing canvas/frame loop and particle cap. Interior bubbles use the button background, so no elements cover or wrap the label. No button box shadows, blur, dependencies, extra animation loops, or timers are added. Visible powered backgrounds repaint at most 12 times per second for interior bubbles and bite ripples; there are additional paints at state/interaction boundaries. Offscreen targets do not animate their backgrounds. Reduced motion uses a steady border and static fill, without bubbles, shaking, ripples, body pulses, or tilt. All rendered targets must reach zero to end the round; offscreen pursuit continues. The page automatically restores after a loss while retaining results.
 
 Mouse play has a 32-pixel target cursor. Native cursors and input remain over protected controls and return when play pauses or ends. Touch uses brief tap rings with no persistent cursor. Coarse pointers or widths up to 640 pixels use a 62-pixel hit diameter and 72% movement speed; desktop hit diameter is 46 pixels. Reduced motion shortens decorative feedback. Pause and tab hiding freeze gameplay clocks.
 

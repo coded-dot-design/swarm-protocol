@@ -2,10 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createDomDefender } from '../src/dom-defender.js';
 import { targetSignal, liquidFill } from '../src/target-health.js';
+import { readTargetPalette } from '../src/target-palette.js';
 import { fixture } from './helpers/engine-fixture.mjs';
 
 test('health uses the requested states and slows its pulse as power drains', () => {
-  assert.equal(targetSignal(100).color, '#74dfa1');
+  assert.equal(targetSignal(100, '#123456').color, '#123456');
   assert.equal(targetSignal(60).color, '#cdde00');
   assert.equal(targetSignal(25).color, '#f4457a');
   assert.equal(targetSignal(-1).fill, 0);
@@ -29,7 +30,7 @@ test('real bites drain a liquid background without touching labels or native but
   p.lead.style.setProperty('background-image', 'linear-gradient(90deg,white,gray)');
   const original = p.lead.style.cssText;
   p.call('start');
-  assert.match(p.lead.style.getPropertyValue('background-image'), /#74dfa1 100%/);
+  assert.ok(decodeURIComponent(p.lead.style.getPropertyValue('background-image')).includes('rgb(255, 255, 255)'));
   assert.match(p.lead.style.getPropertyValue('background-image'), /linear-gradient\(90deg,white,gray\)/);
   let sawRipple = false, sawMovement = false;
   const colors = new Set();
@@ -37,7 +38,7 @@ test('real bites drain a liquid background without touching labels or native but
     p.tick(1 / 60);
     const raw = p.lead.style.getPropertyValue('background-image');
     const image = raw.includes('data:image/svg+xml,') ? decodeURIComponent(raw.split('data:image/svg+xml,')[1].split('"')[0]) : raw;
-    for (const color of ['#74dfa1', '#cdde00', '#f4457a']) if (image.includes(color)) colors.add(color);
+    for (const color of ['rgb(255, 255, 255)', '#cdde00', '#f4457a']) if (image.includes(color)) colors.add(color);
     sawRipple ||= image.includes('<svg');
     sawMovement ||= Boolean(p.lead.style.getPropertyValue('translate'));
     assert.equal(p.lead.style.getPropertyValue('color'), '#234567');
@@ -50,7 +51,7 @@ test('real bites drain a liquid background without touching labels or native but
     if (p.lead.getAttribute('data-swarm-infected') === 'breached') break;
   }
   assert.ok(sawRipple && sawMovement);
-  assert.deepEqual(colors, new Set(['#74dfa1', '#cdde00', '#f4457a']));
+  assert.deepEqual(colors, new Set(['rgb(255, 255, 255)', '#cdde00', '#f4457a']));
   assert.equal(p.lead.getAttribute('data-swarm-infected'), 'breached');
   assert.equal(p.lead.style.getPropertyValue('background-image'), 'linear-gradient(90deg,white,gray)');
   assert.equal(p.lead.style.getPropertyValue('rotate'), '-3deg');
@@ -74,7 +75,7 @@ test('pause freezes liquid and beacon motion; stop and restart reset the page', 
   p.call('resume'); p.tick(.2);
   assert.notEqual(JSON.stringify(p.signals), rings);
   p.call('stop'); assert.equal(p.lead.hasAttribute('style'), false);
-  p.call('start'); assert.match(p.lead.style.getPropertyValue('background-image'), /#74dfa1 100%/);
+  p.call('start'); assert.ok(decodeURIComponent(p.lead.style.getPropertyValue('background-image')).includes('rgb(255, 255, 255)'));
   p.finish();
 });
 
@@ -132,15 +133,14 @@ for (const dark of [false, true]) {
   }
 }
 
-test('button bite digits are larger, outlined, and persist long enough to read', () => {
+test('button bites release subtle thin bubbles instead of score-like digits', () => {
   const p = fixture(createDomDefender, { noText: true, feedback: true });
   p.call('start');
   for (let i = 0; i < 900 && !p.events.some(e => e.type === 'damage'); i++) p.tick(1 / 60);
-  const digit = p.feedback.find(f => f.kind === 'text' && /^[01]$/.test(f.text));
-  assert.ok(digit);
-  assert.match(digit.font, /600 15px/);
-  assert.equal(digit.alpha, 1);
-  assert.ok(p.feedback.some(f => f.kind === 'outline' && f.text === digit.text));
+  assert.equal(p.feedback.some(f => f.kind === 'text' && /^[01]$/.test(f.text)), false);
+  assert.equal(p.feedback.some(f => f.kind === 'outline'), false);
+  assert.ok(p.feedback.some(f => f.kind === 'ring' && f.width === .8 && f.alpha <= .55));
+  assert.ok(p.arcs.some(([, , radius]) => radius >= 1.8 && radius <= 4.5));
   p.finish();
 });
 
@@ -178,15 +178,17 @@ test('hover and focus keep drained power and pulse phase while releasing host mo
   hovered = true;
   p.fire('pointerover', { target: p.lead });
   assert.equal(p.engine.getSnapshot().targets[0].health, health);
-  assert.match(p.lead.style.getPropertyValue('background-image'), /data:image\/svg\+xml.*linear-gradient\(red,blue\)/);
+  assert.ok(!p.lead.style.getPropertyValue('background-image').includes('linear-gradient(red,blue)'));
+  assert.ok(decodeURIComponent(p.lead.style.getPropertyValue('background-image')).includes('opacity="0.86"'));
+  assert.equal(p.lead.style.getPropertyValue('background-color'), 'rgb(255, 255, 255)');
   assert.equal(p.lead.style.getPropertyPriority('background-image'), 'important');
   assert.equal(p.lead.style.getPropertyValue('translate'), '');
   assert.equal(p.lead.style.getPropertyValue('rotate'), '');
   assert.deepEqual(p.signals.map(r => r.rect), rings.map(r => r.rect), 'Interaction must not restart the pulse');
-  assert.ok(p.signals[0].alpha > rings[0].alpha);
+  assert.equal(p.signals[0].alpha, rings[0].alpha);
   focused = true; p.fire('focusin', { target: p.lead });
   hovered = false; p.fire('pointerout', { target: p.lead, relatedTarget: p.doc.body });
-  assert.match(p.lead.style.getPropertyValue('background-image'), /linear-gradient\(red,blue\)/);
+  assert.ok(!p.lead.style.getPropertyValue('background-image').includes('linear-gradient(red,blue)'));
   p.call('resume'); p.tick(.3);
   assert.equal(p.lead.style.getPropertyValue('translate'), '', 'Host focus owns motion even while bugs bite');
   focused = false; p.fire('focusout', { target: p.lead, relatedTarget: p.doc.body });
@@ -207,5 +209,44 @@ test('hovering a depleted target temporarily releases tilt without restoring hea
   assert.equal(p.engine.getSnapshot().targets[0].health, 0);
   hovered = false; p.fire('pointerout', { target: p.lead, relatedTarget: p.doc.body });
   assert.equal(p.lead.style.getPropertyValue('rotate'), '-3deg');
+  p.finish();
+});
+
+
+test('palette fallback and explicit hover token preserve host styles and attributes', () => {
+  const p = fixture(createDomDefender, { noText: true });
+  p.lead.style.setProperty('background-color', '#ffffff');
+  p.lead.style.setProperty('transition', 'background .2s', 'important');
+  p.lead.setAttribute('data-swarm-color-probe', 'host');
+  p.doc.styleSheets = [{ get cssRules() { throw new Error('SecurityError'); } }];
+  const original = p.lead.style.cssText;
+  assert.deepEqual(readTargetPalette(p.lead, p.doc), { base: '#ffffff', power: '#ffffff' });
+  assert.equal(p.lead.style.cssText, original);
+  p.lead.style.setProperty('--swarm-power-color', 'rgb(255, 0, 0)');
+  assert.equal(readTargetPalette(p.lead, p.doc).power, 'rgb(255, 0, 0)', 'Opaque red must not be mistaken for transparent');
+  assert.equal(p.lead.getAttribute('data-swarm-color-probe'), 'host');
+  assert.equal(p.lead.style.getPropertyPriority('transition'), 'important');
+  for (const name of ['background-color', 'transition', '--swarm-power-color']) p.lead.style.removeProperty(name);
+  p.lead.removeAttribute('data-swarm-color-probe');
+  p.call('start');
+  p.finish();
+});
+
+test('interior bubbles stay behind labels and background work is capped at 12Hz', () => {
+  const p = fixture(createDomDefender, { noText: true, footer: true });
+  p.call('start');
+  let previous = p.lead.style.getPropertyValue('background-image'), writes = 0;
+  for (let i = 0; i < 60; i++) {
+    p.tick(1 / 60);
+    const current = p.lead.style.getPropertyValue('background-image');
+    if (current !== previous) writes++;
+    previous = current;
+  }
+  const svg = decodeURIComponent(previous);
+  assert.equal((svg.match(/<ellipse /g) || []).length, 3);
+  assert.ok(svg.includes('clip-path="url(#l)"'));
+  assert.ok(writes > 0 && writes <= 12);
+  p.call('pause'); p.tick(1);
+  assert.equal(p.lead.style.getPropertyValue('background-image'), previous);
   p.finish();
 });

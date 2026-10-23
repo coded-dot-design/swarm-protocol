@@ -2,6 +2,14 @@
 
 Each published version keeps its original tag and release assets. Corrections are released under a new version.
 
+## 1.0.11 — Native button colors and subtle bubbles
+
+- Start liquid power with each button's native hover color instead of fixed green, retaining yellow at 60% and pink at 25% health.
+- Freeze the underlying background while powered; hover/focus only lowers fill opacity to 86%, without a color flip, level reset, or pulse change. Restore native backgrounds/hover on depletion or exit.
+- Add three small interior bubbles in the original surface color, behind the existing label. Replace outlined button-bite digits with tiny, thin circle particles; leave kill-score styling and letter feeding unchanged.
+- Resolve native colors once per target/round, including CSS tokens, active media queries, nesting, specificity, and named layers. Provide `--swarm-power-color` for explicit tokens or inaccessible/complex hover styles, with a native-surface fallback.
+- Cap background animation at 12Hz and share the existing frame loop/particle cap. Skip liquid-wave calculations outside real bite ripples; use no extra timers, animation loops, button shadows, or runtime dependencies. Respect reduced motion and full cleanup.
+
 ## 1.0.10 — Liquid power beacons and bug-colored scores
 
 - Match every floating kill score to the killed bug's exact color in both themes, retaining readable outlines and hold/fade timing.
