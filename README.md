@@ -1,5 +1,30 @@
 # Swarm Protocol
 
+## Play and develop the Astro site
+
+Product page: https://coded-dot-design.github.io/swarm-protocol/ (available after Pages is enabled and the deployment succeeds). Created by **Chris Cooley / coded.design**.
+
+Use Node **24** (`nvm use`), then run from this repository, where `package.json` lives:
+
+```sh
+npm ci
+npm run dev
+```
+
+Open the exact local URL Astro prints, including the `/swarm-protocol/` base path. `npm ci` uses the committed lockfile. `npm run dev:playground` keeps the original Vite regression playground available. The product site loads built game distributions; after editing game source, run `npm run build` and restart `npm run dev`.
+
+```sh
+npm run check
+npm run site:build
+npm run site:preview
+```
+
+`site:build` writes static output to `artifacts/site` and checks the launch script, styles and Pages asset paths. Pages builds run on every push to `main`; PR checks also build the product site. One-time setup: **Settings → Pages → Build and deployment → Source: GitHub Actions**. No custom domain or paid hosting is required for this public repository. If the deploy job ran before enabling Pages, rerun that failed job afterward.
+
+The page defaults to your system color scheme, with persistent light/dark overrides. Game launches are explicit and lazy-loaded. Recall destroys the active controller and restores eligible game-owned edits. Menu controls, code examples and the launcher are excluded from game targets.
+
+
+
 A hidden, opt-in game that runs across a real webpage. Little agents eat selected letters into `0` and `1`, grow stronger, and hunt marked buttons. Squash them before the buttons lose their color.
 
 Install the versioned npm package or use the **self-hosted drop-in ZIP**. Both serve the built game with your own website assets. Visitors do not load the game from GitHub, npm, or a separate game server.

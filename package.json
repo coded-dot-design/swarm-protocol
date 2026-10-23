@@ -46,7 +46,10 @@
     "docs/API.md",
     "docs/DROP-IN.md"
   ],
-  "sideEffects": false,
+  "sideEffects": [
+    "./site-kit/**",
+    "./site/**"
+  ],
   "peerDependencies": {
     "react": "^18.2.0 || ^19.0.0"
   },
@@ -56,7 +59,7 @@
     }
   },
   "scripts": {
-    "dev": "vite --config playground/vite.config.mjs",
+    "dev": "node site/shared/scripts/prepare.mjs && astro dev --config site/astro.config.mjs",
     "playground:build": "vite build --config playground/vite.config.mjs",
     "playground:preview": "vite preview --config playground/vite.config.mjs",
     "build": "node scripts/build.mjs",
@@ -65,7 +68,12 @@
     "check": "npm run typecheck && npm run build && npm test",
     "prepack": "npm run check",
     "size": "node scripts/size.mjs",
-    "release:build": "node scripts/build-release.mjs"
+    "release:build": "node scripts/build-release.mjs",
+    "dev:playground": "vite --config playground/vite.config.mjs",
+    "site:prepare": "node site/shared/scripts/prepare.mjs",
+    "site:build": "npm run site:typecheck && node site/shared/scripts/prepare.mjs && astro build --config site/astro.config.mjs && node site/shared/scripts/verify.mjs",
+    "site:preview": "astro preview --config site/astro.config.mjs",
+    "site:typecheck": "tsc -p site/shared/tsconfig.json"
   },
   "keywords": [
     "game",
@@ -76,7 +84,7 @@
     "dom"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22.23.4"
   },
   "devDependencies": {
     "@types/react": "19.3.0",
@@ -85,7 +93,8 @@
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "typescript": "7.0.2",
-    "vite": "8.3.5"
+    "vite": "8.3.5",
+    "astro": "7.4.2"
   },
   "repository": {
     "type": "git",

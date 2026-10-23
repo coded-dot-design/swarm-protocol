@@ -1,0 +1,25 @@
+---
+import Icon from './Icon.astro';
+const { game, index = 0, single = false } = Astro.props;
+const repo=`https://github.com/coded-dot-design/${game.id}`;
+const kb=(n)=> (n/1000).toFixed(1);
+---
+<section id={game.id} class:list={['game-section', `accent-${game.accent}`]} aria-labelledby={`${game.id}-title`}>
+  <div class="section-heading"><span class="eyebrow"><span class="index">0{index+1}</span> {game.kind}</span><span class="version">v{game.version} / MIT</span></div>
+  <div class="game-intro">
+    <div><h2 id={`${game.id}-title`}>{game.name}<span>{game.tagline}</span></h2><p class="lead">{game.description}</p><div class="actions" data-virus-ignore data-swarm-ignore><button class="button primary" data-launch={game.id}><span>▶</span> Play {game.name}</button><a class="button quiet" href={`${repo}#readme`}>Read the source <span>↗</span></a></div><p class="credit">Created by <span>Chris Cooley</span> · coded.design</p></div>
+    <div class="game-display" aria-label={`${game.name} gameplay illustration`}>
+      <div class="display-top"><span class="led"></span> {game.kind}<span class="display-note">DOM / ACTIVE SURFACE</span></div>
+      <div class="arena-copy"><span class="arena-line">THE PAGE IS</span><span class="arena-line">THE PLAYFIELD<span class="blinking-dot">.</span></span></div>
+      <div class="demo-path"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="arena-character"><Icon kind={game.icon} size={56}/></div>
+      <div class="arena-targets"><button data-arcade-target data-virus-target data-swarm-target>SPAWN_01</button><button data-arcade-target data-virus-target data-swarm-target>SPAWN_02</button></div>
+      <div class="display-bottom"><span>{game.versionNote}</span><span>↖ SHOOT / EAT / DEFEND</span></div>
+    </div>
+  </div>
+  <div class="game-facts"><div><b>{kb(game.metrics.gzip)}<small> kB</small></b><span>gzip · {game.id === 'swarm-protocol' ? 'full immediate path' : 'complete game + engine'}</span></div>{game.facts.map(f=><div><b>{f.value}</b><span>{f.label}</span></div>)}</div>
+  <div class="game-bottom">
+    <div class="game-loop"><div class="eyebrow">THE LOOP</div><ol>{game.loop.map((step,i)=><li><span>0{i+1}</span>{step}</li>)}</ol><div class="controls" data-virus-ignore data-swarm-ignore><h3>Know your controls.</h3>{game.controls.map(control=><p>{control}</p>)}</div></div>
+    <div class="game-notes">{game.chapters.slice(0,2).map(chapter=><article><h3>{chapter.title}</h3><p>{chapter.body}</p></article>)}<details><summary data-virus-ignore data-swarm-ignore>Open the engineering notes <span>+</span></summary><div>{game.chapters.slice(2).map(chapter=><article><h3>{chapter.title}</h3><p>{chapter.body}</p></article>)}<p>{game.extra}</p><div class="source-links" data-virus-ignore data-swarm-ignore>{game.sourcePaths.map(path=><a href={`${repo}/blob/main/${path}`}>{path} ↗</a>)}</div></div></details></div>
+  </div>
+</section>

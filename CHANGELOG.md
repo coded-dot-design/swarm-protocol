@@ -1,4 +1,10 @@
 # Changelog
+## Website update — 2026-10-23
+
+- Add the Astro product/test page, system/light/dark themes, real game descriptions, measured package sizes, architecture diagrams, and creator attribution.
+- Add a versioned shared site kit and CI-gated GitHub Pages builds. Commit the Node 24 toolchain and lockfile.
+- Keep the released game runtime at 1.1.0 unchanged.
+
 
 Each published version keeps its original tag and release assets. Corrections are released under a new version.
 

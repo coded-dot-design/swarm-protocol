@@ -6,3 +6,7 @@ artifacts/
 .env
 .env.*
 !.env.example
+
+site/generated/
+site/.astro/
+.astro/

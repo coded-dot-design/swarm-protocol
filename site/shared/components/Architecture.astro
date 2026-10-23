@@ -1,0 +1,16 @@
+---
+const { mode = 'board' } = Astro.props;
+---
+{mode === 'board' ? <div class="architecture" role="img" aria-label="The host document supplies headings, paragraphs and buttons. A board adapter reads geometry and performs controlled mutations. A Shadow DOM host contains one canvas and the controls. Recall restores game-owned changes.">
+  <div class="diagram-label">HOST DOCUMENT <span>YOUR EXISTING PAGE</span></div>
+  <div class="dom-elements"><span>&lt;h1&gt;<b>letters → targets</b></span><span>&lt;p&gt;<b>copy → terrain</b></span><span>&lt;button&gt;<b>controls → factories</b></span></div>
+  <div class="connection"><span>Range geometry ↓</span><span>↑ owned mutations</span></div>
+  <div class="adapter"><span class="led"></span><b>BOARD ADAPTER</b><span>selectors · geometry cache · collision grid · mutation ledger</span></div>
+  <div class="connection"><span>simulation state ↓</span><span>↑ Recall / cleanup</span></div>
+  <div class="shadow-box"><div class="diagram-label">SHADOW ROOT <span>STYLE BOUNDARY</span></div><div class="shadow-contents"><b>Canvas / characters + effects</b><b>HUD / score + controls</b></div></div>
+  <div class="diagram-caption">Encapsulated presentation. Explicit access to the host document.</div>
+</div> : <div class="frame-diagram" role="img" aria-label="One requestAnimationFrame updates the board geometry when due, advances simulation, recycles entities and draws one canvas, then schedules the next frame only while running.">
+  <div class="diagram-label">ONE TICK <span>requestAnimationFrame</span></div>
+  <ol><li><i>01</i><div><b>Measure when due</b><span>Read cached page geometry; avoid per-projectile layout.</span></div></li><li><i>02</i><div><b>Advance the simulation</b><span>Move, collide, score. Keep entity counts bounded.</span></div></li><li><i>03</i><div><b>Recycle + render</b><span>Reuse storage. Draw characters and feedback on canvas.</span></div></li><li><i>04</i><div><b>Schedule only if playing</b><span>Pause, Recall and teardown end the active loop.</span></div></li></ol>
+  <div class="diagram-caption">Time-based motion. No timer attached to every alien.</div>
+</div>}

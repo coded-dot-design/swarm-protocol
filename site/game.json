@@ -1,0 +1,66 @@
+{
+  "id": "swarm-protocol",
+  "author": "Chris Cooley",
+  "license": "MIT",
+  "name": "Swarm Protocol",
+  "kind": "DOM DEFENSE",
+  "tagline": "Protect every last byte.",
+  "description": "Release a swarm onto the page, then defend it. Bugs eat letters into binary, evolve, and drain your buttons. Squash them before the interface falls apart.",
+  "accent": "violet",
+  "icon": "bug",
+  "versionNote": "The original DOM experiment.",
+  "controls": [
+    "Click / tap \u2014 squash a bug",
+    "Scroll \u2014 outrun the swarm",
+    "Edge alerts \u2014 paid Jump or Jump + Zap",
+    "Esc \u2014 Recall and restore the page"
+  ],
+  "facts": [
+    {
+      "value": "48",
+      "label": "bug cap"
+    },
+    {
+      "value": "36",
+      "label": "Range reads / frame"
+    },
+    {
+      "value": "240",
+      "label": "nearby glyph cache"
+    }
+  ],
+  "loop": [
+    "Release the swarm",
+    "Defend the buttons",
+    "Rescue distant attacks",
+    "Recall the page"
+  ],
+  "chapters": [
+    {
+      "title": "A swarm with different priorities.",
+      "body": "Bugs arrive inside your viewport near the pointer. Small bugs stay near local food and buttons. Grown hunters keep their assigned mission, biting letters already in their path. Scrolling can outrun the swarm; attached bugs track their target geometry while free bugs retain their document position."
+    },
+    {
+      "title": "The button is a living health bar.",
+      "body": "Damage drains a fill behind the real button label. Desktop surfaces ripple and bubble; mobile uses stable native CSS gradients and quiet radial bubbles. Beacon cadence slows as health drops. The label, icon and original handler remain part of the host page."
+    },
+    {
+      "title": "Rescue is a decision, not a teleport cheat.",
+      "body": "Offscreen attack alerts offer Jump from 50 points and Jump + Zap from 200. Each rescue increases the jump and zap prices; each zap increases its own price further. A zap clears a limited radius and awards only one point per kill. Manual scrolling is always free."
+    },
+    {
+      "title": "Optimization without rewriting the game.",
+      "body": "Swarm keeps its established engine. A reusable Range and a nearby glyph shortlist constrain geometry work. The navigation audit preserved full deterministic gameplay and DOM traces while reducing ancestry checks by 81.8% and distance calls by 90.4% in the documented workload. Those are operation counts, not an FPS claim."
+    }
+  ],
+  "code": "const swarm = installSwarm({\n  textSelector: \"[data-swarm-text]\",\n  targetSelector: \"[data-swarm-target]\",\n  keyboard: false,\n  triggerSelector: false,\n});\nawait swarm.start();\n// Later: swarm.destroy();",
+  "importLine": "import { installSwarm } from \"@chriscooley/swarm-protocol\";",
+  "engine": "Established Swarm engine",
+  "extra": "Optional hidden activation: \u2191 \u2191 \u2193 \u2193 \u2190 \u2192 \u2190 \u2192 B A Enter. A deferred entry can wait for load, delay and idle before installing the activation bootstrap; the game itself loads on first open or start.",
+  "sourcePaths": [
+    "src/dom-defender.js",
+    "src/target-health.js",
+    "src/swarm-loader.js",
+    "PERFORMANCE.md"
+  ]
+}

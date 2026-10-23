@@ -25,12 +25,14 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '22'
+          node-version: '24'
           cache: npm
       - name: Install build dependencies
         run: npm ci --no-audit --no-fund
       - name: Check types, build, and test
         run: npm run check
+      - name: Build the Astro product page
+        run: npm run site:build
       - name: Build the local playground
         run: npm run playground:build
       - name: Build the self-hosted release
