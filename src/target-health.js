@@ -1,3 +1,5 @@
+const bubbleRadii = [1.25, 2.2, 3.8, 1.7, 5.2, 3.1];
+
 // A solid health fill. Lower health gives the beacon a slower cadence.
 export function targetSignal(health, powerColor = '#06c4ff') {
   const fill = Math.max(0, Math.min(100, health));
@@ -34,18 +36,33 @@ export function liquidFill(fill, color, energy = 0, time = 0, bite = .5, opacity
     }
     path += 'L100 100H0Z';
   }
-  // Three tiny circles are clipped inside the liquid, behind the real label.
+  // Six varied circles are clipped inside the liquid, behind the real label.
   // Positions are deterministic: decorative motion never changes game RNG.
   let circles = '';
   if (bubbles && fill > 0) {
-    for (let i = 0; i < 3; i++) {
-      const phase = (bubbles.time * .22 + i / 3) % 1;
-      const x = 14 + i * 34 + Math.sin(bubbles.time * 1.3 + i * 2) * 3;
+    for (let i = 0; i < 6; i++) {
+      const phase = (bubbles.time * (.18 + i * .025) + i / 6) % 1;
+      const x = 9 + i * 16 + Math.sin(bubbles.time * 1.8 + i * 2) * 4;
       const y = 100 - phase * fill;
-      const radius = 1.5 + i * .4;
-      circles += `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${(radius / bubbles.width * 100).toFixed(2)}" ry="${(radius / bubbles.height * 100).toFixed(2)}" fill="${bubbles.color}" fill-opacity="${(.32 * Math.sin(phase * Math.PI)).toFixed(2)}"/>`;
+      const radius = bubbleRadii[i];
+      circles += `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${(radius / bubbles.width * 100).toFixed(2)}" ry="${(radius / bubbles.height * 100).toFixed(2)}" fill="${bubbles.color}" fill-opacity="${(.42 * Math.sin(phase * Math.PI)).toFixed(2)}"/>`;
     }
   }
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none"><defs><clipPath id="l"><path d="${path}"/></clipPath></defs><g opacity="${opacity}" clip-path="url(#l)"><rect width="100" height="100" fill="${color}"/>${circles}</g></svg>`;
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+
+// Opposite light/dark tone of the native surface, rather than another brand
+// color. Computed RGB and hex values cover the common button palettes.
+export function bubbleContrast(color) {
+  const lightness = color.match(/^(oklch|oklab|lch|lab)\(\s*([\d.]+)(%?)/i);
+  if (lightness) {
+    const level = +lightness[2] / (lightness[3] || !lightness[1].startsWith('ok') ? 100 : 1);
+    return level < .6 ? '#ffffff' : '#101010';
+  }
+  const hex = color.match(/^#([\da-f]{3}|[\da-f]{6})$/i)?.[1];
+  const rgb = hex ? (hex.length === 3 ? [...hex].map(c => c + c).join('') : hex).match(/../g).map(c => parseInt(c, 16))
+    : color.startsWith('color(') ? color.match(/^color\((?:srgb|display-p3)\s+([^)]+)\)/)?.[1].trim().split(/[ /]+/).slice(0, 3).map(c => +c * 255)
+    : color.match(/^rgba?\(([^)]+)\)/)?.[1].trim().split(/[, /]+/).slice(0, 3).map(c => parseFloat(c) * (c.endsWith('%') ? 2.55 : 1));
+  return rgb?.length === 3 && rgb.every(Number.isFinite) && rgb[0] * .2126 + rgb[1] * .7152 + rgb[2] * .0722 < 140 ? '#ffffff' : '#101010';
 }

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createDomDefender } from '../src/dom-defender.js';
-import { targetSignal, liquidFill } from '../src/target-health.js';
+import { targetSignal, liquidFill, bubbleContrast } from '../src/target-health.js';
 import { readTargetPalette } from '../src/target-palette.js';
 import { fixture } from './helpers/engine-fixture.mjs';
 
@@ -133,14 +133,16 @@ for (const dark of [false, true]) {
   }
 }
 
-test('button bites release subtle thin bubbles instead of score-like digits', () => {
+test('button bites release solid bubbles in the feeding bug color', () => {
   const p = fixture(createDomDefender, { noText: true, feedback: true });
   p.call('start');
   for (let i = 0; i < 900 && !p.events.some(e => e.type === 'damage'); i++) p.tick(1 / 60);
   assert.equal(p.feedback.some(f => f.kind === 'text' && /^[01]$/.test(f.text)), false);
   assert.equal(p.feedback.some(f => f.kind === 'outline'), false);
-  assert.ok(p.feedback.some(f => f.kind === 'ring' && f.width === .8 && f.alpha <= .55));
-  assert.ok(p.arcs.some(([, , radius]) => radius >= 1.8 && radius <= 4.5));
+  const bug = [...p.live.values()].find(b => b.siphonUntil > p.engine.getSnapshot().elapsed);
+  assert.ok(bug);
+  assert.ok(p.feedback.some(f => f.kind === 'bubble' && f.color === bug.color && f.alpha > .8));
+  assert.ok(p.arcs.some(([, , radius]) => radius >= 2.4 && radius <= 6));
   p.finish();
 });
 
@@ -158,10 +160,10 @@ test('a biting bug briefly latches to its target before crawling again', () => {
   p.finish();
 });
 
-test('hover and focus keep drained power and pulse phase while releasing host motion', () => {
+test('hover keeps power and pulse phase while bubbles accelerate without a phase reset', () => {
   const p = fixture(createDomDefender, { noText: true, footer: true });
   let hovered = false, focused = false;
-  p.lead.matches = () => hovered || focused;
+  p.lead.matches = selector => selector === ':hover' ? hovered : hovered || focused;
   const computed = p.win.getComputedStyle;
   p.win.getComputedStyle = el => {
     const style = computed(el);
@@ -179,18 +181,18 @@ test('hover and focus keep drained power and pulse phase while releasing host mo
   p.fire('pointerover', { target: p.lead });
   assert.equal(p.engine.getSnapshot().targets[0].health, health);
   assert.ok(!p.lead.style.getPropertyValue('background-image').includes('linear-gradient(red,blue)'));
-  assert.ok(decodeURIComponent(p.lead.style.getPropertyValue('background-image')).includes('opacity="0.86"'));
+  assert.ok(!decodeURIComponent(p.lead.style.getPropertyValue('background-image')).includes('opacity="0.86"'));
   assert.equal(p.lead.style.getPropertyValue('background-color'), 'rgb(255, 255, 255)');
   assert.equal(p.lead.style.getPropertyPriority('background-image'), 'important');
-  assert.equal(p.lead.style.getPropertyValue('translate'), '');
-  assert.equal(p.lead.style.getPropertyValue('rotate'), '');
+  assert.ok(p.lead.style.getPropertyValue('translate'));
+  assert.ok(p.lead.style.getPropertyValue('rotate'));
   assert.deepEqual(p.signals.map(r => r.rect), rings.map(r => r.rect), 'Interaction must not restart the pulse');
   assert.equal(p.signals[0].alpha, rings[0].alpha);
   focused = true; p.fire('focusin', { target: p.lead });
   hovered = false; p.fire('pointerout', { target: p.lead, relatedTarget: p.doc.body });
   assert.ok(!p.lead.style.getPropertyValue('background-image').includes('linear-gradient(red,blue)'));
   p.call('resume'); p.tick(.3);
-  assert.equal(p.lead.style.getPropertyValue('translate'), '', 'Host focus owns motion even while bugs bite');
+  assert.equal(p.lead.getAttribute('data-swarm-hover-locked'), 'active');
   focused = false; p.fire('focusout', { target: p.lead, relatedTarget: p.doc.body });
   assert.ok(!p.lead.style.getPropertyValue('background-image').includes('linear-gradient(red,blue)'));
   p.finish();
@@ -243,10 +245,45 @@ test('interior bubbles stay behind labels and background work is capped at 12Hz'
     previous = current;
   }
   const svg = decodeURIComponent(previous);
-  assert.equal((svg.match(/<ellipse /g) || []).length, 3);
+  assert.equal((svg.match(/<ellipse /g) || []).length, 6);
   assert.ok(svg.includes('clip-path="url(#l)"'));
   assert.ok(writes > 0 && writes <= 12);
   p.call('pause'); p.tick(1);
   assert.equal(p.lead.style.getPropertyValue('background-image'), previous);
   p.finish();
+});
+
+
+test('interior bubbles use an opposite surface tone and a broad size range', () => {
+  assert.equal(bubbleContrast('#fefefe'), '#101010');
+  assert.equal(bubbleContrast('rgb(20, 25, 30)'), '#ffffff');
+  assert.equal(bubbleContrast('oklch(0.25 0.02 220)'), '#ffffff');
+  assert.equal(bubbleContrast('oklch(95% 0.02 220)'), '#101010');
+  assert.equal(bubbleContrast('color(display-p3 0.1 0.1 0.1)'), '#ffffff');
+  const svg = decodeURIComponent(liquidFill(100, '#06c4ff', 0, 0, .5, 1, {time: 1, width: 100, height: 40, color: '#101010'}));
+  const sizes = [...svg.matchAll(/rx="([^"]+)"/g)].map(m => +m[1]);
+  assert.equal(new Set(sizes).size, 6);
+  assert.ok(Math.max(...sizes) / Math.min(...sizes) > 4);
+});
+
+test('hover boils faster at the same bounded paint cadence and restores the guard on stop', () => {
+  function sample(hovered) {
+    const p = fixture(createDomDefender, { noText: true, footer: true });
+    p.lead.matches = () => hovered;
+    p.call('start');
+    let previous = p.lead.style.getPropertyValue('background-image'), writes = 0;
+    for (let i = 0; i < 30; i++) {
+      p.tick(1 / 60);
+      const current = p.lead.style.getPropertyValue('background-image');
+      if (current !== previous) writes++;
+      previous = current;
+    }
+    const y = +decodeURIComponent(previous).match(/cy="([^"]+)"/)[1];
+    assert.ok(writes > 0 && writes <= 6);
+    p.call('stop');
+    assert.equal(p.lead.hasAttribute('data-swarm-hover-locked'), false);
+    p.finish();
+    return 100 - y;
+  }
+  assert.ok(sample(true) > sample(false) * 2, 'Hover increases travel, not paint frequency');
 });

@@ -2,6 +2,23 @@
 
 The optimization preserves the approved game rules and appearance. It reduces repeated work in the engine and defers the entire game behind a small installer. The report below measures deterministic operation counts, not hardware frame rate or elapsed performance.
 
+## Version 1.0.12 boiling hover
+
+Six interior bubbles share one clipped SVG background layer, with varied radii of 1.25–5.2px. Hover eases their existing motion clock from 1× to 4× speed; the number of bubbles and the 12Hz paint cap do not increase. Motion clocks freeze offscreen, on pause, with hidden tabs, and with reduced motion. One shared radius table avoids per-bubble array allocations. The fill opacity no longer changes on hover.
+
+A one-time walk of accessible stylesheets adds zero-specificity selector exclusions for powered targets, descendants, and pseudo-elements. This prevents native hover visuals without per-frame/per-hover computed-style reads or wrapping button contents. Owned selectors are restored on cleanup; newer host CSSOM edits are preserved. The seven background properties and temporary transition override use the existing inline-style ownership ledger. Cross-origin unreadable or later-added stylesheets cannot be guarded.
+
+External bite bubbles are solid circles in the feeding bug's color, with radii of 2.4–4.2px and 0.8-second lifetimes, under the existing 120-particle cap. No dependencies, blur, added button shadows, timers, additional animation loops, or extra live DOM nodes per bubble are introduced. All 148 tests pass, including the 12Hz cap at normal and boiling speed, pause, cleanup, and current gameplay workloads.
+
+| Loaded JavaScript | Minified bytes | Gzip bytes |
+| --- | ---: | ---: |
+| Initial deferred scheduler | 1,956 | 1,120 |
+| Additional activation bootstrap | 9,162 | 4,043 |
+| Additional game on first open/start | 67,076 | 25,689 |
+| Complete deferred path | 78,194 | 30,852 |
+
+The complete path adds 976 compressed bytes (about 3.3%) to v1.0.11. The initial scheduler remains about 1.1 kB compressed. These are emitted-file sizes and deterministic operation/paint checks, not a hardware FPS benchmark. Older sections below describe their respective archived releases.
+
 ## Version 1.0.11 native colors and bubbles
 
 Native hover palette discovery runs once per target per round, using accessible stylesheet rules and one temporary background/custom-property probe. It preserves original stylesheets and removes its marker/style immediately. An explicit `--swarm-power-color` skips stylesheet discovery. This adds startup work proportional to selected targets and accessible rules; it is not per-frame or per-hover polling. Select only participating buttons. Palettes are stable for the round and sampled again on restart.

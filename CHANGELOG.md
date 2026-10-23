@@ -2,6 +2,14 @@
 
 Each published version keeps its original tag and release assets. Corrections are released under a new version.
 
+## 1.0.12 — Boiling hover and visible bite bubbles
+
+- Replace opacity-only hover with a gentle simmer that eases up to a 4× boil on hover and settles on exit, without restarting bubble positions, health, or beacon timing.
+- Use six clipped interior bubbles with radii from 1.25 to 5.2px and an opposite light/dark tone to the button's native surface. Keep labels and icons in place.
+- Temporarily scope native CSS hover rules away from powered targets and their descendants/pseudo-elements, including important, nested, and group rules. Restore the rules on cleanup and native hover at depletion; preserve native clicks and focus indicators.
+- Make bite particles solid, 2.4–4.2px, and the exact feeding bug color. Keep kill scores unchanged.
+- Keep the 12Hz background cap, shared animation loop, 120-particle limit, offscreen suspension, pause and reduced-motion behavior. No added runtime dependency, shadow, blur, timer, or animation loop.
+
 ## 1.0.11 — Native button colors and subtle bubbles
 
 - Start liquid power with each button's native hover color instead of fixed green, retaining yellow at 60% and pink at 25% health.

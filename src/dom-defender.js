@@ -1,7 +1,8 @@
 import { createAttackIndicators, getAttackEdges } from './attack-indicators.js';
 import { feedbackColors } from './feedback-colors.js';
-import { targetSignal, liquidFill } from './target-health.js';
+import { targetSignal, liquidFill, bubbleContrast } from './target-health.js';
 import { readTargetPalette, cssLayers } from './target-palette.js';
+import { guardTargetHover, hoverLock } from './target-hover.js';
 
 /**
  * DOM Defender — a dependency-free, opt-in overlay.
@@ -51,6 +52,7 @@ export function createDomDefender(options = {}) {
   let glyphRange = null;
   let cursorRecord = null, lastPointer = null, aimEffects = [];
   const styleLedger = new Map();
+  let releaseHover = null;
   const originalStyleAttributes = new Map();
   const textLedger = new Map();
   const attributeLedger = new Map();
@@ -128,6 +130,8 @@ export function createDomDefender(options = {}) {
     attributes.get(name).latest = value;
   }
   function restorePage() {
+    releaseHover?.();
+    releaseHover = null;
     restoreCursor();
     aimEffects = [];
     glyphRange?.detach?.();
@@ -173,6 +177,7 @@ export function createDomDefender(options = {}) {
       label: element.getAttribute('data-swarm-label') || element.getAttribute('aria-label') || element.textContent.trim().slice(0, 48) || `Target ${index + 1}`,
       health: 100, rect: null, visible: false, rendered: false, enrolled: false, bites: 0,
       originalBackground: null, palette: null, cornerRadius: 8, pulsePhase: index * .17, interactive: false, interactionUntil: 0,
+      hovered: false, bubbleTime: 0, bubbleHeat: 0,
       hitUntil: 0, liquidUntil: 0, liquidBite: .5, liquidActive: false, moving: false, paintDirty: true, lastPaint: -Infinity,
     }));
     const seenNodes = new Set();
@@ -325,10 +330,14 @@ export function createDomDefender(options = {}) {
   }
   function rememberBackground(target) {
     if (target.originalBackground) return;
+    target.palette = readTargetPalette(target.element, doc);
+    setStyle(target.element, 'transition', 'none', 'important');
+    setAttribute(target.element, hoverLock, 'active');
     const style = win.getComputedStyle?.(target.element) || target.element.style;
     const read = (name, fallback) => style.getPropertyValue(name) || fallback;
     const images = cssLayers(read('background-image', 'none'));
-    target.palette = readTargetPalette(target.element, doc);
+    target.palette.base = read('background-color', 'transparent');
+    target.palette.bubbles = bubbleContrast(target.palette.base === 'transparent' || target.palette.base === 'rgba(0, 0, 0, 0)' ? target.palette.power : target.palette.base);
     const expand = (name, fallback) => {
       const values = cssLayers(read(name, fallback));
       return images.map((_, i) => values[i % values.length]);
@@ -366,7 +375,8 @@ export function createDomDefender(options = {}) {
     setAttribute(el, 'data-swarm-infected', target.health <= 0 ? 'breached' : 'active');
     if (target.health <= 0) {
       target.liquidActive = false;
-      restoreProperties(el, targetPaintProperties);
+      setAttribute(el, hoverLock, 'inactive');
+      restoreProperties(el, [...targetPaintProperties, 'transition']);
       if (!reducedMotion && !target.interactive) {
         setStyle(el, 'translate', '0px 2px');
         setStyle(el, 'rotate', '-3deg');
@@ -383,10 +393,10 @@ export function createDomDefender(options = {}) {
     const ripple = !reducedMotion && target.visible ? Math.max(0, target.liquidUntil - state.elapsed) / .65 : 0;
     target.liquidActive = ripple > 0;
     const bubbles = !reducedMotion && target.visible ? {
-      color: target.palette.base, time: state.elapsed,
+      color: target.palette.bubbles, time: target.bubbleTime,
       width: Math.max(1, target.rect.width), height: Math.max(1, target.rect.height),
     } : null;
-    const layer = liquidFill(signal.fill, signal.color, ripple, .65 * (1 - ripple), target.liquidBite, target.interactive ? .86 : 1, bubbles);
+    const layer = liquidFill(signal.fill, signal.color, ripple, .65 * (1 - ripple), target.liquidBite, 1, bubbles);
     // Only the power background outranks host hover rules, including !important.
     setStyle(el, 'background-color', target.palette.base, 'important');
     setStyle(el, 'background-image', [layer, ...base.images].join(','), 'important');
@@ -402,11 +412,15 @@ export function createDomDefender(options = {}) {
       const el = target.element;
       if (!el.contains(event.target) && !el.contains(event.relatedTarget)) continue;
       const interactive = el.matches?.(':hover, :focus-within') || false;
-      if (target.interactive === interactive) continue;
+      const hovered = el.matches?.(':hover') || false;
+      if (target.interactive === interactive && target.hovered === hovered) continue;
       target.interactive = interactive;
+      target.hovered = hovered;
       target.interactionUntil = state.elapsed + .35;
-      restoreProperties(el, ['translate', 'rotate'], true);
-      target.moving = false;
+      if (target.health <= 0) {
+        restoreProperties(el, ['translate', 'rotate'], true);
+        target.moving = false;
+      }
       geometryDirty = true;
       if (target.rendered) paintTarget(target);
     }
@@ -414,8 +428,7 @@ export function createDomDefender(options = {}) {
     if (state.status === 'paused' && !doc.hidden) { refreshGeometry(); draw(); }
   }
   function animateTargetHit(target) {
-    // Do not compete with the site's hover/focus translate or rotate rules.
-    if (reducedMotion || target.interactive || target.health <= 0 || !target.element.isConnected) return;
+    if (reducedMotion || target.health <= 0 || !target.element.isConnected) return;
     const remaining = target.hitUntil - state.elapsed;
     if (remaining > 0) {
       const progress = 1 - remaining / .22;
@@ -456,7 +469,7 @@ export function createDomDefender(options = {}) {
     target.paintDirty = true;
     if (target.health <= 0) paintTarget(target);
     if (!reducedMotion && particles.length < MAX_PARTICLES - 2) {
-      particles.push({ x: clamp(bug.x + Math.cos(bug.angle) * 8 * bug.size, target.rect.left, target.rect.right), y: clamp(bug.y + Math.sin(bug.angle) * 8 * bug.size, target.rect.top, target.rect.bottom), vx: rand(-12, 12), vy: -rand(18, 30), life: .8, total: .8, color: targetSignal(target.health, target.palette?.power).color, bubble: true, radius: rand(1.8, 3.2) });
+      particles.push({ x: clamp(bug.x + Math.cos(bug.angle) * 8 * bug.size, target.rect.left, target.rect.right), y: clamp(bug.y + Math.sin(bug.angle) * 8 * bug.size, target.rect.top, target.rect.bottom), vx: rand(-12, 12), vy: -rand(18, 30), life: .8, total: .8, color: bug.color, bubble: true, radius: rand(2.4, 4.2) });
     }
     emit('damage', { targetId: target.id, health: target.health });
     const playable = targets.filter(t => t.enrolled && t.rendered && t.element.isConnected);
@@ -904,12 +917,11 @@ export function createDomDefender(options = {}) {
       ctx.globalAlpha = clamp(p.life / (p.score ? .4 : p.total), 0, 1);
       if (p.bubble) {
         const progress = 1 - p.life / p.total;
-        ctx.globalAlpha *= .55;
+        ctx.globalAlpha *= .9;
         ctx.beginPath();
         ctx.arc(p.x + Math.sin(progress * 7) * 2, p.y, p.radius * (1 + progress * .4), 0, Math.PI * 2);
-        ctx.strokeStyle = p.color;
-        ctx.lineWidth = .8;
-        ctx.stroke();
+        ctx.fillStyle = p.color;
+        ctx.fill();
       } else if (p.text) {
         ctx.font = p.score ? '700 16px ui-monospace, monospace' : '10px ui-monospace, monospace';
         ctx.textAlign = 'center';
@@ -988,6 +1000,10 @@ export function createDomDefender(options = {}) {
     // Coalesce health paints; pulse drawing shares the existing canvas loop.
     for (const target of targets) {
       const bubbling = !reducedMotion && target.health > 0 && target.visible;
+      if (bubbling) {
+        target.bubbleHeat += ((target.hovered ? 1 : 0) - target.bubbleHeat) * Math.min(1, dt * 8);
+        target.bubbleTime += dt * (1 + target.bubbleHeat * 3);
+      }
       if (target.rendered && (target.paintDirty || bubbling || target.liquidActive) && state.elapsed - target.lastPaint >= 1 / 12) paintTarget(target);
       if (target.health > 0 && !reducedMotion) target.pulsePhase = (target.pulsePhase + dt / targetSignal(target.health, target.palette?.power).period) % 1;
       animateTargetHit(target);
@@ -1185,8 +1201,10 @@ export function createDomDefender(options = {}) {
     ensureCanvas();
     canvas.style.display = 'block';
     discoverPage();
+    if (targets.length) releaseHover = guardTargetHover(doc);
     for (const target of targets) {
       target.interactive = target.element.matches?.(':hover, :focus-within') || false;
+      target.hovered = target.element.matches?.(':hover') || false;
       if (target.rendered) paintTarget(target);
     }
     startWave('start');
