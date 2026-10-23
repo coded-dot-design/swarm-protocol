@@ -13,11 +13,9 @@ function contrast(first, second) {
 }
 
 for (const [name, dark, surface] of [['light', false, '#ffffff'], ['dark', true, '#101010']]) {
-  test(`${name} feedback has readable scores and distinct bursts`, () => {
+  test(`${name} feedback has distinct bursts and a theme-aware outer outline`, () => {
     const colors = feedbackColors(dark);
-    const minimumScoreContrast = dark ? 7 : 3; // Light mode uses the approved brand pink.
-    assert.ok(contrast(colors.score, surface) >= minimumScoreContrast, 'Opaque scores meet the palette contrast floor');
-    assert.ok(contrast(colors.score, colors.outline) >= minimumScoreContrast, 'The outline separates scores from mixed page content');
+    assert.equal(colors.outline, dark ? '#101010' : '#ffffff');
     for (const color of [colors.kill, colors.hit, colors.miss, ...colors.shards]) {
       assert.ok(contrast(color, surface) >= 3, `${color} remains visible on ${surface}`);
     }

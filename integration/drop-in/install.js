@@ -1,4 +1,4 @@
-/*! Swarm Protocol 1.0.9 | Copyright 2026 Chris Cooley | MIT */
+/*! Swarm Protocol 1.0.10 | Copyright 2026 Chris Cooley | MIT */
 import { installSwarmDeferred } from './deferred.js';
 
 // Edit these selectors to opt in the exact elements on your site.

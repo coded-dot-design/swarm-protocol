@@ -2,6 +2,25 @@
 
 The optimization preserves the approved game rules and appearance. It reduces repeated work in the engine and defers the entire game behind a small installer. The report below measures deterministic operation counts, not hardware frame rate or elapsed performance.
 
+## Version 1.0.10 target feedback
+
+The new beacon uses two thin rounded strokes on the existing canvas, cached target rectangles, and the existing frame loop. It adds no blur, box shadows, runtime dependencies, JavaScript timers, or separate animation frames. Each real bite briefly holds the attacker at its target and triggers a 0.65-second localized liquid ripple. Ripple backgrounds are repainted at most 20 times per second, only on visible recently bitten targets. Short button nudges use the same frame loop and individual translate/rotate properties; the site's transform and label styles remain intact. Hover/focus boundaries refresh the host background once and brighten the existing beacon; there is no per-frame hover-style lookup. Geometry uses its existing 80ms dirty-refresh limit briefly while native hover movement settles. Game motion yields to native hover/focus, and damage/pulse timing is unchanged. Pause and hidden tabs freeze time-based effects with the game; explicit hover/focus may still update a paused target. Reduced motion removes ripple, shake, body pulse, and tilt, and draws a steady ring.
+
+Floating scores keep their bug's color; only their outer outline follows the system theme. Button-bite digits are 15px rather than 10px. Both use the existing particle cap. The old column/stripe bookkeeping and painting have been removed. Text discovery still scales with marked text and target work with selected buttons; use explicit participating content rather than an entire application root.
+
+The benchmark below is the archived optimization comparison through v1.0.9, now pinned to `tests/fixtures/dom-defender-1.0.9.js`. It is not a claim that v1.0.10 visuals or random trajectories match the old stripes. `node tests/engine-performance.mjs --refined` runs the same five behavioral workloads against the current engine, verifies current health states, and retains exact no-target feeding traces. `tests/target-health.test.mjs` additionally checks palette stages, all tier score colors in both themes, real liquid damage, unchanged host typography/shadows, latching, native button state, pause, reduced motion, hover/focus priority and motion, newer host changes, and cleanup.
+
+The v1.0.10 production build measures:
+
+| Loaded JavaScript | Minified bytes | Gzip bytes |
+| --- | ---: | ---: |
+| Initial deferred scheduler | 1,956 | 1,122 |
+| Additional activation bootstrap | 9,162 | 4,044 |
+| Additional game on first open/start | 62,138 | 23,622 |
+| Complete deferred path | 73,256 | 28,788 |
+
+The complete deferred path adds 647 compressed bytes (about 2.3%) to v1.0.9's 28,141 bytes. Compression is summed per emitted file; hashed import names can cause small changes in unchanged entry chunks. The initial scheduler remains about 1.1 kB compressed. These are transfer sizes, not FPS measurements.
+
 ## Version 1.0.7 feedback contrast
 
 Kill feedback reads one retained `prefers-color-scheme: dark` media query during the existing draw loop. There are no theme polling timers, extra animation loops, DOM theme selectors, or per-frame layout reads. A score remains fully opaque for 0.7 seconds, then fades over 0.4 seconds; the existing particle cap still applies. The five historical gameplay and page-mutation traces remain unchanged; the canvas feedback colors and duration intentionally change.
@@ -34,7 +53,7 @@ The production Astro path therefore begins with approximately **1.1 kB compresse
 
 The scheduler defers even the activation listeners until after the page's load/delay/idle gates, and all pending work is cancelable. Host `onState`/`onEvent` failures are isolated at the installer: a failed hook is disabled and reported once rather than interrupting gameplay. Low-level widget mount failures clean up before rethrowing. Painted CTA/surface properties yield to newer application values or priorities, preserving host changes through later repaint and restoration. The five historical engine traces still match exactly.
 
-Steady-state work has explicit limits: at most 48 live/queued bugs, 120 particles, eight aim rings, 36 glyph-range measurements in a frame, and a 240-item nearby-letter cache. Initial text discovery still scales with marked text, and stored stripe columns scale with marked CTA widths. Mark selected static copy and CTAs, not an entire application root. Cleanup cancels animation work, timers, listeners, and active audio voices. Destroy closes the audio context; ordinary stop retains it for reuse.
+Steady-state work has explicit limits: at most 48 live/queued bugs, 120 particles, eight aim rings, 36 glyph-range measurements in a frame, and a 240-item nearby-letter cache. Initial text discovery still scales with marked text, and the historical stripe implementation stored columns proportional to marked CTA widths. Mark selected static copy and CTAs, not an entire application root. Cleanup cancels animation work, timers, listeners, and active audio voices. Destroy closes the audio context; ordinary stop retains it for reuse.
 
 ## 1.0.1 isolation and activation changes
 
@@ -46,7 +65,7 @@ Minimize changes only which widget controls are visible. It preserves the existi
 
 ## Deterministic engine comparison
 
-The portable harness compares the current engine with the exact historical pre-optimization source in `tests/fixtures/dom-defender-before-perf.js`. That fixture is historical test code, may retain historical naming/comments, and is excluded from the runtime tarball. The repository's MIT and Lucide ISC notices cover the applicable original code and embedded icon geometry.
+The archived portable harness compares the v1.0.9 engine with the exact historical pre-optimization source in `tests/fixtures/dom-defender-before-perf.js`. That fixture is historical test code, may retain historical naming/comments, and is excluded from the runtime tarball. The repository's MIT and Lucide ISC notices cover the applicable original code and embedded icon geometry.
 
 The recorded run used Node **v24.19.0**, seeded randomness, a fixed 60 Hz fake clock, and an instrumented minimal DOM/canvas fixture. Five workloads produced **8,827 active frames**:
 

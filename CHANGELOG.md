@@ -2,6 +2,17 @@
 
 Each published version keeps its original tag and release assets. Corrections are released under a new version.
 
+## 1.0.10 — Liquid power beacons and bug-colored scores
+
+- Match every floating kill score to the killed bug's exact color in both themes, retaining readable outlines and hold/fade timing.
+- Enlarge button-bite binary digits from 10px to 15px, add outlines, and let them remain visible longer.
+- Replace colored/black button stripes with a vertical liquid fill: green `#74DFA1`, yellow `#CDDE00` at 60%, and pink `#F4457A` at 25%.
+- Synchronize a brief bug latch, localized liquid dip/ripple, and subtle button tug with real bites. Pulse two thin beacon rings, slowing as health drains.
+- Keep power backgrounds above native hover rules, including `!important`, without resetting health or pulse timing. Brighten the existing beacon on hover/focus, refresh the underlying host background at interaction boundaries, and let native hover/focus control movement.
+- Restore a depleted button's original background with a slight tilt. Keep its labels, typography, text shadows, existing shadows, and native click behavior unchanged.
+- Reuse the existing canvas/frame loop and cached target geometry. Add no dependencies, animated box shadows, blur, extra timers, or animation loops. Bound liquid repainting to 20Hz while visible and recently bitten; honor reduced motion.
+- Preserve activation, scoring, growth thresholds, wave rules, offscreen warnings, restoration, and the package API. Historical optimization comparisons remain archived; current behavior has independent regression coverage.
+
 ## 1.0.9 — Glowing attack cues and exit guidance
 
 - Add the game’s bug icon beside each offscreen warning arrow, with a soft synchronized glow and pulse. Keep the warning text steady and all cue layers pointer-transparent.

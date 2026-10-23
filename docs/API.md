@@ -1,6 +1,6 @@
 # Swarm Protocol
 
-A small, opt-in game that turns selected page content into a playground. Bugs physically eat letters, grow into button hunters, and leave narrow colored strokes across your marked targets. Click or tap to squash them, build combos, and survive the next wave.
+A small, opt-in game that turns selected page content into a playground. Bugs physically eat letters, grow into button hunters, and drain liquid power from your marked targets. Click or tap to squash them, build combos, and survive the next wave.
 
 The installation is completely hidden. The recommended `./deferred` entry initially loads a small scheduler, waits for page load, a one-second delay, and an idle opportunity, then imports the activation bootstrap. That bootstrap creates no game UI, canvas, audio context, animation loop, or storage reads. The keyboard sequence reveals a small floating target button; a completed footer secret opens the instructions. The engine and full widget load only when the visitor opens or starts the game.
 
@@ -11,14 +11,14 @@ Original game and integration code: **MIT, copyright 2026 Chris Cooley**. The em
 For an npm-managed Astro integration, install the pinned package asset from the GitHub release:
 
 ```sh
-npm install https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.0.9/chriscooley-swarm-protocol-1.0.9.tgz
+npm install https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.0.10/chriscooley-swarm-protocol-1.0.10.tgz
 ```
 
 This records the versioned URL in your package manifest and lockfile. Commit both so CI can install the same package. GitHub is contacted during dependency installation; the deployed game is bundled and served by your own website. Pushing to GitHub does not change an installed version automatically. npm registry publication is still deferred; the package name remains `@chriscooley/swarm-protocol`.
 
 See [Astro](#astro) below for the included component. When migrating from the drop-in, replace `SwarmDropIn` with `SwarmProtocol` in your shared layout, carry over selector/storage configuration, and remove the old installer include. Once no code references them, remove the old `SwarmDropIn.astro` and copied `public/swarm-protocol/` files. Preserve the existing `data-swarm-*` page attributes and CTA handlers. If upgrading from a local `file:vendor/...tgz` dependency, the URL install replaces that dependency; remove its unused vendor tarball after confirming the manifest and lockfile use the URL.
 
-The [self-hosted drop-in ZIP](./DROP-IN.md) remains available for sites that prefer copied static assets. You can also install a downloaded package file directly with `npm install ./chriscooley-swarm-protocol-1.0.9.tgz`.
+The [self-hosted drop-in ZIP](./DROP-IN.md) remains available for sites that prefer copied static assets. You can also install a downloaded package file directly with `npm install ./chriscooley-swarm-protocol-1.0.10.tgz`.
 
 To create a tarball from the source repository:
 
@@ -169,7 +169,7 @@ import SwarmProtocol from '../components/SwarmProtocol.astro';
 <SwarmProtocol />
 ```
 
-Keep the template's plain `<script>` with no `is:inline` or `type` attribute so Astro processes its TypeScript and npm imports. See [Astro scripts](https://docs.astro.build/en/guides/client-side-scripts/) and [navigation lifecycle events](https://docs.astro.build/en/guides/view-transitions/#lifecycle-events). For the recommended registry-free integration, use the separate [drop-in guide](./DROP-IN.md) and its `SwarmDropIn.astro` component. That external-script component intentionally uses `is:inline`; this npm component uses a processed script instead.
+Keep the template's plain `<script>` with no `is:inline` or `type` attribute so Astro processes its TypeScript and npm imports. See [Astro scripts](https://docs.astro.build/en/guides/client-side-scripts/) and [navigation lifecycle events](https://docs.astro.build/en/guides/view-transitions/#lifecycle-events). For a copied-static-assets integration, use the separate [drop-in guide](./DROP-IN.md) and its `SwarmDropIn.astro` component. That external-script component intentionally uses `is:inline`; this npm component uses a processed script instead.
 
 An existing Astro React integration can instead use `<SwarmGame client:idle />` from the React entry. The adapter uses the same load/delay/idle scheduler after hydration. Keep one integration and do not use `transition:persist` for the initial setup.
 
@@ -251,7 +251,11 @@ Each bug starts with one hit point. It must reach a visible Unicode letter and v
 
 Kills award `(10 + speed bonus + tier bonus) × combo`. The speed bonus is 20 before age 3 seconds or 10 before age 6 seconds; each tier above the first adds 10. Kills within 1.5 seconds build up to a ×4 combo. Waves arrive every 18 active seconds, starting at 12 arrivals and adding 6 per wave, capped at 48 live plus queued bugs. Clearing early gives `50 × wave` points, repairs surviving targets by 9, and starts a 3-second intermission. A timed advance grants no clear bonus or repair.
 
-Button footsteps leave 1–3 CSS pixel vertical color strokes over the original background. Full color coverage is reached at 45% integrity, remains through 40%, then is eaten into black below 40%. All rendered targets must reach zero to end the round; offscreen pursuit continues. The page automatically restores after a loss while retaining results.
+Rendered targets start with a solid green (`#74DFA1`) power fill. It drains vertically, turns yellow (`#CDDE00`) at 60% health, and becomes pink (`#F4457A`) at 25%. Two thin canvas bands pulse from the button, slowing from a 0.7-second to a 2.8-second cycle as health falls. Every real bite briefly latches the bug, disturbs the liquid near the contact point, nudges the button, and releases a larger binary digit. At zero, the fill and beacon disappear; the original background returns with a slight tilt. Labels, font colors, text shadows, existing box shadows, handlers, and disabled state are never changed by this effect. Stop/Escape restores owned changes while preserving newer site edits.
+
+Hover and focus do not reset health or replace the power fill, even when a site uses an `!important` hover background. The six background-layer properties owned by the game take priority while power remains. Native text/border/outline/transform rules still apply; the underlying hover background is sampled at interaction boundaries and shows through the drained portion. The beacon brightens without changing cadence. During hover or focus within the target, game nudges/tilt yield to native movement; the liquid and actual damage continue. At zero health the complete native background, including hover, takes over. Newer inline edits by the host still take ownership, as with all game mutations.
+
+The rings share the existing canvas/frame loop; no box shadows, blur, extra animation loops, or timers are added. Liquid backgrounds repaint at most 20 times per second for 0.65 seconds after a bite, and only while visible. Reduced motion uses a steady border and static fill, without shaking, ripples, body pulses, or a tilt. All rendered targets must reach zero to end the round; offscreen pursuit continues. The page automatically restores after a loss while retaining results.
 
 Mouse play has a 32-pixel target cursor. Native cursors and input remain over protected controls and return when play pauses or ends. Touch uses brief tap rings with no persistent cursor. Coarse pointers or widths up to 640 pixels use a 62-pixel hit diameter and 72% movement speed; desktop hit diameter is 46 pixels. Reduced motion shortens decorative feedback. Pause and tab hiding freeze gameplay clocks.
 
@@ -259,7 +263,7 @@ Sound uses short, quiet Web Audio tones, with no audio asset or music download. 
 
 Offscreen button attacks display directional edge cues with a softly pulsing bug icon and “Other sections under attack — Scroll to squash.” These use the engine's existing target rectangles and attached-attacker state; offscreen travel alone does not show a warning. Multiple affected edges can show simultaneously. Partially visible targets do not warn. The separate Shadow DOM overlay is pointer-transparent, keeps working when the scoreboard is minimized, and clears on pause, game over, stop, or destroy. Both `reducedMotion` and the browser's reduced-motion preference suppress its pulse. No public API changes or additional integration options are required.
 
-Kill scores, burst fragments, and hit rings follow the system light/dark preference automatically. Light-mode scores use brand pink (`#F4457A`) while bursts and rings retain their deeper colors; scores have a contrasting outline and stay fully opaque for 0.7 seconds before a 0.4-second fade. A system theme change updates active effects on the next game frame. Reduced motion keeps score text stationary and removes burst fragments. No theme switch or extra configuration is needed.
+Kill scores keep the exact color of the squashed bug in both system themes. A dark inner outline and theme-aware outer outline keep them distinct over page content, with 0.7 seconds fully opaque followed by a 0.4-second fade. Burst fragments and hit rings still adapt to the system light/dark setting. Reduced motion keeps scores stationary and removes fragments. No theme switch or extra configuration is needed.
 
 ## Shadow DOM, page ownership, and CSP
 

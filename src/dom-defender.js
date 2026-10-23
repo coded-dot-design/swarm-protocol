@@ -1,5 +1,6 @@
 import { createAttackIndicators, getAttackEdges } from './attack-indicators.js';
 import { feedbackColors } from './feedback-colors.js';
+import { targetSignal, liquidFill } from './target-health.js';
 
 /**
  * DOM Defender — a dependency-free, opt-in overlay.
@@ -25,7 +26,6 @@ export function createDomDefender(options = {}) {
   const segmenter = typeof Intl.Segmenter === 'function' ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
   const bestKey = options.bestKey || 'swarm-protocol-best-v1';
   const tierColors = ['#ff6b6b', '#d984ff', '#8573ee'];
-  const stripePalette = ['#06c4ff', '#4428e8', '#8573ee', '#74dfa1'];
   const protectedPointerSelector = '[data-swarm-ui],[data-swarm-ignore],dialog,[role="dialog"],[aria-modal="true"],form,input,textarea,select,option,[contenteditable]';
   const cursorSVG = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><g fill="none" stroke-linecap="round"><circle cx="16" cy="16" r="8" stroke="#101010" stroke-width="4"/><path d="M16 3v3m0 20v3M3 16h3m20 0h3" stroke="#101010" stroke-width="4"/><circle cx="16" cy="16" r="8" stroke="#06c4ff" stroke-width="1.5"/><path d="M16 3v3m0 20v3M3 16h3m20 0h3" stroke="#ecfcff" stroke-width="1.5"/></g><circle cx="16" cy="16" r="2" fill="#fff" stroke="#101010" stroke-width="1.5"/></svg>';
   const reticleCursor = `url("data:image/svg+xml,${encodeURIComponent(cursorSVG)}") 16 16, crosshair`;
@@ -96,7 +96,7 @@ export function createDomDefender(options = {}) {
     emit('status', { status: value });
     notify(true);
   }
-  function setStyle(element, property, value) {
+  function setStyle(element, property, value, desiredPriority = '') {
     if (!styleLedger.has(element)) {
       styleLedger.set(element, new Map());
       originalStyleAttributes.set(element, cursorRecord?.element === element ? cursorRecord.hadStyle : element.hasAttribute('style'));
@@ -112,8 +112,8 @@ export function createDomDefender(options = {}) {
     // Once the host edits this property, its newer value owns the rest of the
     // round. Do not overwrite it on a later footprint or restore the old value.
     if (record.abandoned || (record.latest !== null && (current !== record.latest || priority !== record.latestPriority))) { record.abandoned = true; return; }
-    if (record.requested === value && current === record.latest && priority === record.latestPriority) return;
-    element.style.setProperty(property, value);
+    if (record.requested === value && current === record.latest && priority === record.latestPriority && priority === desiredPriority) return;
+    element.style.setProperty(property, value, desiredPriority);
     record.latest = element.style.getPropertyValue(property);
     record.latestPriority = element.style.getPropertyPriority(property);
     record.requested = value;
@@ -170,9 +170,9 @@ export function createDomDefender(options = {}) {
       element,
       id: element.id || `swarm-target-${index + 1}`,
       label: element.getAttribute('data-swarm-label') || element.getAttribute('aria-label') || element.textContent.trim().slice(0, 48) || `Target ${index + 1}`,
-      health: 100, worstHealth: 100, rect: null, visible: false, rendered: false, enrolled: false, bites: 0,
-      stripes: new Map(), stripeSerial: 0, stripeWidth: 0, originalBackground: null,
-      paintDirty: false, lastPaint: -Infinity,
+      health: 100, rect: null, visible: false, rendered: false, enrolled: false, bites: 0,
+      originalBackground: null, cornerRadius: 8, pulsePhase: index * .17, interactive: false, interactionUntil: 0,
+      hitUntil: 0, liquidUntil: 0, liquidBite: .5, liquidActive: false, moving: false, paintDirty: true, lastPaint: -Infinity,
     }));
     const seenNodes = new Set();
     textAreas = [...doc.querySelectorAll(selectors.text)].filter(el => !el.closest(selectors.ui)).map(element => {
@@ -246,7 +246,6 @@ export function createDomDefender(options = {}) {
         const style = win.getComputedStyle?.(item.element);
         item.visible = item.visible && rectVisible(item.rect) && style?.getPropertyValue('display') !== 'none' && style?.getPropertyValue('visibility') !== 'hidden' && style?.getPropertyValue('visibility') !== 'collapse';
       }
-      if ('stripes' in item && item.stripeWidth && item.rect.width > 0) syncStripeWidth(item);
     }
     uiRects = [...doc.querySelectorAll(selectors.ui)]
       .filter(el => !el.hidden).map(el => el.getBoundingClientRect()).filter(rectVisible);
@@ -301,8 +300,8 @@ export function createDomDefender(options = {}) {
       color: tierColors[0], size: rand(1.05, 1.18), tier: 1, hp: 1, feeds: 0, lettersEaten: 0, hitFlash: 0,
       speed: (rand(110, 155) + Math.min(80, state.wave * 8)) * (coarsePointer() ? .72 : 1),
       age: 0, biteIn: rand(.2, .8), target: null,
-      food: null, lastFood: null, foodSearchIn: 0, foodCheckIn: 0, foodWaitUntil: state.elapsed + .45, chewing: false, chewLeft: 0,
-      stripeIn: 0, scatterUntil: 0, scatterX: 0, scatterY: 0,
+      siphonUntil: 0, food: null, lastFood: null, foodSearchIn: 0, foodCheckIn: 0, foodWaitUntil: state.elapsed + .45, chewing: false, chewLeft: 0,
+      scatterUntil: 0, scatterX: 0, scatterY: 0,
       pursuit: null, pursuitUntil: 0, dashIn: 0, dashX: 0, dashY: 0,
       orbit: rand(0, Math.PI * 2), attached: false,
     };
@@ -323,10 +322,6 @@ export function createDomDefender(options = {}) {
     state.best = state.score;
     try { win.localStorage.setItem(bestKey, String(state.best)); } catch {}
   }
-  function stripeColor(hex, strength) {
-    const value = parseInt(hex.slice(1), 16);
-    return `rgb(${Math.round((value >> 16) * strength)},${Math.round(((value >> 8) & 255) * strength)},${Math.round((value & 255) * strength)})`;
-  }
   function cssLayers(value) {
     const layers = [];
     let depth = 0, start = 0, quote = '';
@@ -343,6 +338,18 @@ export function createDomDefender(options = {}) {
   }
   function rememberBackground(target) {
     if (target.originalBackground) return;
+    // Sample the host's current :hover/:focus background without our layer.
+    // This read happens at interaction boundaries, never in the draw loop.
+    const saved = [];
+    for (const name of targetPaintProperties) {
+      const record = styleLedger.get(target.element)?.get(name);
+      if (!record || record.abandoned) continue;
+      const style = target.element.style;
+      if (style.getPropertyValue(name) !== record.latest || style.getPropertyPriority(name) !== record.latestPriority) continue;
+      saved.push([name, record.latest, record.latestPriority]);
+      if (record.original) style.setProperty(name, record.original, record.priority);
+      else style.removeProperty(name);
+    }
     const style = win.getComputedStyle?.(target.element) || target.element.style;
     const read = (name, fallback) => style.getPropertyValue(name) || fallback;
     const images = cssLayers(read('background-image', 'none'));
@@ -350,6 +357,7 @@ export function createDomDefender(options = {}) {
       const values = cssLayers(read(name, fallback));
       return images.map((_, i) => values[i % values.length]);
     };
+    target.cornerRadius = Math.min(target.rect.height / 2, parseFloat(read('border-top-left-radius', '8')) || 0);
     target.originalBackground = {
       images: images[0] === 'none' ? [] : images,
       sizes: expand('background-size', 'auto'),
@@ -357,118 +365,119 @@ export function createDomDefender(options = {}) {
       repeats: expand('background-repeat', 'repeat'),
       origins: expand('background-origin', 'padding-box'),
       clips: expand('background-clip', 'border-box'),
-      color: read('color', '#151515'),
     };
+    for (const [name, value, priority] of saved) target.element.style.setProperty(name, value, priority);
   }
-  function syncStripeWidth(target) {
-    const width = Math.max(1, Math.ceil(target.rect.width));
-    if (width === target.stripeWidth) return width;
-    const previous = target.stripeWidth, old = target.stripes;
-    target.stripeWidth = width;
-    if (previous && old.size) {
-      target.stripes = new Map();
-      for (let x = 0; x < width; x++) {
-        const stripe = old.get(Math.min(previous - 1, Math.floor(x * previous / width)));
-        if (stripe) target.stripes.set(x, stripe);
+  const targetPaintProperties = ['background-image', 'background-size', 'background-position', 'background-repeat', 'background-origin', 'background-clip'];
+  function restoreProperties(element, names, release = false) {
+    const properties = styleLedger.get(element);
+    if (!properties) return;
+    for (const name of names) {
+      const record = properties.get(name);
+      if (!record) continue;
+      if (!record.abandoned && element.style.getPropertyValue(name) === record.latest && element.style.getPropertyPriority(name) === record.latestPriority) {
+        if (record.original) element.style.setProperty(name, record.original, record.priority);
+        else element.style.removeProperty(name);
       }
-      target.paintDirty = true;
+      else { record.abandoned = true; continue; }
+      if (release) properties.delete(name);
+      else record.abandoned = true;
     }
-    return width;
-  }
-  function markColumns(target, origin, count, erase = false) {
-    // Prefer untouched pixels close to the crawler, then fill the remaining gaps.
-    // During the second stage, opaque black consumes color without exposing white.
-    if (count <= 0) return;
-    const candidates = [];
-    const eligible = x => erase ? target.stripes.has(x) && !target.stripes.get(x).black : !target.stripes.has(x);
-    // Distance ties keep the lower column first, matching the original stable
-    // sort, but only the needed nearest columns are visited and retained.
-    for (let distance = 0; distance < target.stripeWidth && candidates.length < count; distance++) {
-      const left = origin - distance, right = origin + distance;
-      if (left >= 0 && eligible(left)) candidates.push(left);
-      if (distance && right < target.stripeWidth && candidates.length < count && eligible(right)) candidates.push(right);
-    }
-    let left = Math.min(count, candidates.length), cursor = 0;
-    while (left > 0) {
-      const step = ++target.stripeSerial;
-      const top = step % stripePalette.length;
-      const stripe = {
-        id: step, black: erase, top,
-        bottom: (top + 1 + Math.floor(Math.random() * (stripePalette.length - 1))) % stripePalette.length,
-        strength: rand(.55, 1),
-      };
-      const stroke = Math.min(left, 1 + Math.floor(Math.random() * 3));
-      for (let i = 0; i < stroke; i++) target.stripes.set(candidates[cursor++], stripe);
-      left -= stroke;
-    }
-  }
-  function leaveStripe(target, bug) {
-    rememberBackground(target);
-    const limit = syncStripeWidth(target);
-    const x = clamp(Math.round(bug.x - target.rect.left + rand(-4, 4)), 0, limit - 1);
-    // The first 55 integrity points consume the original fill. Footsteps repaint
-    // existing colored pixels between bites, keeping the untouched white intact.
-    const coverage = Math.min(limit, Math.max(2, Math.ceil(limit * (100 - target.worstHealth) / 55)));
-    markColumns(target, x, Math.max(0, coverage - target.stripes.size));
-    // A short fully colored stage (45–40% integrity) makes the handoff visible.
-    // Black appears only after all original fill has been covered with color.
-    if (target.worstHealth < 40 && target.stripes.size === limit) {
-      const colored = [...target.stripes.values()].filter(stripe => !stripe.black).length;
-      const remainingColor = Math.floor(limit * Math.max(0, target.worstHealth) / 40);
-      markColumns(target, x, Math.max(0, colored - remainingColor), true);
-    } else {
-      // A step may change one existing color, but never refill an eaten slot.
-      const previous = target.stripes.get(x);
-      if (previous && !previous.black) {
-        const step = ++target.stripeSerial, top = step % stripePalette.length;
-        target.stripes.set(x, { id: step, black: false, top, bottom: (top + 1) % stripePalette.length, strength: rand(.55, 1) });
-      }
-    }
-    target.paintDirty = true;
   }
   function paintTarget(target) {
-    const el = target.element;
     target.paintDirty = false;
     target.lastPaint = state.elapsed;
+    const el = target.element;
     setAttribute(el, 'data-swarm-infected', target.health <= 0 ? 'breached' : 'active');
     if (target.health <= 0) {
-      setStyle(el, 'background-image', 'none');
-      setStyle(el, 'background-color', '#050609');
-      setStyle(el, 'color', '#a0a6b2');
-      setStyle(el, 'box-shadow', 'inset 0 0 0 1px #353944, 0 0 18px #00000030');
+      target.liquidActive = false;
+      restoreProperties(el, targetPaintProperties);
+      if (!reducedMotion && !target.interactive) {
+        setStyle(el, 'translate', '0px 2px');
+        setStyle(el, 'rotate', '-3deg');
+      }
+      target.moving = false;
       return;
     }
-    if (!target.originalBackground) return;
+    rememberBackground(target);
     const base = target.originalBackground;
-    const columns = [...target.stripes.entries()].sort((a, b) => a[0] - b[0]);
-    const runs = [];
-    for (const [x, stripe] of columns) {
-      const last = runs[runs.length - 1];
-      if (last && last.stripe.id === stripe.id && last.x + last.width === x && last.width < 3) last.width++;
-      else runs.push({ x, width: 1, stripe });
+    const signal = targetSignal(target.health);
+    // One solid color with a hard horizontal edge: the fill drains downward.
+    // Original background layers remain visible in the empty part of the tank.
+    const appendBase = (value, originals) => [value, ...(base.images.length ? originals : [])].join(',');
+    const ripple = !reducedMotion && target.visible ? Math.max(0, target.liquidUntil - state.elapsed) / .65 : 0;
+    target.liquidActive = ripple > 0;
+    const layer = liquidFill(signal.fill, signal.color, ripple, .65 * (1 - ripple), target.liquidBite);
+    // Only the power background outranks host hover rules, including !important.
+    setStyle(el, 'background-image', [layer, ...base.images].join(','), 'important');
+    setStyle(el, 'background-size', appendBase('100% 100%', base.sizes), 'important');
+    setStyle(el, 'background-position', appendBase('0% 0%', base.positions), 'important');
+    setStyle(el, 'background-repeat', appendBase('no-repeat', base.repeats), 'important');
+    setStyle(el, 'background-origin', appendBase('border-box', base.origins), 'important');
+    setStyle(el, 'background-clip', appendBase('border-box', base.clips), 'important');
+  }
+  function targetInteraction(event) {
+    if (!targets.length || destroyed) return;
+    for (const target of targets) {
+      const el = target.element;
+      if (!el.contains(event.target) && !el.contains(event.relatedTarget)) continue;
+      const interactive = el.matches?.(':hover, :focus-within') || false;
+      if (target.interactive === interactive) continue;
+      target.interactive = interactive;
+      target.interactionUntil = state.elapsed + .35;
+      target.originalBackground = null;
+      restoreProperties(el, ['translate', 'rotate'], true);
+      target.moving = false;
+      geometryDirty = true;
+      if (target.rendered) paintTarget(target);
     }
-    // Keep the real button background underneath every untouched pixel. Both
-    // colored footprints and empty slots are narrow, opaque layers above it.
-    const appendBase = (values, originals) => values.concat(base.images.length ? originals : []).join(',');
-    const images = runs.map(({stripe}) => stripe.black ? 'linear-gradient(180deg,#050609,#050609)' : `linear-gradient(180deg,${stripeColor(stripePalette[stripe.top], stripe.strength)},${stripeColor(stripePalette[stripe.bottom], stripe.strength)})`);
-    setStyle(el, 'background-image', images.concat(base.images).join(',') || 'none');
-    setStyle(el, 'background-size', appendBase(runs.map(run => `${run.width}px 100%`), base.sizes) || 'auto');
-    setStyle(el, 'background-position', appendBase(runs.map(run => `${run.x}px 0px`), base.positions) || '0px 0px');
-    setStyle(el, 'background-repeat', appendBase(runs.map(() => 'no-repeat'), base.repeats) || 'no-repeat');
-    setStyle(el, 'background-origin', appendBase(runs.map(() => 'border-box'), base.origins) || 'border-box');
-    setStyle(el, 'background-clip', appendBase(runs.map(() => 'border-box'), base.clips) || 'border-box');
-    const dark = target.stripes.size / target.stripeWidth > .55;
-    setStyle(el, 'color', dark ? '#f7f9fb' : base.color);
-    if (dark) setStyle(el, 'text-shadow', '0 1px 2px #050609, 0 0 1px #050609');
+    // Paused rounds keep their phase/health but still allow native interaction.
+    if (state.status === 'paused' && !doc.hidden) { refreshGeometry(); draw(); }
+  }
+  function animateTargetHit(target) {
+    // Do not compete with the site's hover/focus translate or rotate rules.
+    if (reducedMotion || target.interactive || target.health <= 0 || !target.element.isConnected) return;
+    const remaining = target.hitUntil - state.elapsed;
+    if (remaining > 0) {
+      const progress = 1 - remaining / .22;
+      const offset = Math.sin(progress * Math.PI * 4) * (1 - progress) * (target.bites % 2 ? 1 : -1);
+      setStyle(target.element, 'translate', `${(offset * 2).toFixed(2)}px ${(-Math.abs(offset)).toFixed(2)}px`);
+      setStyle(target.element, 'rotate', `${(offset * .9).toFixed(2)}deg`);
+      target.moving = true;
+    } else if (target.moving) {
+      restoreProperties(target.element, ['translate', 'rotate'], true);
+      target.moving = false;
+    }
+  }
+  function drawTargetSignals() {
+    for (const target of targets) {
+      if (!target.visible || !target.rendered || !target.element.isConnected || target.health <= 0) continue;
+      const signal = targetSignal(target.health), r = target.rect;
+      ctx.save();
+      ctx.strokeStyle = signal.color;
+      ctx.lineWidth = target.interactive ? 2 : 1.5;
+      for (let band = 0; band < (reducedMotion ? 1 : 2); band++) {
+        const phase = reducedMotion ? 0 : (target.pulsePhase + band * .5) % 1;
+        const spread = 2 + phase * (12 + signal.fill * .08);
+        ctx.globalAlpha = (1 - phase) ** 2 * (target.interactive ? .95 : .65);
+        ctx.beginPath();
+        ctx.roundRect(r.left - spread, r.top - spread, r.width + spread * 2, r.height + spread * 2, target.cornerRadius + spread);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
   }
   function damageTarget(target, bug) {
     target.bites++;
+    bug.siphonUntil = state.elapsed + .16;
     target.health = Math.max(0, target.health - (1.15 + Math.min(state.wave - 1, 9) * .12));
-    target.worstHealth = Math.min(target.worstHealth, target.health);
-    leaveStripe(target, bug);
+    target.hitUntil = state.elapsed + .22;
+    target.liquidUntil = state.elapsed + .65;
+    target.liquidBite = clamp((bug.x - target.rect.left) / Math.max(1, target.rect.width), 0, 1);
+    target.paintDirty = true;
     if (target.health <= 0) paintTarget(target);
     if (!reducedMotion && particles.length < MAX_PARTICLES - 2) {
-      particles.push({ x: bug.x, y: bug.y, vx: rand(-12, 12), vy: -rand(10, 24), life: .5, total: .5, color: bug.color, text: Math.random() > .5 ? '1' : '0' });
+      particles.push({ x: clamp(bug.x + Math.cos(bug.angle) * 8 * bug.size, target.rect.left, target.rect.right), y: clamp(bug.y + Math.sin(bug.angle) * 8 * bug.size, target.rect.top, target.rect.bottom), vx: rand(-12, 12), vy: -rand(18, 30), life: .8, total: .8, color: bug.color, bite: true, text: Math.random() > .5 ? '1' : '0' });
     }
     emit('damage', { targetId: target.id, health: target.health });
     const playable = targets.filter(t => t.enrolled && t.rendered && t.element.isConnected);
@@ -702,6 +711,12 @@ export function createDomDefender(options = {}) {
       }
     }
     const foodPoint = bug.food?.rect;
+    // Briefly latch onto a visible button at the instant a real bite takes power.
+    // The bite timer keeps advancing, so this does not slow the damage cadence.
+    if (!scattering && !foodPoint && bug.attached && target?.visible && target.health > 0 && bug.siphonUntil > state.elapsed && contains(target.rect, bug.x, bug.y, 6)) {
+      bug.biteIn -= dt;
+      return;
+    }
     let pinnedOffscreen = false;
     const orbitPoint = () => {
       const r = target.rect;
@@ -832,8 +847,6 @@ export function createDomDefender(options = {}) {
       } else if (r === null) releaseFood(bug);
     }
     if (bug.attached && target?.health > 0) {
-      bug.stripeIn -= dt;
-      if (bug.stripeIn <= 0) { leaveStripe(target, bug); bug.stripeIn = rand(.12, .20); }
       bug.biteIn -= dt;
       if (bug.biteIn <= 0) { damageTarget(target, bug); bug.biteIn = rand(.72, 1.1); }
     }
@@ -844,7 +857,9 @@ export function createDomDefender(options = {}) {
     ctx.save();
     ctx.translate(bug.x, bug.y);
     ctx.rotate(bug.angle + Math.PI / 2);
-    ctx.scale(bug.size, bug.size);
+    const feeding = !reducedMotion && bug.attached && bug.target?.health > 0 && bug.siphonUntil > state.elapsed;
+    const bitePulse = feeding ? Math.sin((1 - (bug.siphonUntil - state.elapsed) / .16) * Math.PI) * .04 : 0;
+    ctx.scale(bug.size * (1 + bitePulse), bug.size * (1 - bitePulse));
     const gait = reducedMotion ? 0 : Math.sin(time * 17 + bug.phase) * Math.PI / 20;
     ctx.strokeStyle = bug.hitFlash > 0 ? '#ffffff' : bug.color;
     ctx.lineWidth = 2;
@@ -904,18 +919,22 @@ export function createDomDefender(options = {}) {
     // Retain one live media query; existing effects adapt on the next frame.
     const colors = feedbackColors(darkQuery?.matches);
     ctx.clearRect(0, 0, width, height);
+    drawTargetSignals();
     for (const bug of bugs) drawBug(bug, state.elapsed);
     for (const p of particles) {
-      ctx.globalAlpha = clamp(p.life / (p.score ? .4 : p.total), 0, 1);
+      ctx.globalAlpha = clamp(p.life / (p.score ? .4 : p.bite ? .5 : p.total), 0, 1);
       if (p.text) {
-        ctx.font = p.score ? '700 16px ui-monospace, monospace' : '10px ui-monospace, monospace';
+        ctx.font = p.score ? '700 16px ui-monospace, monospace' : p.bite ? '600 15px ui-monospace, monospace' : '10px ui-monospace, monospace';
         ctx.textAlign = 'center';
-        ctx.fillStyle = p.score ? colors.score : p.color;
-        if (p.score) {
+        ctx.fillStyle = p.color;
+        if (p.score || p.bite) {
           ctx.save();
           ctx.strokeStyle = colors.outline;
-          ctx.lineWidth = 3.5;
+          ctx.lineWidth = p.score ? 6 : 4.5;
           ctx.lineJoin = 'round';
+          ctx.strokeText(p.text, p.x, p.y);
+          ctx.strokeStyle = '#101010';
+          ctx.lineWidth = p.score ? 3 : 2.5;
           ctx.strokeText(p.text, p.x, p.y);
           ctx.restore();
         }
@@ -957,6 +976,7 @@ export function createDomDefender(options = {}) {
     const dt = Math.min(.05, (now - lastNow) / 1000 || 0);
     lastNow = now;
     state.elapsed += dt;
+    if (targets.some(target => target.interactionUntil > state.elapsed)) geometryDirty = true;
     refreshGeometry();
     scanFood(dt);
     if (state.elapsed - comboTime > 1.5) state.combo = 1;
@@ -978,10 +998,12 @@ export function createDomDefender(options = {}) {
       }
       if (!bugs.length && !remaining && state.status === 'running') clearWave();
     }
-    // Coalesce the footprints from all bugs; don't rewrite a button's layers for
-    // every bug or every animation frame.
+    // Coalesce health paints; pulse drawing shares the existing canvas loop.
     for (const target of targets) {
-      if (target.paintDirty && state.elapsed - target.lastPaint >= .10) paintTarget(target);
+      const rippling = !reducedMotion && target.health > 0 && target.visible && target.liquidUntil > state.elapsed;
+      if (target.rendered && (target.paintDirty || rippling || target.liquidActive) && state.elapsed - target.lastPaint >= .05) paintTarget(target);
+      if (target.health > 0 && !reducedMotion) target.pulsePhase = (target.pulsePhase + dt / targetSignal(target.health).period) % 1;
+      animateTargetHit(target);
     }
     let liveParticles = 0;
     for (const p of particles) {
@@ -1064,7 +1086,7 @@ export function createDomDefender(options = {}) {
       const angle = i / shards * Math.PI * 2;
       particles.push({ x: bug.x, y: bug.y, vx: Math.cos(angle) * rand(25, 65), vy: Math.sin(angle) * rand(25, 65), life: .42, total: .42, color: bug.color, tier: bug.tier });
     }
-    if (particles.length < MAX_PARTICLES) particles.push({ x: bug.x, y: bug.y - 12, vx: 0, vy: reducedMotion ? 0 : -18, life: 1.1, total: 1.1, text: `+${points}`, score: true });
+    if (particles.length < MAX_PARTICLES) particles.push({ x: bug.x, y: bug.y - 12, vx: 0, vy: reducedMotion ? 0 : -18, life: 1.1, total: 1.1, text: `+${points}`, color: bug.color, score: true });
     emit('kill', { points, x: bug.x, y: bug.y, combo: state.combo, speedBonus, tierBonus, tier: bug.tier, age: bug.age });
     notify(true);
   }
@@ -1176,6 +1198,10 @@ export function createDomDefender(options = {}) {
     ensureCanvas();
     canvas.style.display = 'block';
     discoverPage();
+    for (const target of targets) {
+      target.interactive = target.element.matches?.(':hover, :focus-within') || false;
+      if (target.rendered) paintTarget(target);
+    }
     startWave('start');
     schedule();
     return getSnapshot();
@@ -1223,6 +1249,7 @@ export function createDomDefender(options = {}) {
   on(win, 'pointerdown', pointerDown, { capture: true, passive: false });
   on(win, 'pointermove', trackPointer, { capture: true, passive: true });
   on(win, 'pointerover', trackPointer, { capture: true, passive: true });
+  for (const name of ['pointerover', 'pointerout', 'focusin', 'focusout']) on(win, name, targetInteraction, { capture: true, passive: true });
   on(win, 'pointerout', event => { if (!event.relatedTarget) leavePointer(); }, { passive: true });
   on(win, 'pointercancel', () => { suppressedClick = null; aimEffects = []; leavePointer(); }, { passive: true });
   on(win, 'blur', leavePointer);
