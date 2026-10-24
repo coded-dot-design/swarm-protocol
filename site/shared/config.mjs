@@ -22,6 +22,7 @@ export default defineConfig({
     resolve: {
       alias: {
         "@site-kit": kit,
+        "@character-art": resolve(root, "site/generated/character-art.json"),
         "@site-data": resolve(root, "site/generated/data.json"),
         "@game-registry": resolve(root, "site/generated/registry.ts"),
       },

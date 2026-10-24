@@ -13,7 +13,7 @@ export function createBitHighlights(doc: Document) {
       if (!highlight) {
         highlight = new win.Highlight();
         style = doc.createElement('style');
-        style.textContent = `::highlight(${name}){color:#ff168f;background-color:transparent}`;
+        style.textContent = `::highlight(${name}){color:#d984ff;background-color:transparent}`;
         doc.head.append(style);
         win.CSS.highlights.set(name, highlight);
       }

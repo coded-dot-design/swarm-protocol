@@ -1,9 +1,11 @@
 ---
+import characterArt from "@character-art";
 const { kind = 'ship', size = 48 } = Astro.props;
+
+const selectedArt=characterArt[kind];
 ---
-<svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden="true" class="character-icon">
-  {kind === 'ship' && <><path d="M14 2h4v6h4v6h4v10h-8v-4h-4v4H6V14h4V8h4V2Z" fill="currentColor"/><path d="M14 10h4v8h-4z" fill="var(--surface)"/><path d="M10 26h4v4h-4zm8 0h4v4h-4z" fill="currentColor" opacity=".9"/></>}
-  {kind === 'runner' && <><path d="M16 2 30 9 18 16l12 7-14 7L2 16 16 2Z" fill="currentColor"/><path d="M14 8h3v3h-3z" fill="var(--surface)"/><path d="M26 14h3v3h-3z" fill="currentColor" opacity=".9"/></>}
-  {kind === 'bug' && <><path d="M10 8h12v16H10z" fill="currentColor"/><path d="m12 8-4-5m12 5 4-5M10 12 4 9m6 8H2m8 4-6 5m18-14 6-3m-6 8h8m-8 4 6 5" stroke="currentColor" stroke-width="2"/><path d="M15 10h2v12h-2z" fill="var(--surface)"/></>}
+<svg width={size} height={size} viewBox={selectedArt?.viewBox || "0 0 32 32"} fill="none" aria-hidden="true" class="character-icon">
+  {selectedArt && <g shape-rendering="crispEdges">{selectedArt.layers.map(layer=><path d={layer.d} fill={layer.fill}/>)}</g>}
+  {kind === 'bug' && <g fill="currentColor" shape-rendering="crispEdges"><path d="M8 0h3v4h3v3h-3V4H8Zm16 0h-3v4h-3v3h3V4h3ZM8 12H4v-2H1v3h3v2h4Zm16 0h4v-2h3v3h-3v2h-4ZM6 18H0v3h6Zm20 0h6v3h-6ZM8 24H4v3H1v3h4v-3h3Zm16 0h4v3h3v3h-4v-3h-3Z"/><path fill-rule="evenodd" d="M12 4h8v4h4v4h2v12h-2v4h-4v2h-8v-2H8v-4H6V12h2V8h4ZM10 10v3h4v-3Zm8 0v3h4v-3Zm-3 6v10h2V16Z"/></g>}
   {kind === 'tank' && <><path d="M3 5h26v7H3zm0 16h26v7H3z" fill="currentColor" opacity="1"/><path d="M7 9h17v15H7z" fill="currentColor"/><path d="M12 12h10v9H12z" fill="var(--surface)"/><path d="M19 15h13v3H19z" fill="currentColor"/></>}
 </svg>

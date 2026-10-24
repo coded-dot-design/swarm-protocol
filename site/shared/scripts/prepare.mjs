@@ -1,8 +1,8 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import { resolve } from "node:path";
+import { resolve, dirname } from "node:path";
 import { execFileSync } from "node:child_process";
 import { gzipSync } from "node:zlib";
-import { pathToFileURL } from "node:url";
+import { pathToFileURL, fileURLToPath } from "node:url";
 import { latestReleasePins } from "./latest.mjs";
 import { prepareArchives } from "./releases.mjs";
 const root = process.cwd();
@@ -65,9 +65,18 @@ function swarmSize(gameRoot) {
 }
 const archives = prepareArchives(root, names);
 const games = [];
+const artSets=read(resolve(dirname(fileURLToPath(import.meta.url)),'../character-art.json'));
+
 for (const name of names) {
   const gameRoot = roots[name];
   const pkg = read(resolve(gameRoot, "package.json"));
+  const artPath=resolve(gameRoot,'site/art.json');
+  if(existsSync(artPath)){
+    const art=read(artPath);
+    if(art.source!==name||art.version!==pkg.version)throw new Error(`Artwork version mismatch: ${name}`);
+    artSets[name]=art;
+  }
+
   if (latest) {
     const actual = execFileSync("git", ["rev-parse", "HEAD"], {
       cwd: gameRoot,
@@ -126,6 +135,7 @@ for (const name of names) {
 }
 const out = resolve(root, "site/generated");
 mkdirSync(out, { recursive: true });
+writeFileSync(resolve(out,'character-art.json'),JSON.stringify(Object.assign({},...Object.values(artSets).map(art=>art.sprites)),null,2)+'\n');
 writeFileSync(
   resolve(out, "data.json"),
   JSON.stringify({ ...config, games }, null, 2) + "\n",

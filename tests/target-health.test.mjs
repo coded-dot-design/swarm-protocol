@@ -7,8 +7,8 @@ import { fixture } from './helpers/engine-fixture.mjs';
 
 test('health uses the requested states and slows its pulse as power drains', () => {
   assert.equal(targetSignal(100, '#123456').color, '#123456');
-  assert.equal(targetSignal(60).color, '#ffea00');
-  assert.equal(targetSignal(25).color, '#ff343b');
+  assert.equal(targetSignal(60).color, '#ffb96b');
+  assert.equal(targetSignal(25).color, '#ff6b6b');
   assert.equal(targetSignal(-1).fill, 0);
   assert.equal(targetSignal(101).fill, 100);
   let previous = 0;
@@ -17,8 +17,8 @@ test('health uses the requested states and slows its pulse as power drains', () 
     assert.ok(period > previous);
     previous = period;
   }
-  assert.match(liquidFill(50, '#ffea00'), /50%,transparent 50%/);
-  assert.notEqual(liquidFill(50, '#ffea00', 1, 0), liquidFill(50, '#ffea00', 1, .1));
+  assert.match(liquidFill(50, '#ffb96b'), /50%,transparent 50%/);
+  assert.notEqual(liquidFill(50, '#ffb96b', 1, 0), liquidFill(50, '#ffb96b', 1, .1));
 });
 
 test('real bites drain a liquid background without touching labels or native button state', () => {
@@ -38,7 +38,7 @@ test('real bites drain a liquid background without touching labels or native but
     p.tick(1 / 60);
     const raw = p.lead.style.getPropertyValue('background-image');
     const image = raw.includes('data:image/svg+xml,') ? decodeURIComponent(raw.split('data:image/svg+xml,')[1].split('"')[0]) : raw;
-    for (const color of ['rgb(255, 255, 255)', '#ffea00', '#ff343b']) if (image.includes(color)) colors.add(color);
+    for (const color of ['rgb(255, 255, 255)', '#ffb96b', '#ff6b6b']) if (image.includes(color)) colors.add(color);
     sawRipple ||= image.includes('<svg');
     sawMovement ||= Boolean(p.lead.style.getPropertyValue('translate'));
     assert.equal(p.lead.style.getPropertyValue('color'), '#234567');
@@ -51,7 +51,7 @@ test('real bites drain a liquid background without touching labels or native but
     if (p.lead.getAttribute('data-swarm-infected') === 'breached') break;
   }
   assert.ok(sawRipple && sawMovement);
-  assert.deepEqual(colors, new Set(['rgb(255, 255, 255)', '#ffea00', '#ff343b']));
+  assert.deepEqual(colors, new Set(['rgb(255, 255, 255)', '#ffb96b', '#ff6b6b']));
   assert.equal(p.lead.getAttribute('data-swarm-infected'), 'breached');
   assert.equal(p.lead.style.getPropertyValue('background-image'), 'linear-gradient(90deg,white,gray)');
   assert.equal(p.lead.style.getPropertyValue('rotate'), '-3deg');
@@ -111,7 +111,7 @@ test('host edits win during liquid painting, depletion and cleanup', () => {
 });
 
 for (const dark of [false, true]) {
-  for (const [index, color] of ['#ff343b', '#ff168f', '#a855ff'].entries()) {
+  for (const [index, color] of ['#ff6b6b', '#ff168f', '#a855ff'].entries()) {
     test(`${dark ? 'dark' : 'light'} score retains the killed tier ${index + 1} bug color across theme changes`, () => {
       const p = fixture(createDomDefender, { noText: true, noTargets: true, dark, feedback: true });
       p.call('start'); p.tick(.15);

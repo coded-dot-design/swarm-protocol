@@ -4,7 +4,7 @@ import CharacterIcon from './Icon.astro';
 const { game, index = 0, single = false } = Astro.props;
 const repo=`https://github.com/coded-dot-design/${game.id}`;
 const kb=(n)=> (n/1000).toFixed(1);
-const enemy = ({ship:"ship",runner:"runner",bug:"bug",tank:"tank"})[game.icon];
+const enemy = ({ship:"ship",runner:"fly-chaser",bug:"bug",tank:"tank"})[game.icon];
 ---
 <section id={game.id} class:list={['game-section', `accent-${game.accent}`]} aria-labelledby={`${game.id}-title`}>
   <div class="section-heading"><span class="eyebrow"><span class="index">0{index+1}</span> {game.kind}</span><span class="version">v{game.version} / MIT</span></div>
@@ -15,7 +15,7 @@ const enemy = ({ship:"ship",runner:"runner",bug:"bug",tank:"tank"})[game.icon];
       <div class="arena-copy"><span class="arena-line">THE PAGE IS</span><span class="arena-line">THE PLAYFIELD<span class="blinking-dot">.</span></span></div>
       <div class="demo-path"><i></i><i></i><i></i><i></i><i></i><i></i></div>
       <div class="arena-character"><Icon kind={game.icon} size={76}/></div>
-      <div class="arena-enemy one"><Icon kind={enemy} size={34}/></div><div class="arena-enemy two"><Icon kind={enemy} size={28}/></div><div class="arena-targets"><button data-arcade-target data-virus-target data-swarm-target>SPAWN_01</button><button data-arcade-target data-virus-target data-swarm-target>SPAWN_02</button></div>
+      <div class="arena-enemy one"><Icon kind={enemy} size={34}/></div><div class="arena-enemy two"><Icon kind={game.icon === "runner" ? "fly-interceptor" : enemy} size={28}/></div><div class="arena-targets"><button data-arcade-target data-virus-target data-swarm-target>SPAWN_01</button><button data-arcade-target data-virus-target data-swarm-target>SPAWN_02</button></div>
       <div class="display-bottom"><span>{game.versionNote}</span><span>ARCADE SIGNALS / DOM TERRAIN</span></div>
     </div>
   </div>

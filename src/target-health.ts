@@ -1,11 +1,11 @@
 const bubbleRadii = [1.25, 2.2, 3.8, 1.7, 5.2, 3.1];
 
 // A solid health fill. Lower health gives the beacon a slower cadence.
-export function targetSignal(health:number, powerColor = '#00e5ff') {
+export function targetSignal(health:number, powerColor = '#06c4ff') {
   const fill = Math.max(0, Math.min(100, health));
   return {
     fill: Math.round(fill * 10) / 10,
-    color: fill > 60 ? powerColor : fill > 25 ? '#ffea00' : '#ff343b',
+    color: fill > 60 ? powerColor : fill > 25 ? '#ffb96b' : '#ff6b6b',
     period: .7 + 2.1 * (1 - fill / 100),
   };
 }

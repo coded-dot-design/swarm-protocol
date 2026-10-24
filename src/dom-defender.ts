@@ -37,9 +37,9 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
   const MAX_FOOD_CANDIDATES = 240;
   const segmenter = typeof Intl.Segmenter === 'function' ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
   const bestKey = options.bestKey || 'swarm-protocol-best-v1';
-  const tierColors = ['#ff343b', '#ff168f', '#a855ff'];
+  const tierColors = ['#ff6b6b', '#d984ff', '#8573ee'];
   const protectedPointerSelector = '[data-swarm-attack-cues],[data-swarm-ui],[data-swarm-ignore],dialog,[role="dialog"],[aria-modal="true"],form,input,textarea,select,option,[contenteditable]';
-  const cursorSVG = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><g fill="none" stroke-linecap="round"><circle cx="16" cy="16" r="8" stroke="#101010" stroke-width="4"/><path d="M16 3v3m0 20v3M3 16h3m20 0h3" stroke="#101010" stroke-width="4"/><circle cx="16" cy="16" r="8" stroke="#00e5ff" stroke-width="1.5"/><path d="M16 3v3m0 20v3M3 16h3m20 0h3" stroke="#ecfcff" stroke-width="1.5"/></g><circle cx="16" cy="16" r="2" fill="#fff" stroke="#101010" stroke-width="1.5"/></svg>';
+  const cursorSVG = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><g fill="none" stroke-linecap="round"><circle cx="16" cy="16" r="8" stroke="#101010" stroke-width="4"/><path d="M16 3v3m0 20v3M3 16h3m20 0h3" stroke="#101010" stroke-width="4"/><circle cx="16" cy="16" r="8" stroke="#06c4ff" stroke-width="1.5"/><path d="M16 3v3m0 20v3M3 16h3m20 0h3" stroke="#ecfcff" stroke-width="1.5"/></g><circle cx="16" cy="16" r="2" fill="#fff" stroke="#101010" stroke-width="1.5"/></svg>';
   const reticleCursor = `url("data:image/svg+xml,${encodeURIComponent(cursorSVG)}") 16 16, crosshair`;
   const clamp = (v:number, a:number, b:number) => Math.max(a, Math.min(b, v));
   const rand = (a:number, b:number) => a + Math.random() * (b - a);
@@ -709,7 +709,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
       emit('evolve', { id: bug.id, tier, hp: bug.hp, x: bug.x, y: bug.y });
     }
     nickSurface(bug);
-    if (!reducedMotion && particles.length < MAX_PARTICLES) particles.push({ x: r.x, y: r.y, vx: (bug.x - r.x) / .25, vy: (bug.y - r.y) / .25, life: .25, total: .25, color: '#65ff00', text: binary });
+    if (!reducedMotion && particles.length < MAX_PARTICLES) particles.push({ x: r.x, y: r.y, vx: (bug.x - r.x) / .25, vy: (bug.y - r.y) / .25, life: .25, total: .25, color: '#74dfa1', text: binary });
     emit('bite', { id: bug.id, x: r.x, y: r.y, letter: glyph.letter, binary, lettersEaten: bug.lettersEaten, tier: bug.tier, full: bug.tier === 3 });
   }
   function chewGlyph(bug: Bug, dt:number) {
@@ -955,7 +955,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     ctx.restore();
     if (bug.chewing) {
       ctx.save();
-      ctx.strokeStyle = '#65ff00';
+      ctx.strokeStyle = '#74dfa1';
       ctx.lineWidth = 1;
       ctx.globalAlpha = .7;
       ctx.beginPath();

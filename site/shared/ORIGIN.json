@@ -1,6 +1,6 @@
 {
   "project": "https://github.com/coded-dot-design/dom-virus",
-  "version": "1.7.1",
-  "sourceSha256": "1e25b70c554d5d94b43a0d1e5f672522868749fd9f303e0fe6d6867e85ff6334",
+  "version": "1.9.0",
+  "sourceSha256": "873ba7b49e0052f758eb3d85a7d2a09bedc2922f78d650ce17947fe4b5a35bf7",
   "note": "Generated site kit. Edit dom-virus/site-kit, then run npm run sync:sites. Game content remains owned by site/game.json in this repository."
 }

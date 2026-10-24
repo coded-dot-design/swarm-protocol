@@ -1,15 +1,15 @@
 {
-  "version": "1.2.2",
-  "note": "Reviewed neon palette and native attachment changes. The original TypeScript migration baseline remains archived unchanged. Behavior is checked by deterministic gameplay tests and browser attachment regressions.",
+  "version": "1.2.5",
+  "note": "Original v1.0.13 palette restored; DOM ownership, target effects, and gameplay preserved.",
   "modules": {
-    "dom-defender": "f04d6bc324cd1454c1de9d942c1ed1e650beec14fc5c3af89cbb02009cd029eb",
-    "attack-indicators": "3439a94dd63eddc24e60242e49c7a798cde3041358d3c62c7833164c63431421",
-    "feedback-colors": "68b7303ee9fb4e9dcde9aa06e78dcedbb27c743f3585ba3f30e1cd677f45ab03",
-    "target-health": "6b61975908546454c1f4c803776d9c9f00b28201cce2504e079e739144abec49",
+    "dom-defender": "8e05f6609251017d41be37ec8615e322542fd05f439e9d952aea10dd1d7399f3",
+    "attack-indicators": "82a6fd4b77f44c3476d204ef0cdad387b07c391666ec86ac1fa3074f1c157272",
+    "feedback-colors": "80b165fc93845d474549c4e3563859466e8fb10f1f6995c48db9a3329a8f13a0",
+    "target-health": "c7e3efa4bc506fb3b6050d8a56a890b4044acb85e2a1e55dd1f7a5f850e32d06",
     "target-hover": "775a3f113479b7fcc37ac2f62107c17c27019f40ad6af56cba51b729dab08585",
-    "target-palette": "b0f117e454edc944ef60e0ef4ce8292accfbcb9ff09939c8e8270b956d9cd6d2",
-    "swarm-widget": "59286dcb498463b766383edb259751491494ae1bc4ba2713a6afce07c185d62f",
-    "swarm-loader": "23f376f76aab2b49301f276e18e45e02eb5bfecafca097a5e96c649d5cc46dda",
+    "target-palette": "33f0cb707bf70ebc17a3aa2ec4801835787746f1ed5355ecf080e1155bdd67b3",
+    "swarm-widget": "55f5fb6e2f50e065b41bf3ebbd62a47660fe12034d46983628ec7ecf7e7accc3",
+    "swarm-loader": "cd1d6b76679e461242dc316dd8564dbc92cca2a533fe1888a88084a04ee795ff",
     "swarm-deferred": "e6233af0c3e536431013bbd3bf0654fe45caad7074fc53a27e970b8bb27ec3e5"
   }
 }

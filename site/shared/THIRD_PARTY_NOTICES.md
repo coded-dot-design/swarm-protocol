@@ -1,6 +1,6 @@
 # Site artwork
 
-Ship, runner, ghost, and tank artwork follows the original coded.design game renderers. The Swarm bug uses the same Lucide-derived outline as the game.
+Ship, runner, fly, and tank artwork follows the original coded.design game renderers. The Swarm bug uses the same Lucide-derived outline as the game.
 
 ISC License
 

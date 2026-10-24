@@ -22,7 +22,7 @@ export function readTargetPalette(element: HTMLElement, doc: Document): Palette 
   const initial = computed();
   const base = initial.getPropertyValue('background-color') || 'transparent';
   const explicit = initial.getPropertyValue('--swarm-power-color').trim();
-  const fallback = initial.getPropertyValue('border-top-color') || initial.getPropertyValue('color') || '#00e5ff';
+  const fallback = initial.getPropertyValue('border-top-color') || initial.getPropertyValue('color') || '#06c4ff';
   const marker = 'data-swarm-color-probe';
   const previous = element.getAttribute(marker), originalStyle = element.getAttribute('style'), normalizedStyle = element.style.cssText;
   const temporary = ['transition', 'background-color'].map(name => [name, element.style.getPropertyValue(name), element.style.getPropertyPriority(name)] as const);
