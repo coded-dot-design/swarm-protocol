@@ -1,3 +1,4 @@
+import { AttachedPresentation } from './attached-presentation.js';
 import { createMobileZoomLock } from '../shared/zoom-lock.js';
 import { createBitHighlights } from './bit-highlights.js';
 import type { Point, Rect, Palette, Background, Target, TextArea, TextRecord, Glyph, Bug, Particle, Surface, StyleRecord, CursorRecord, AimEffect, GameState, PointerNode } from './runtime-types.js';
@@ -36,9 +37,9 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
   const MAX_FOOD_CANDIDATES = 240;
   const segmenter = typeof Intl.Segmenter === 'function' ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
   const bestKey = options.bestKey || 'swarm-protocol-best-v1';
-  const tierColors = ['#ff6b6b', '#d984ff', '#8573ee'];
+  const tierColors = ['#ff343b', '#ff168f', '#a855ff'];
   const protectedPointerSelector = '[data-swarm-attack-cues],[data-swarm-ui],[data-swarm-ignore],dialog,[role="dialog"],[aria-modal="true"],form,input,textarea,select,option,[contenteditable]';
-  const cursorSVG = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><g fill="none" stroke-linecap="round"><circle cx="16" cy="16" r="8" stroke="#101010" stroke-width="4"/><path d="M16 3v3m0 20v3M3 16h3m20 0h3" stroke="#101010" stroke-width="4"/><circle cx="16" cy="16" r="8" stroke="#06c4ff" stroke-width="1.5"/><path d="M16 3v3m0 20v3M3 16h3m20 0h3" stroke="#ecfcff" stroke-width="1.5"/></g><circle cx="16" cy="16" r="2" fill="#fff" stroke="#101010" stroke-width="1.5"/></svg>';
+  const cursorSVG = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><g fill="none" stroke-linecap="round"><circle cx="16" cy="16" r="8" stroke="#101010" stroke-width="4"/><path d="M16 3v3m0 20v3M3 16h3m20 0h3" stroke="#101010" stroke-width="4"/><circle cx="16" cy="16" r="8" stroke="#00e5ff" stroke-width="1.5"/><path d="M16 3v3m0 20v3M3 16h3m20 0h3" stroke="#ecfcff" stroke-width="1.5"/></g><circle cx="16" cy="16" r="2" fill="#fff" stroke="#101010" stroke-width="1.5"/></svg>';
   const reticleCursor = `url("data:image/svg+xml,${encodeURIComponent(cursorSVG)}") 16 16, crosshair`;
   const clamp = (v:number, a:number, b:number) => Math.max(a, Math.min(b, v));
   const rand = (a:number, b:number) => a + Math.random() * (b - a);
@@ -73,6 +74,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
   const attributeLedger = new Map<Element,Map<string,{original:string|null;latest:string|null}>>();
   const listeners: (()=>void)[] = [];
   const attackIndicators = createAttackIndicators(doc, reducedMotion, rescue);
+  const attachedPresentation = new AttachedPresentation(doc, setStyle);
 
   function on<K extends keyof DocumentEventMap>(target: EventTarget, name: K, callback: (event: DocumentEventMap[K])=>void, settings?: boolean | AddEventListenerOptions) {
     target.addEventListener(name, callback as EventListener, settings);
@@ -105,6 +107,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
   }
   function status(value: SwarmStatus) {
     state.status = value;
+    attachedPresentation.setActive(value === 'running' || value === 'intermission');
     zoomLock.setActive(value === 'running' || value === 'intermission');
     if (value !== 'running') attackIndicators.update(0);
     if (value === 'running') syncCursor();
@@ -147,6 +150,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     attributes.get(name)!.latest = value;
   }
   function restorePage() {
+    attachedPresentation.clear();
     zoomLock.setActive(false);
     bitHighlights.destroy();
     releaseHover?.();
@@ -499,25 +503,6 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
       target.moving = false;
     }
   }
-  function drawTargetSignals() {
-    const calm = coarsePointer();
-    for (const target of targets) {
-      if (!target.visible || !target.rendered || !target.element.isConnected || target.health <= 0) continue;
-      const signal = targetSignal(target.health, target.palette?.power), r = target.rect;
-      ctx.save();
-      ctx.strokeStyle = signal.color;
-      ctx.lineWidth = 1.5;
-      for (let band = 0; band < (reducedMotion || calm ? 1 : 2); band++) {
-        const phase = reducedMotion ? 0 : (target.pulsePhase + band * .5) % 1;
-        const spread = 2 + phase * (calm ? 8 : 12 + signal.fill * .08);
-        ctx.globalAlpha = (1 - phase) ** 2 * (calm ? .35 : .65);
-        ctx.beginPath();
-        ctx.roundRect(r.left - spread, r.top - spread, r.width + spread * 2, r.height + spread * 2, target.cornerRadius + spread);
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-  }
   function damageTarget(target: Target, bug: Bug) {
     target.bites++;
     bug.siphonUntil = state.elapsed + .16;
@@ -724,7 +709,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
       emit('evolve', { id: bug.id, tier, hp: bug.hp, x: bug.x, y: bug.y });
     }
     nickSurface(bug);
-    if (!reducedMotion && particles.length < MAX_PARTICLES) particles.push({ x: r.x, y: r.y, vx: (bug.x - r.x) / .25, vy: (bug.y - r.y) / .25, life: .25, total: .25, color: '#74dfa1', text: binary });
+    if (!reducedMotion && particles.length < MAX_PARTICLES) particles.push({ x: r.x, y: r.y, vx: (bug.x - r.x) / .25, vy: (bug.y - r.y) / .25, life: .25, total: .25, color: '#65ff00', text: binary });
     emit('bite', { id: bug.id, x: r.x, y: r.y, letter: glyph.letter, binary, lettersEaten: bug.lettersEaten, tier: bug.tier, full: bug.tier === 3 });
   }
   function chewGlyph(bug: Bug, dt:number) {
@@ -922,7 +907,8 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     }
   }
   let bugPaths: {body:Path2D;shell:Path2D;legs:[number,number,Path2D][]} | undefined;
-  function drawBug(bug: Bug, time:number) {
+  function drawBug(bug: Bug, time:number, context = ctx) {
+    const ctx = context;
     if (options.drawBug) { options.drawBug(ctx, bug, time); return; }
     // Offscreen missions keep simulating, without issuing invisible canvas work.
     const margin = 32 * bug.size;
@@ -969,7 +955,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     ctx.restore();
     if (bug.chewing) {
       ctx.save();
-      ctx.strokeStyle = '#74dfa1';
+      ctx.strokeStyle = '#65ff00';
       ctx.lineWidth = 1;
       ctx.globalAlpha = .7;
       ctx.beginPath();
@@ -992,8 +978,10 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     // Retain one live media query; existing effects adapt on the next frame.
     const colors = feedbackColors(darkQuery?.matches);
     ctx.clearRect(0, 0, width, height);
-    drawTargetSignals();
-    for (const bug of bugs) drawBug(bug, state.elapsed);
+    attachedPresentation.update(targets, bugs, reducedMotion || coarsePointer());
+    for (const bug of bugs) {
+      if (!attachedPresentation.drawBug(bug, ratio, context => drawBug(bug, state.elapsed, context))) drawBug(bug, state.elapsed);
+    }
     for (const p of particles) {
       if (p.x < -80 || p.x > width + 80 || p.y < -30 || p.y > height + 30) continue;
       ctx.globalAlpha = clamp(p.life / (p.score ? .4 : p.total), 0, 1);
@@ -1021,6 +1009,8 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
         }
         ctx.fillText(p.text, p.x, p.y);
       } else {
+        ctx.strokeStyle = '#151020'; ctx.lineWidth = 2;
+        ctx.strokeRect(p.x - 1.5, p.y - 1.5, 3, 3);
         ctx.fillStyle = p.tier ? colors.shards[p.tier - 1] : p.color;
         ctx.fillRect(p.x - 1.5, p.y - 1.5, 3, 3);
       }
@@ -1296,6 +1286,8 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     suppressedClick = null;
     trackPointer(event);
     if (state.status !== 'running' || event.button > 0 || protectedPointer(pointerPath(event))) return;
+    syncScroll();
+    refreshGeometry(true);
     const radius = event.pointerType === 'touch' || coarsePointer() ? 31 : 23;
     let hit = null, nearest = radius;
     for (const bug of bugs) {

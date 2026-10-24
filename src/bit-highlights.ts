@@ -13,7 +13,7 @@ export function createBitHighlights(doc: Document) {
       if (!highlight) {
         highlight = new win.Highlight();
         style = doc.createElement('style');
-        style.textContent = `::highlight(${name}){color:rgb(0 110 150 / .72)}@media(prefers-color-scheme:dark){::highlight(${name}){color:rgb(88 219 224 / .72)}}`;
+        style.textContent = `::highlight(${name}){color:#ff168f;background-color:#151020}`;
         doc.head.append(style);
         win.CSS.highlights.set(name, highlight);
       }

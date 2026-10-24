@@ -7,8 +7,8 @@ import { fixture } from './helpers/engine-fixture.mjs';
 
 test('health uses the requested states and slows its pulse as power drains', () => {
   assert.equal(targetSignal(100, '#123456').color, '#123456');
-  assert.equal(targetSignal(60).color, '#cdde00');
-  assert.equal(targetSignal(25).color, '#f4457a');
+  assert.equal(targetSignal(60).color, '#ffea00');
+  assert.equal(targetSignal(25).color, '#ff343b');
   assert.equal(targetSignal(-1).fill, 0);
   assert.equal(targetSignal(101).fill, 100);
   let previous = 0;
@@ -17,8 +17,8 @@ test('health uses the requested states and slows its pulse as power drains', () 
     assert.ok(period > previous);
     previous = period;
   }
-  assert.match(liquidFill(50, '#cdde00'), /50%,transparent 50%/);
-  assert.notEqual(liquidFill(50, '#cdde00', 1, 0), liquidFill(50, '#cdde00', 1, .1));
+  assert.match(liquidFill(50, '#ffea00'), /50%,transparent 50%/);
+  assert.notEqual(liquidFill(50, '#ffea00', 1, 0), liquidFill(50, '#ffea00', 1, .1));
 });
 
 test('real bites drain a liquid background without touching labels or native button state', () => {
@@ -38,7 +38,7 @@ test('real bites drain a liquid background without touching labels or native but
     p.tick(1 / 60);
     const raw = p.lead.style.getPropertyValue('background-image');
     const image = raw.includes('data:image/svg+xml,') ? decodeURIComponent(raw.split('data:image/svg+xml,')[1].split('"')[0]) : raw;
-    for (const color of ['rgb(255, 255, 255)', '#cdde00', '#f4457a']) if (image.includes(color)) colors.add(color);
+    for (const color of ['rgb(255, 255, 255)', '#ffea00', '#ff343b']) if (image.includes(color)) colors.add(color);
     sawRipple ||= image.includes('<svg');
     sawMovement ||= Boolean(p.lead.style.getPropertyValue('translate'));
     assert.equal(p.lead.style.getPropertyValue('color'), '#234567');
@@ -51,7 +51,7 @@ test('real bites drain a liquid background without touching labels or native but
     if (p.lead.getAttribute('data-swarm-infected') === 'breached') break;
   }
   assert.ok(sawRipple && sawMovement);
-  assert.deepEqual(colors, new Set(['rgb(255, 255, 255)', '#cdde00', '#f4457a']));
+  assert.deepEqual(colors, new Set(['rgb(255, 255, 255)', '#ffea00', '#ff343b']));
   assert.equal(p.lead.getAttribute('data-swarm-infected'), 'breached');
   assert.equal(p.lead.style.getPropertyValue('background-image'), 'linear-gradient(90deg,white,gray)');
   assert.equal(p.lead.style.getPropertyValue('rotate'), '-3deg');
@@ -73,7 +73,7 @@ test('pause freezes liquid and beacon motion; stop and restart reset the page', 
   assert.equal(p.lead.style.cssText, styles);
   assert.equal(JSON.stringify(p.signals), rings);
   p.call('resume'); p.tick(.2);
-  assert.notEqual(JSON.stringify(p.signals), rings);
+  assert.equal(p.signals.length, 0, 'beacons no longer paint viewport canvas; native motion is tested in the browser');
   p.call('stop'); assert.equal(p.lead.hasAttribute('style'), false);
   p.call('start'); assert.ok(decodeURIComponent(p.lead.style.getPropertyValue('background-image')).includes('rgb(255, 255, 255)'));
   p.finish();
@@ -111,7 +111,7 @@ test('host edits win during liquid painting, depletion and cleanup', () => {
 });
 
 for (const dark of [false, true]) {
-  for (const [index, color] of ['#ff6b6b', '#d984ff', '#8573ee'].entries()) {
+  for (const [index, color] of ['#ff343b', '#ff168f', '#a855ff'].entries()) {
     test(`${dark ? 'dark' : 'light'} score retains the killed tier ${index + 1} bug color across theme changes`, () => {
       const p = fixture(createDomDefender, { noText: true, noTargets: true, dark, feedback: true });
       p.call('start'); p.tick(.15);
@@ -122,7 +122,7 @@ for (const dark of [false, true]) {
       assert.equal(score().color, color);
       assert.equal(score().alpha, 1);
       assert.ok(p.feedback.some(f => f.kind === 'outline' && f.color === '#101010'));
-      assert.ok(p.feedback.some(f => f.kind === 'outline' && f.color === (dark ? '#101010' : '#ffffff')));
+      assert.ok(p.feedback.some(f => f.kind === 'outline' && f.color === (dark ? '#101010' : '#151020')));
       p.dark.matches = !dark; p.tick(.55);
       assert.equal(score().color, color);
       assert.equal(score().alpha, 1);
@@ -187,7 +187,7 @@ test('hover keeps power and pulse phase while bubbles accelerate without a phase
   assert.ok(p.lead.style.getPropertyValue('translate'));
   assert.ok(p.lead.style.getPropertyValue('rotate'));
   assert.deepEqual(p.signals.map(r => r.rect), rings.map(r => r.rect), 'Interaction must not restart the pulse');
-  assert.equal(p.signals[0].alpha, rings[0].alpha);
+  assert.equal(p.signals.length, 0, 'native beacons never draw viewport rings');
   focused = true; p.fire('focusin', { target: p.lead });
   hovered = false; p.fire('pointerout', { target: p.lead, relatedTarget: p.doc.body });
   assert.ok(!p.lead.style.getPropertyValue('background-image').includes('linear-gradient(red,blue)'));
@@ -260,7 +260,7 @@ test('interior bubbles use an opposite surface tone and a broad size range', () 
   assert.equal(bubbleContrast('oklch(0.25 0.02 220)'), '#ffffff');
   assert.equal(bubbleContrast('oklch(95% 0.02 220)'), '#101010');
   assert.equal(bubbleContrast('color(display-p3 0.1 0.1 0.1)'), '#ffffff');
-  const svg = decodeURIComponent(liquidFill(100, '#06c4ff', 0, 0, .5, 1, {time: 1, width: 100, height: 40, color: '#101010'}));
+  const svg = decodeURIComponent(liquidFill(100, '#00e5ff', 0, 0, .5, 1, {time: 1, width: 100, height: 40, color: '#101010'}));
   const sizes = [...svg.matchAll(/rx="([^"]+)"/g)].map(m => +m[1]);
   assert.equal(new Set(sizes).size, 6);
   assert.ok(Math.max(...sizes) / Math.min(...sizes) > 4);
@@ -308,7 +308,7 @@ for (const mobile of [true, false]) {
     p.tick(.4);
     assert.equal(p.lead.style.getPropertyValue('background-image'), background);
     assert.equal(p.lead.style.getPropertyValue('translate'), '');
-    assert.equal(p.signals.length, 1);
+    assert.equal(p.signals.length, 0, 'mobile beacons are native children');
     assert.ok(p.signals.every(s => s.alpha <= .35));
     p.finish();
   });

@@ -7,7 +7,7 @@
   --muted: #afbed0;
   --faint: #8d9eb4;
   --line: #304055;
-  --accent: #77edaa;
+  --accent: #ff168f;
   --accent-ink: #0c2015;
   --grid: #ffffff05;
   --mono: ui-monospace, SFMono-Regular, Consolas, monospace;
@@ -31,17 +31,17 @@ html[data-theme="light"] {
 }
 .accent-cyan,
 .cyan {
-  --accent: #77e4eb;
+  --accent: #00e5ff;
   --accent-ink: #102528;
 }
 .accent-lime,
 .lime {
-  --accent: #c4ee77;
+  --accent: #65ff00;
   --accent-ink: #1b2710;
 }
 .accent-violet,
 .violet {
-  --accent: #bda1f6;
+  --accent: #ff168f;
   --accent-ink: #231635;
 }
 html[data-theme="light"] .accent-cyan,
@@ -399,7 +399,7 @@ section {
   position: absolute;
   width: 3px;
   height: 17px;
-  background: #77e4eb;
+  background: #00e5ff;
   right: 108px;
   bottom: 150px;
   transform: rotate(-35deg);
@@ -755,7 +755,7 @@ details > div {
   color: var(--accent-text, var(--accent));
 }
 .engineering {
-  --accent: #8ebdff;
+  --accent: #a855ff;
   margin: 100px 0 70px;
   padding: 42px 30px 70px;
   border: 1px solid var(--line);
@@ -1513,7 +1513,7 @@ pre {
 
 .accent-amber,
 .amber {
-  --accent: #f2bd68;
+  --accent: #ff343b;
   --accent-ink: #292014;
 }
 html[data-theme="light"] .accent-amber,
@@ -1525,7 +1525,7 @@ html[data-theme="light"] .amber {
 .art-character.amber {
   left: 38%;
   top: 65%;
-  color: #f2bd68;
+  color: #ff343b;
 }
 [data-sherman-wall] {
   border: 1px dashed var(--accent);
@@ -1564,19 +1564,17 @@ html[data-theme="light"] .amber {
 html[data-theme="light"] .game-section {
   background: #fff;
 }
-/* Neon fills keep their saturation. Text has a separate contrast token;
-   preview panels supply a dark stage instead of dulling the colors. */
+/* White browser panels invert the chrome while keeping the neon game colors. */
 html[data-theme="light"] :is(.hero-art, .game-display) {
-  --surface: #151020;
-  --raised: #241a35;
-  --ink: #fff5ff;
-  --muted: #d2c7e1;
-  --faint: #b7a7cd;
-  --line: #49385f;
-  --grid: #ffffff08;
-  --accent-text: var(--accent);
-  background-color: var(--surface);
-  border-color: #49385f;
+  --surface: #fff;
+  --raised: #f0ebff;
+  --ink: #171022;
+  --muted: #574967;
+  --faint: #6a597b;
+  --line: #d9cfe8;
+  --grid: #1710220a;
+  background-color: #fff;
+  border-color: #171022;
 }
 html[data-theme="light"] .hero-art {
   box-shadow: 7px 7px 0 #ff168f;
@@ -1584,8 +1582,8 @@ html[data-theme="light"] .hero-art {
 html[data-theme="light"] :is(.art-character, .arena-character, .arena-enemy) {
   color: var(--accent);
 }
-html[data-theme="light"] .arena-enemy.one { color: #ff168f; }
-html[data-theme="light"] .arena-enemy.two { color: #65ff00; }
+.arena-enemy.one { color: #ff168f; }
+.arena-enemy.two { color: #a855ff; }
 html[data-theme="light"] .art-bullet { background: #00e5ff; }
 html[data-theme="light"] .art-character.amber { color: #ff343b; }
 html[data-theme="light"] .button.primary {
@@ -1653,3 +1651,12 @@ html[data-theme="light"] :is(button, a, summary):focus-visible {
 
 /* Each game owns its mobile HUD. A second fixed launcher bar obscures it. */
 @media (pointer:coarse),(max-width:600px){.session-bar{display:none}}
+
+.game-palette{margin-top:32px;padding-top:22px;border-top:1px solid var(--line)}
+.palette-bar{display:flex;flex-wrap:wrap;gap:16px;margin-top:14px}
+.palette-swatch{display:flex;align-items:center;gap:10px;min-width:130px;font:10px/1.6 var(--mono);color:var(--ink)}
+.palette-swatch i{display:block;width:34px;height:34px;border:3px solid #151020;background:var(--swatch);flex-shrink:0}
+.palette-swatch code{display:block;font:9px/1.6 var(--mono);color:var(--muted);text-transform:uppercase}
+
+/* Real target buttons use the section signal color, including in preview art. */
+.art-button,.arena-targets button{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);--virus-power-color:var(--accent);--swarm-power-color:var(--accent)}
