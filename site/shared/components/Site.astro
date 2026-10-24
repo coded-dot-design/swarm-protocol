@@ -6,6 +6,9 @@ import Icon from './AbstractIcon.astro';
 import UiIcon from './UiIcon.astro';
 import CodePreview from './CodePreview.astro';
 import brandIcon from '../assets/dom-virus-icon.svg?raw';
+import appIcon from '../assets/dom-virus-app-icon.svg?raw';
+// Home Screen icons must be PNG on iOS; Vite inlines the tiny 180px render as a data URL.
+import touchIcon from '../assets/dom-virus-app-icon-180.png?inline';
 import '../style.css';
 const {data}=Astro.props;
 const hub=data.id==='dom-virus';
@@ -19,7 +22,8 @@ const kb=(n)=>(n/1000).toFixed(1);
   <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="description" content={`${title} by Chris Cooley / coded.design. Tiny, open-source arcade games that turn your actual webpage into the game board.`}/>
   <meta name="theme-color" content="#100a1b"/><title>{title} — The DOM is the game board.</title>
-  <link rel="icon" type="image/svg+xml" href={`data:image/svg+xml,${encodeURIComponent(brandIcon)}`}/>
+  <link rel="icon" type="image/svg+xml" href={`data:image/svg+xml,${encodeURIComponent(appIcon)}`}/>
+  <link rel="apple-touch-icon" href={touchIcon}/>
   <script is:inline>
     (()=>{let preference='system';try{preference=localStorage.getItem('dom-virus:theme')||'system'}catch{}if(!['system','dark','light'].includes(preference))preference='system';document.documentElement.dataset.preference=preference;document.documentElement.dataset.theme=preference==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):preference})()
   </script>
