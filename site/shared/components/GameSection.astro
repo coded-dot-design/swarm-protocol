@@ -3,18 +3,19 @@ import Icon from './Icon.astro';
 const { game, index = 0, single = false } = Astro.props;
 const repo=`https://github.com/coded-dot-design/${game.id}`;
 const kb=(n)=> (n/1000).toFixed(1);
+const enemy = ({ship:"drone",runner:"ghost",bug:"bug",tank:"tank"})[game.icon];
 ---
 <section id={game.id} class:list={['game-section', `accent-${game.accent}`]} aria-labelledby={`${game.id}-title`}>
   <div class="section-heading"><span class="eyebrow"><span class="index">0{index+1}</span> {game.kind}</span><span class="version">v{game.version} / MIT</span></div>
   <div class="game-intro">
     <div><h2 id={`${game.id}-title`}>{game.name}<span>{game.tagline}</span></h2><p class="lead">{game.description}</p><div class="actions" data-virus-ignore data-swarm-ignore><button class="button primary" data-launch={game.id}><span>▶</span> Play {game.name}</button><a class="button quiet" href={`${repo}#readme`}>Read the source <span>↗</span></a></div>{game.archives?.length > 0 && <div class="release-picker" data-virus-ignore data-swarm-ignore><label for={`${game.id}-release`}>TEST A RELEASE</label><select id={`${game.id}-release`} data-release={game.id}><option value={game.id} data-version={`v${game.version}`}>Current · v{game.version}</option>{game.archives.map(release=><option value={release.key} data-version={release.version}>{release.version} · archived</option>)}</select><p>Play uses the selected build. Notes below describe the current release.</p></div>}<p class="credit">Created by <span>Chris Cooley</span> · coded.design</p></div>
-    <div class="game-display" aria-label={`${game.name} gameplay illustration`}>
+    <div class="game-display" data-cartridge={game.id} aria-label={`${game.name} gameplay illustration`}>
       <div class="display-top"><span class="led"></span> {game.kind}<span class="display-note">DOM / ACTIVE SURFACE</span></div>
       <div class="arena-copy"><span class="arena-line">THE PAGE IS</span><span class="arena-line">THE PLAYFIELD<span class="blinking-dot">.</span></span></div>
       <div class="demo-path"><i></i><i></i><i></i><i></i><i></i><i></i></div>
-      <div class="arena-character"><Icon kind={game.icon} size={56}/></div>
-      <div class="arena-targets"><button data-arcade-target data-virus-target data-swarm-target>SPAWN_01</button><button data-arcade-target data-virus-target data-swarm-target>SPAWN_02</button></div>
-      <div class="display-bottom"><span>{game.versionNote}</span><span>↖ SHOOT / EAT / DEFEND</span></div>
+      <div class="arena-character"><Icon kind={game.icon} size={76}/></div>
+      <div class="arena-enemy one"><Icon kind={enemy} size={34} color={game.icon === "tank" ? "#fa9361" : undefined}/></div><div class="arena-enemy two"><Icon kind={game.icon === "ship" ? "crab" : enemy} size={28} color={game.icon === "tank" ? "#f36979" : game.icon === "bug" ? "#e9ad69" : undefined}/></div><div class="arena-targets"><button data-arcade-target data-virus-target data-swarm-target>SPAWN_01</button><button data-arcade-target data-virus-target data-swarm-target>SPAWN_02</button></div>
+      <div class="display-bottom"><span>{game.versionNote}</span><span>GAME SPRITES / DOM TERRAIN</span></div>
     </div>
   </div>
   {game.id === "sherman-bytes" && <aside data-sherman-wall>HARD COVER / Drive around this bunker. Shells stop here.</aside>}
