@@ -3033,3 +3033,11 @@ html[data-theme="light"] .astro-code span {
 @media(max-width:760px){.engineering,.embed-section{margin:56px 0 40px;padding:18px 20px}.technical-grid,.technical-grid.reverse{grid-template-columns:minmax(0,1fr);gap:26px;margin-bottom:52px}.technical-grid>div{max-width:none}.technical-grid>figure,.technical-grid.reverse>figure{justify-self:center;max-width:440px}}
 
 html[data-theme="light"] :is(.engineering,.embed-section){background:transparent}
+
+/* Leave a usable page gutter around mobile game cards and their raised edges. */
+@media (max-width: 760px) {
+  .game-section { margin-inline: 24px; }
+  .site-header, .hero, .game-directory, .engineering, .embed-section, .site-footer {
+    padding-inline: 24px;
+  }
+}

@@ -1,5 +1,6 @@
 import { AttachedPresentation } from './attached-presentation.js';
 import { createMobileZoomLock } from '../shared/zoom-lock.js';
+import { createMobileSelectionLock } from '../shared/selection-lock.js';
 import { createBitHighlights } from './bit-highlights.js';
 import type { Point, Rect, Palette, Background, Target, TextArea, TextRecord, Glyph, Bug, Particle, Surface, StyleRecord, CursorRecord, AimEffect, GameState, PointerNode } from './runtime-types.js';
 import type { SwarmEvent, SwarmStatus } from '../integration/swarm-types.js';
@@ -50,6 +51,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
   const coarsePointer = () => width <= 640 || Boolean(coarseQuery?.matches);
   let best = 0;
   try { best = Math.max(0, Number(win.localStorage.getItem(bestKey)) || 0); } catch {}
+  const selectionLock = createMobileSelectionLock(doc);
   const zoomLock = createMobileZoomLock(doc, options.lockZoom !== false);
   const bitHighlights = createBitHighlights(doc);
   const state: GameState = { status: 'idle', score: 0, best, wave: 0, kills: 0, combo: 1, elapsed: 0 };
@@ -109,6 +111,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     state.status = value;
     attachedPresentation.setActive(value === 'running' || value === 'intermission');
     zoomLock.setActive(value === 'running' || value === 'intermission');
+    selectionLock.setActive(value === 'running' || value === 'intermission');
     if (value !== 'running') attackIndicators.update(0);
     if (value === 'running') syncCursor();
     else restoreCursor();
@@ -152,6 +155,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
   function restorePage() {
     attachedPresentation.clear();
     zoomLock.setActive(false);
+    selectionLock.setActive(false);
     bitHighlights.destroy();
     releaseHover?.();
     releaseHover = null;

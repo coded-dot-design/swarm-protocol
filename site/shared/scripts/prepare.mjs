@@ -167,3 +167,6 @@ if (archiveEntries.length) {
 console.log(
   `Site ready: ${config.id}; ${games.length} game(s). Metrics measured from built distribution files.`,
 );
+
+// The standalone Battlefield is hosted here; it never enters a game bundle.
+if (config.id === "dom-virus") await import(pathToFileURL(resolve(root, "scripts/prepare-battlefield.mjs")).href);

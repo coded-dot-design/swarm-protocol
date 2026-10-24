@@ -1,8 +1,8 @@
 {
-  "version": "1.3.0",
-  "note": "Reviewed first-bite mint fade and earlier amber/coral health stages. Original bug palette, damage, DOM ownership, and gameplay preserved.",
+  "version": "1.3.1",
+  "note": "Reviewed reversible mobile text-selection policy; original bug palette, damage, DOM ownership, and gameplay preserved.",
   "modules": {
-    "dom-defender": "9ff86fa3526c028edf5bb2d18986e61630c55519d1983ce2ac5a7e233251b2f4",
+    "dom-defender": "339088c2b31f9af9eac8fb332d96516fb3d415e964832ef1f99d46ce5edb015a",
     "attack-indicators": "82a6fd4b77f44c3476d204ef0cdad387b07c391666ec86ac1fa3074f1c157272",
     "feedback-colors": "80b165fc93845d474549c4e3563859466e8fb10f1f6995c48db9a3329a8f13a0",
     "target-health": "d540d5d8506bacbdc4f6e508f2af7792d3cad361ab837f8edd51ddb62354786d",
