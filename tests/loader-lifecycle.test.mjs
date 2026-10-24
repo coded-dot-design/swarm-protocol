@@ -1,3 +1,4 @@
+import { transformSync } from 'esbuild';
 /**
  * Swarm Protocol — MIT © 2026 Chris Cooley.
  * Portable loader lifecycle regression tests; no browser or dependencies needed.
@@ -20,8 +21,8 @@ import test from 'node:test';
 
 const sourcePath = process.argv[2]
   ? resolve(process.argv[2])
-  : fileURLToPath(new URL('../src/swarm-loader.js', import.meta.url));
-const source = readFileSync(sourcePath, 'utf8');
+  : fileURLToPath(new URL('../src/swarm-loader.ts', import.meta.url));
+const source = transformSync(readFileSync(sourcePath, 'utf8'), {loader:'ts'}).code;
 const importPattern = /import\((['"])\.\/swarm-widget\.js\1\)/g;
 assert.equal([...source.matchAll(importPattern)].length, 1, 'Expected exactly one lazy widget import to substitute.');
 assert.equal((source.match(/export function installSwarm\(/g) || []).length, 1, 'Expected the public installSwarm export.');

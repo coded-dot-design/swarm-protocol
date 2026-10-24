@@ -9,7 +9,7 @@ import { resolve } from 'node:path';
 const args=process.argv.slice(2);
 function option(name,fallback){const i=args.indexOf(name);if(i<0)return fallback;if(!args[i+1]||args[i+1].startsWith('--'))throw new Error('Missing value for '+name);return args[i+1]}
 const REFINED=args.includes('--refined');
-const SOURCE=option('--engine',new URL(REFINED?'../src/dom-defender.js':'./fixtures/dom-defender-1.0.9.js',import.meta.url));
+const SOURCE=option('--engine',new URL(REFINED?'../src/dom-defender.ts':'./fixtures/dom-defender-1.0.9.js',import.meta.url));
 const BASELINE=option('--baseline',new URL('./fixtures/dom-defender-before-perf.js',import.meta.url));
 const REPORT=option('--report',null);
 process.on('uncaughtException', error=>{console.error(String(error.stack||error).split('\n').filter(line=>!line.includes('data:text/javascript')).slice(0,10).join('\n'));process.exitCode=1});

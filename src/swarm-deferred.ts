@@ -1,3 +1,22 @@
+import type { SwarmInstallation, SwarmInstallOptions } from '../integration/swarm-types.js';
+
+export type { SwarmInstallation, SwarmInstallOptions } from '../integration/swarm-types.js';
+
+export interface SwarmDeferredScheduling {
+  /** Delay after page load or visibility restoration; defaults to 1000 ms. */
+  delayMs?: number;
+  /** requestIdleCallback timeout; defaults to 2000 ms. */
+  idleTimeoutMs?: number;
+}
+
+export interface SwarmDeferredInstallation {
+  /** The hidden installation, or null if cancelled before installation. */
+  ready: Promise<SwarmInstallation | null>;
+  /** Cancel pending setup or destroy the completed installation. Idempotent. */
+  destroy(): void;
+}
+
+
 /**
  * Swarm Protocol — MIT © 2026 Chris Cooley.
  * Load only the hidden bootstrap after the page's load, delay, and idle gates.
@@ -10,18 +29,18 @@
  * @param {import('./swarm-deferred.js').SwarmDeferredScheduling} [scheduling]
  * @returns {import('./swarm-deferred.js').SwarmDeferredInstallation}
  */
-export function installSwarmDeferred(options = {}, scheduling = {}) {
-  const doc = options.document || options.host?.ownerDocument || (typeof document !== 'undefined' ? document : null);
+export function installSwarmDeferred(options: SwarmInstallOptions = {}, scheduling: SwarmDeferredScheduling = {}): SwarmDeferredInstallation {
+  const doc = options.document || options.host?.ownerDocument || (typeof document !== 'undefined' ? document : null)!;
   if (!doc?.defaultView) throw new Error('installSwarmDeferred() must be called in a browser.');
-  const win = doc.defaultView;
-  const delayMs = Number.isFinite(scheduling.delayMs) ? Math.max(0, Math.min(2147483647, scheduling.delayMs)) : 1000;
-  const idleTimeoutMs = Number.isFinite(scheduling.idleTimeoutMs) ? Math.max(1, Math.min(2147483647, scheduling.idleTimeoutMs)) : 2000;
+  const win = doc.defaultView!;
+  const delayMs = Number.isFinite(scheduling.delayMs) ? Math.max(0, Math.min(2147483647, scheduling.delayMs!)) : 1000;
+  const idleTimeoutMs = Number.isFinite(scheduling.idleTimeoutMs) ? Math.max(1, Math.min(2147483647, scheduling.idleTimeoutMs!)) : 2000;
   const canIdle = typeof win.requestIdleCallback === 'function' && typeof win.cancelIdleCallback === 'function';
   let disposed = false, loaded = doc.readyState === 'complete', gateReady = false;
-  let delayTimer = null, fallbackTimer = null, idleHandle = null;
-  let bootstrap = null, importing = false, installation = null;
-  let resolveReady, rejectReady;
-  const ready = new Promise((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
+  let delayTimer: number | null = null, fallbackTimer: number | null = null, idleHandle: number | null = null;
+  let bootstrap: typeof import("./swarm-loader.js") | null = null, importing = false, installation: SwarmInstallation | null = null;
+  let resolveReady!: (value: SwarmInstallation | null) => void, rejectReady!: (error: unknown) => void;
+  const ready = new Promise<SwarmInstallation | null>((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
   // The caller may only need destroy(). Keep an unused failed ready promise safe
   // while preserving its rejection for callers that await or catch it.
   void ready.catch(() => {});
@@ -52,7 +71,7 @@ export function installSwarmDeferred(options = {}, scheduling = {}) {
     if (options.host && !options.host.isConnected) { destroy(); return false; }
     return true;
   }
-  function fail(error) {
+  function fail(error: unknown) {
     if (disposed) return;
     disposed = true;
     cleanup();
@@ -62,7 +81,7 @@ export function installSwarmDeferred(options = {}, scheduling = {}) {
   function mount() {
     if (!gateReady || !usable()) return;
     try {
-      const mounted = bootstrap.installSwarm({ ...options, document: doc });
+      const mounted = bootstrap!.installSwarm({ ...options, document: doc });
       if (disposed) { mounted.destroy(); return; }
       installation = mounted;
       cleanup();

@@ -1,3 +1,6 @@
+import type { SwarmInstallation, SwarmInstallOptions, SwarmController, SwarmSnapshot, SwarmEvent } from '../integration/swarm-types.js';
+
+export type { SwarmInstallation, SwarmInstallOptions } from '../integration/swarm-types.js';
 /**
  * Swarm Protocol — MIT © 2026 Chris Cooley.
  * A small, dormant entry point. The game imports only after open() or start().
@@ -14,23 +17,24 @@ const PILL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
  * sequence position and timestamps; typed text is never retained or transmitted.
  * @param {import('./swarm-loader.js').SwarmInstallOptions} [options]
  */
-export function installSwarm(options = {}) {
-  const doc = options.document || options.host?.ownerDocument || (typeof document !== 'undefined' ? document : null);
+export function installSwarm(options: SwarmInstallOptions = {}): SwarmInstallation {
+  const doc = options.document || options.host?.ownerDocument || (typeof document !== 'undefined' ? document : null)!;
   if (!doc?.defaultView) throw new Error('installSwarm() must be called in a browser.');
-  const win = doc.defaultView;
+  const win = doc.defaultView!;
   const keyboard = options.keyboard ?? 'sequence';
   const triggerSelector = options.triggerSelector ?? '[data-swarm-trigger]';
   const storageKey = options.storageKey || 'swarm-protocol-best-v1';
   let destroyed = false, unlocked = false, visible = false, widgetShown = false;
-  let widget = null, widgetHost = null, ownsWidgetHost = false, loading = null;
-  let pillHost = null, pillButton = null, lastSnapshot = null;
+  let widget: SwarmController | null = null, widgetHost: HTMLElement | null = null, ownsWidgetHost = false, loading: Promise<SwarmController | null> | null = null;
+  let pillHost: HTMLDivElement | null = null, pillButton: HTMLButtonElement | null = null, lastSnapshot: SwarmSnapshot | null = null;
   let progress = 0, lastKeyAt = 0, epoch = 0;
-  let pressing = null, armed = null, ignoredClick = null, confirmingClick = null;
+  type Press = {id:number;target:HTMLElement;x:number;y:number;confirming:boolean;timer:number;restore:()=>void};
+  let pressing: Press | null = null, armed: {target:HTMLElement;until:number;animation:Animation;timer:number} | null = null, ignoredClick: HTMLElement | null = null, confirmingClick: HTMLElement | null = null;
   let exiting = false;
-  let desiredAction = null;
-  const disposers = [];
+  let desiredAction: "open" | "start" | null = null;
+  const disposers: (()=>void)[] = [];
   const failedHooks = new Set();
-  function reportError(error) {
+  function reportError(error: unknown) {
     const errors = [error];
     if (!failedHooks.has('onError')) {
       try { if (options.onError) { options.onError(error); return; } }
@@ -38,9 +42,9 @@ export function installSwarm(options = {}) {
     }
     try { (win.console || globalThis.console)?.error?.('[Swarm Protocol]', ...errors); } catch (_) {}
   }
-  function notifyHost(name, value) {
+  function notifyHost<K extends "onState" | "onEvent">(name: K, value: K extends "onState" ? SwarmSnapshot : SwarmEvent) {
     if (failedHooks.has(name)) return;
-    try { options[name]?.(value); }
+    try { (options[name] as ((payload: typeof value) => void) | undefined)?.(value); }
     catch (error) {
       // Disable a faulty hook before reporting it, including for reentrant
       // host actions. A host exception must not break the game's frame loop.
@@ -48,17 +52,17 @@ export function installSwarm(options = {}) {
       reportError(error);
     }
   }
-  const pathOf = event => event.composedPath?.() || [event.target];
-  const guarded = (path, selector) => path.some(node => node?.closest?.(selector));
+  const pathOf = (event: Event) => event.composedPath?.() || [event.target];
+  const guarded = (path: (EventTarget | null)[], selector: string) => path.some(node => (node as Element | null)?.closest?.(selector));
   const now = () => win.performance.now();
-  function on(target, type, handler, settings) {
-    target.addEventListener(type, handler, settings);
-    disposers.push(() => target.removeEventListener(type, handler, settings));
+  function on<K extends keyof DocumentEventMap | "astro:before-swap">(target: EventTarget, type: K, handler: (event: K extends keyof DocumentEventMap ? DocumentEventMap[K] : Event) => void, settings?: boolean | AddEventListenerOptions) {
+    target.addEventListener(type, handler as EventListener, settings);
+    disposers.push(() => target.removeEventListener(type, handler as EventListener, settings));
   }
   function resetSequence() { progress = 0; lastKeyAt = 0; }
   // These temporary styles belong only to the explicitly marked footer text.
   // Restore each value only if the application has not written a newer value.
-  function suppressSelection(target) {
+  function suppressSelection(target: HTMLElement) {
     const hadStyle = target.hasAttribute('style');
     const saved = ['user-select', '-webkit-user-select', '-webkit-touch-callout'].map(property => ({
       property, value: target.style.getPropertyValue(property), priority: target.style.getPropertyPriority(property),
@@ -91,12 +95,12 @@ export function installSwarm(options = {}) {
     ignoredClick = null;
     confirmingClick = null;
   }
-  function triggerTarget(event) {
+  function triggerTarget(event: Event) {
     const path = pathOf(event);
     if (guarded(path, TRIGGER_GUARD)) return null;
-    return path.map(node => node?.closest?.(triggerSelector)).find(Boolean) || null;
+    return path.map(node => (node as HTMLElement | null)?.closest?.<HTMLElement>(triggerSelector as string)).find(Boolean) || null;
   }
-  function armTrigger(press) {
+  function armTrigger(press: Press) {
     if (pressing !== press || !press.target.isConnected || doc.hidden) { resetTrigger(); return; }
     press.timer = 0;
     const style = win.getComputedStyle(press.target);
@@ -107,7 +111,7 @@ export function installSwarm(options = {}) {
     ], { duration: ARMED_MS, easing: 'ease-out', fill: 'none' });
     armed = { target: press.target, until: now() + ARMED_MS, animation, timer: win.setTimeout(resetTrigger, ARMED_MS) };
   }
-  function triggerDown(event) {
+  function triggerDown(event: PointerEvent) {
     if (destroyed || doc.hidden || event.defaultPrevented) return;
     if (event.isPrimary === false || pressing) { resetTrigger(); return; }
     if (event.button !== 0) { resetTrigger(); return; }
@@ -124,12 +128,12 @@ export function installSwarm(options = {}) {
     pressing = press;
     if (!confirming) press.timer = win.setTimeout(() => armTrigger(press), HOLD_MS);
   }
-  function triggerMove(event) {
+  function triggerMove(event: PointerEvent) {
     if (!pressing || event.pointerId !== pressing.id) return;
     const dx = event.clientX - pressing.x, dy = event.clientY - pressing.y;
     if (dx * dx + dy * dy > MOVE_LIMIT_SQUARED) resetTrigger();
   }
-  function triggerUp(event) {
+  function triggerUp(event: PointerEvent) {
     if (!pressing || event.pointerId !== pressing.id) return;
     triggerMove(event);
     if (!pressing) return;
@@ -142,7 +146,7 @@ export function installSwarm(options = {}) {
     }
     releasePress();
   }
-  function triggerClick(event) {
+  function triggerClick(event: MouseEvent) {
     if (destroyed || doc.hidden || event.defaultPrevented) return;
     const target = triggerTarget(event);
     if (!target || armed?.target !== target || now() >= armed.until) { resetTrigger(); return; }
@@ -153,7 +157,7 @@ export function installSwarm(options = {}) {
     if (event.cancelable) event.preventDefault();
     void open().catch(() => {});
   }
-  function suppressNativeHold(event) {
+  function suppressNativeHold(event: Event) {
     const target = triggerTarget(event);
     if (target && (pressing?.target === target || armed?.target === target) && event.cancelable) event.preventDefault();
   }
@@ -183,9 +187,9 @@ export function installSwarm(options = {}) {
     visible = true;
     if (widgetShown) return;
     ensurePill();
-    if (!pillHost.hidden) return;
-    pillButton.classList.toggle('enter', !options.reducedMotion);
-    pillHost.hidden = false;
+    if (!pillHost!.hidden) return;
+    pillButton!.classList.toggle('enter', !options.reducedMotion);
+    pillHost!.hidden = false;
   }
   function unlock() { resetTrigger(); reveal(); }
   function closedByPlayer() {
@@ -238,7 +242,7 @@ export function installSwarm(options = {}) {
     }).finally(() => { loading = null; });
     return loading;
   }
-  async function show(action) {
+  async function show(action: "open" | "start") {
     if (destroyed || exiting) return;
     unlocked = true;
     visible = true;
@@ -309,11 +313,11 @@ export function installSwarm(options = {}) {
     lastSnapshot = null;
     exiting = false;
   }
-  function escapeKey(event) {
+  function escapeKey(event: KeyboardEvent) {
     if (event.key === 'Escape' && !event.repeat && !event.isComposing) exitGame();
     // Leave the event available to the page's own dialog/menu Escape handler.
   }
-  function keyDown(event) {
+  function keyDown(event: KeyboardEvent) {
     if (destroyed || event.repeat || event.isComposing || doc.hidden || event.defaultPrevented) {
       resetSequence();
       return;

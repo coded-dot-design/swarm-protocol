@@ -1,3 +1,4 @@
+import { transformSync } from 'esbuild';
 /**
  * Swarm Protocol — MIT © 2026 Chris Cooley.
  * Portable post-load scheduler tests, with a controlled clock and lazy import.
@@ -11,8 +12,8 @@ import { fileURLToPath } from 'node:url';
 import { Script, createContext } from 'node:vm';
 import test from 'node:test';
 
-const sourcePath=process.argv[2]?resolve(process.argv[2]):fileURLToPath(new URL('../src/swarm-deferred.js',import.meta.url));
-const source=readFileSync(sourcePath,'utf8');
+const sourcePath=process.argv[2]?resolve(process.argv[2]):fileURLToPath(new URL('../src/swarm-deferred.ts',import.meta.url));
+const source=transformSync(readFileSync(sourcePath,'utf8'), {loader:'ts'}).code;
 const importPattern=/import\((['"])\.\/swarm-loader\.js\1\)/g;
 assert.equal([...source.matchAll(importPattern)].length,1,'The scheduler must have one lazy bootstrap boundary.');
 const instrumented=source.replace(importPattern,'__loadBootstrap()')

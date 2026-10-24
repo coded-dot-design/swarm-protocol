@@ -1,4 +1,8 @@
 # Changelog
+
+## 1.2.0
+
+- Strict TypeScript runtime migration; emitted gameplay parity against 1.1.0. Native colored bit highlights preserve text layout and Recall. Abstract site previews.
 ## Website update — 2026-10-23
 
 - Add the Astro product/test page, system/light/dark themes, real game descriptions, measured package sizes, architecture diagrams, and creator attribution.

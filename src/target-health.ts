@@ -1,7 +1,7 @@
 const bubbleRadii = [1.25, 2.2, 3.8, 1.7, 5.2, 3.1];
 
 // A solid health fill. Lower health gives the beacon a slower cadence.
-export function targetSignal(health, powerColor = '#06c4ff') {
+export function targetSignal(health:number, powerColor = '#06c4ff') {
   const fill = Math.max(0, Math.min(100, health));
   return {
     fill: Math.round(fill * 10) / 10,
@@ -12,7 +12,7 @@ export function targetSignal(health, powerColor = '#06c4ff') {
 
 // A short, damped ripple is painted only after a bite, at a bounded cadence.
 // The SVG is a background layer, so labels, icons and click targets stay intact.
-export function liquidFill(fill, color, energy = 0, time = 0, bite = .5, opacity = 1, bubbles = null) {
+export function liquidFill(fill:number, color:string, energy = 0, time = 0, bite = .5, opacity = 1, bubbles: {time:number;width:number;height:number;color:string} | null = null) {
   if (!bubbles && opacity === 1 && (energy <= 0 || fill <= 0 || fill >= 100)) {
     return `linear-gradient(to top,${color} 0%,${color} ${fill}%,transparent ${fill}%,transparent 100%)`;
   }
@@ -54,14 +54,14 @@ export function liquidFill(fill, color, energy = 0, time = 0, bite = .5, opacity
 
 // Opposite light/dark tone of the native surface, rather than another brand
 // color. Computed RGB and hex values cover the common button palettes.
-export function bubbleContrast(color) {
+export function bubbleContrast(color:string) {
   const lightness = color.match(/^(oklch|oklab|lch|lab)\(\s*([\d.]+)(%?)/i);
   if (lightness) {
     const level = +lightness[2] / (lightness[3] || !lightness[1].startsWith('ok') ? 100 : 1);
     return level < .6 ? '#ffffff' : '#101010';
   }
   const hex = color.match(/^#([\da-f]{3}|[\da-f]{6})$/i)?.[1];
-  const rgb = hex ? (hex.length === 3 ? [...hex].map(c => c + c).join('') : hex).match(/../g).map(c => parseInt(c, 16))
+  const rgb = hex ? (hex.length === 3 ? [...hex].map(c => c + c).join('') : hex).match(/../g)!.map(c => parseInt(c, 16))
     : color.startsWith('color(') ? color.match(/^color\((?:srgb|display-p3)\s+([^)]+)\)/)?.[1].trim().split(/[ /]+/).slice(0, 3).map(c => +c * 255)
     : color.match(/^rgba?\(([^)]+)\)/)?.[1].trim().split(/[, /]+/).slice(0, 3).map(c => parseFloat(c) * (c.endsWith('%') ? 2.55 : 1));
   return rgb?.length === 3 && rgb.every(Number.isFinite) && rgb[0] * .2126 + rgb[1] * .7152 + rgb[2] * .0722 < 140 ? '#ffffff' : '#101010';

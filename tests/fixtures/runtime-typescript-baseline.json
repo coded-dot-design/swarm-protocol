@@ -1,0 +1,14 @@
+{
+  "commit": "851a299a70e3e25905786974f1bd3f0c9e0200a7",
+  "modules": {
+    "dom-defender": "7d080ff9b3ec90b35ad15838846557e33fc4be0beb5f3bf349752817d60894f3",
+    "attack-indicators": "82a6fd4b77f44c3476d204ef0cdad387b07c391666ec86ac1fa3074f1c157272",
+    "feedback-colors": "9eff4342e17ead9e9f8ba81dc798f563929466b05a74be4a4057a48d7855ac40",
+    "target-health": "db2ea796646ae0989f760864045a736e60470e5e41a3e9ee32237800207a1094",
+    "target-hover": "775a3f113479b7fcc37ac2f62107c17c27019f40ad6af56cba51b729dab08585",
+    "target-palette": "33f0cb707bf70ebc17a3aa2ec4801835787746f1ed5355ecf080e1155bdd67b3",
+    "swarm-widget": "55f5fb6e2f50e065b41bf3ebbd62a47660fe12034d46983628ec7ecf7e7accc3",
+    "swarm-loader": "cd1d6b76679e461242dc316dd8564dbc92cca2a533fe1888a88084a04ee795ff",
+    "swarm-deferred": "e6233af0c3e536431013bbd3bf0654fe45caad7074fc53a27e970b8bb27ec3e5"
+  }
+}

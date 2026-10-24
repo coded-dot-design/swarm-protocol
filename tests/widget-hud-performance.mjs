@@ -1,3 +1,4 @@
+import { transformSync } from 'esbuild';
 import assert from 'node:assert/strict';
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -11,7 +12,7 @@ const args = Object.fromEntries(process.argv.slice(2).reduce((pairs, value, i, a
   if (value.startsWith('--')) pairs.push([value.slice(2), all[i + 1]]);
   return pairs;
 }, []));
-args.widget ||= fileURLToPath(new URL('../src/swarm-widget.js', import.meta.url));
+args.widget ||= fileURLToPath(new URL('../src/swarm-widget.ts', import.meta.url));
 args.baseline ||= fileURLToPath(new URL('./fixtures/swarm-widget-before-hud.js', import.meta.url));
 const baseSnapshot = {
   status: 'idle', score: 0, best: 430, wave: 0, kills: 0, combo: 1,
@@ -130,8 +131,8 @@ async function run(path, label, options = {}) {
     };
     return engine;
   };
-  const source = (await readFile(path, 'utf8')).replace(
-    "import { createDomDefender } from './dom-defender.js';",
+  const source = transformSync(await readFile(path, 'utf8'), {loader: path.endsWith('.ts') ? 'ts' : 'js'}).code.replace(
+    /import\s*\{\s*createDomDefender\s*\}\s*from\s*[\x27\x22]\.\/dom-defender\.js[\x27\x22];/,
     'const createDomDefender = globalThis.__swarmHudEngineFactory;'
   );
   const module = await import(`data:text/javascript;base64,${Buffer.from(source + '\n// ' + label).toString('base64')}`);
@@ -210,8 +211,8 @@ async function verifyEscapeExit(path) {
     };
     return engine;
   };
-  const source = (await readFile(path, 'utf8')).replace(
-    "import { createDomDefender } from './dom-defender.js';",
+  const source = transformSync(await readFile(path, 'utf8'), {loader: path.endsWith('.ts') ? 'ts' : 'js'}).code.replace(
+    /import\s*\{\s*createDomDefender\s*\}\s*from\s*[\x27\x22]\.\/dom-defender\.js[\x27\x22];/,
     'const createDomDefender = globalThis.__swarmHudEngineFactory;'
   );
   const module = await import(`data:text/javascript;base64,${Buffer.from(source + '\n// escape-contract').toString('base64')}`);
@@ -280,8 +281,8 @@ async function verifyMountFailure(path) {
         }
       };
     };
-    const source = (await readFile(path, 'utf8')).replace(
-      "import { createDomDefender } from './dom-defender.js';",
+    const source = transformSync(await readFile(path, 'utf8'), {loader: path.endsWith('.ts') ? 'ts' : 'js'}).code.replace(
+      /import\s*\{\s*createDomDefender\s*\}\s*from\s*[\x27\x22]\.\/dom-defender\.js[\x27\x22];/,
       'const createDomDefender = globalThis.__swarmHudEngineFactory;'
     );
     const module = await import(`data:text/javascript;base64,${Buffer.from(source + '\n// failure-' + mode).toString('base64')}`);
@@ -318,8 +319,8 @@ async function verifyMinimize(path, showLauncher) {
     };
     return engine;
   };
-  const source = (await readFile(path, 'utf8')).replace(
-    "import { createDomDefender } from './dom-defender.js';",
+  const source = transformSync(await readFile(path, 'utf8'), {loader: path.endsWith('.ts') ? 'ts' : 'js'}).code.replace(
+    /import\s*\{\s*createDomDefender\s*\}\s*from\s*[\x27\x22]\.\/dom-defender\.js[\x27\x22];/,
     'const createDomDefender = globalThis.__swarmHudEngineFactory;'
   );
   const module = await import(`data:text/javascript;base64,${Buffer.from(source + '\n// minimize-' + showLauncher).toString('base64')}`);

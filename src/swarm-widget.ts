@@ -1,3 +1,5 @@
+import type { SwarmSnapshot, SwarmEvent, SwarmCoreController, SwarmController, SwarmGameOptions } from '../integration/swarm-types.js';
+
 import { createDomDefender } from './dom-defender.js';
 
 /*! @license Bug icon derived from Lucide, ISC License. See THIRD_PARTY_NOTICES.md. */
@@ -26,7 +28,7 @@ const styles = `
 `;
 
 /** Mount once inside a dedicated host; destroy restores the page and releases all listeners. */
-export function mountSwarmGame(host, options = {}) {
+export function mountSwarmGame(host: HTMLElement, options: SwarmGameOptions = {}): SwarmController {
   if (!host || !host.isConnected) throw new Error('Swarm Protocol needs a connected host element.');
   host.setAttribute('data-swarm-ui', '');
   const root = host.shadowRoot || host.attachShadow({ mode: 'open' });
@@ -39,29 +41,30 @@ export function mountSwarmGame(host, options = {}) {
       <div class="pauseview" id="paused" hidden><div class="eyebrow">TIMEOUT</div><h2>Swarm on standby.</h2><p>The bugs can wait. Your score and the page are exactly where you left them.</p><button class="primary" id="resume">Resume game ${icons.play}</button><button class="secondary" id="quit">Quit & restore page</button></div>
       <div class="result" id="result" hidden><div class="eyebrow">CONTAINMENT LOST</div><h2>The bugs won this round.</h2><div class="newbest" id="record">FINAL SCORE</div><div class="total" id="total">0</div><div class="resultgrid"><div><span>WAVE</span><b id="finalwave">1</b></div><div><span>SQUASHED</span><b id="finalkills">0</b></div><div><span>PERSONAL BEST</span><b id="best">0</b></div></div><button class="primary" id="restart">Reboot & play again ${icons.arrow}</button><button class="secondary" id="restore">Restore the page</button></div>
     </section><div class="livehint" id="hint" hidden><span class="desktoptip">CLICK TO SQUASH · ESC TO EXIT</span><span class="mobiletip">TAP TO SQUASH</span></div><div class="statusbanner" id="banner" hidden aria-live="polite"></div><div id="announce" role="status" aria-live="polite" style="position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)"></div>`;
-  const elements = new Map();
-  const $ = id => { if(!elements.has(id))elements.set(id,root.getElementById(id));return elements.get(id); };
-  const setText = (id,value) => { const el=$(id),text=String(value);if(el.textContent!==text)el.textContent=text; };
+  const elements = new Map<string, HTMLButtonElement>();
+  const $ = (id: string) => { if(!elements.has(id))elements.set(id,root.getElementById(id) as HTMLButtonElement);return elements.get(id)!; };
+  const setText = (id: string,value: string | number) => { const el=$(id),text=String(value);if(el.textContent!==text)el.textContent=text; };
   const hostFlags = new Map();
-  const flagHost = (name,value) => { if(hostFlags.get(name)===value)return;hostFlags.set(name,value);if(value)host.setAttribute(name,'');else host.removeAttribute(name); };
+  const flagHost = (name: string,value: boolean) => { if(hostFlags.get(name)===value)return;hostFlags.set(name,value);if(value)host.setAttribute(name,'');else host.removeAttribute(name); };
   const styleValues = new Map();
-  const setStyle = (id,property,value) => { const key=id+':'+property;if(styleValues.get(key)!==value){$(id).style[property]=value;styleValues.set(key,value);} };
+  const setStyle = (id: string,property: "color" | "width" | "background",value: string) => { const key=id+':'+property;if(styleValues.get(key)!==value){$(id).style[property]=value;styleValues.set(key,value);} };
   let destroyed = false, closed = options.initiallyClosed !== false, escaped = false, minimized = false, lastStatus = 'idle';
   const doc = host.ownerDocument || document, win = doc.defaultView || window;
   const soundKey = (options.bestKey || 'swarm-protocol-best-v1') + ':sound';
-  let sound = true, audioContext = null, masterGain = null, bannerTimer = 0, feedTimer = 0;
-  let audioUnlocked = false, audioUnavailable = false, audioUnlocking = null, pendingCue = null, audioEpoch = 0;
+  let sound = true, audioContext: AudioContext | null = null, masterGain: GainNode | null = null, bannerTimer = 0, feedTimer = 0;
+  let audioUnlocked = false, audioUnavailable = false, audioUnlocking: Promise<void> | null = null, pendingCue: {type:string;epoch:number} | null = null, audioEpoch = 0;
   let sessionStarted = false;
-  const voices = new Set(), cueTimes = new Map(), warnedTargets = new Map();
+  type Voice = {source: OscillatorNode;gain: GainNode;done:boolean;finish():void};
+  const voices = new Set<Voice>(), cueTimes = new Map<string,number>(), warnedTargets = new Map<string,Set<number>>();
   try { sound = win.localStorage.getItem(soundKey) !== 'off'; } catch (_) {}
-  let lastBest = 0, previousTargetMarkup = '', latestState = null;
+  let lastBest = 0, previousTargetMarkup = '', latestState: SwarmSnapshot | null = null;
   let feedHoldUntil = 0, feedPriority = 0, lastBiteFeedAt = -Infinity;
-  const disposers = [];
-  const on = (id, callback) => { const el=$(id); el.addEventListener('click', callback); disposers.push(()=>el.removeEventListener('click',callback)); };
-  const show = (id, value) => { const el=$(id);if(el.hidden===value)el.hidden=!value; };
-  const announce = text => { $('announce').textContent=text; };
-  function banner(text) { clearTimeout(bannerTimer); $('banner').textContent=text; show('banner',!closed&&!minimized); bannerTimer=setTimeout(()=>show('banner',false),2100); announce(text); }
-  function feed(text, mood='', priority=1) {
+  const disposers: (()=>void)[] = [];
+  const on = (id: string, callback: (event: MouseEvent) => void) => { const el=$(id); el.addEventListener('click', callback); disposers.push(()=>el.removeEventListener('click',callback)); };
+  const show = (id: string, value: boolean) => { const el=$(id);if(el.hidden===value)el.hidden=!value; };
+  const announce = (text: string) => { $('announce').textContent=text; };
+  function banner(text: string) { clearTimeout(bannerTimer); $('banner').textContent=text; show('banner',!closed&&!minimized); bannerTimer=setTimeout(()=>show('banner',false),2100); announce(text); }
+  function feed(text: string, mood='', priority=1) {
     const now=win.performance?.now?.() ?? Date.now();
     if(now<feedHoldUntil && priority<feedPriority)return false;
     feedPriority=priority;feedHoldUntil=now+(priority>=2?1100:350);
@@ -83,25 +86,25 @@ export function mountSwarmGame(host, options = {}) {
     if (lock) audioUnlocked = false;
     for (const voice of [...voices]) {
       try {
-        voice.gain.gain.cancelScheduledValues(audioContext.currentTime);
-        voice.gain.gain.setValueAtTime(0, audioContext.currentTime);
-        voice.source.stop(audioContext.currentTime);
+        voice.gain.gain.cancelScheduledValues(audioContext!.currentTime);
+        voice.gain.gain.setValueAtTime(0, audioContext!.currentTime);
+        voice.source.stop(audioContext!.currentTime);
       } catch (_) {}
       voice.finish();
     }
   }
-  function userGesture(e) {
+  function userGesture(e?: Event) {
     return e?.isTrusted === true || win.navigator?.userActivation?.isActive === true;
   }
-  function unlockAudio(e) {
+  function unlockAudio(e?: Event) {
     if (destroyed || !sound || audioUnavailable || doc.hidden || !userGesture(e)) return;
     try {
       if (!audioContext) {
-        const Context = win.AudioContext || win.webkitAudioContext;
+        const Context = win.AudioContext || (win as Window & {webkitAudioContext?: typeof AudioContext}).webkitAudioContext;
         if (!Context) { audioUnavailable = true; soundButton(); return; }
         audioContext = new Context();
-        masterGain = audioContext.createGain();
-        masterGain.gain.setValueAtTime(.14, audioContext.currentTime);
+        masterGain = audioContext!.createGain();
+        masterGain.gain.setValueAtTime(.14, audioContext!.currentTime);
         masterGain.connect(audioContext.destination);
       }
       audioUnlocked = true;
@@ -116,13 +119,13 @@ export function mountSwarmGame(host, options = {}) {
       }
     } catch (_) { audioUnlocked = false; }
   }
-  function note(frequency, endFrequency, duration, delay = 0, type = 'triangle', volume = .11, crunchy = false) {
+  function note(frequency: number, endFrequency: number, duration: number, delay = 0, type: OscillatorType = 'triangle', volume = .11, crunchy = false) {
     if (voices.size >= 6) return;
-    let source, gain, voice;
+    let source: OscillatorNode | undefined, gain: GainNode | undefined, voice: Voice | undefined;
     try {
-      source = audioContext.createOscillator();
-      gain = audioContext.createGain();
-      const startAt = audioContext.currentTime + delay, endAt = startAt + duration;
+      source = audioContext!.createOscillator();
+      gain = audioContext!.createGain();
+      const startAt = audioContext!.currentTime + delay, endAt = startAt + duration;
       source.type = type;
       source.frequency.setValueAtTime(frequency, startAt);
       if (crunchy) {
@@ -133,16 +136,16 @@ export function mountSwarmGame(host, options = {}) {
       gain.gain.setValueAtTime(.0001, startAt);
       gain.gain.linearRampToValueAtTime(volume, startAt + .004);
       gain.gain.exponentialRampToValueAtTime(.0001, endAt);
-      source.connect(gain); gain.connect(masterGain);
+      source.connect(gain); gain.connect(masterGain!);
       voice = { source, gain, done: false, finish() {
         if (this.done) return;
         this.done = true;
-        source.onended = null;
-        try { source.disconnect(); } catch (_) {}
-        try { gain.disconnect(); } catch (_) {}
+        source!.onended = null;
+        try { source!.disconnect(); } catch (_) {}
+        try { gain!.disconnect(); } catch (_) {}
         voices.delete(this);
       } };
-      source.onended = () => voice.finish();
+      source.onended = () => voice!.finish();
       voices.add(voice);
       source.start(startAt); source.stop(endAt + .012);
     } catch (_) {
@@ -151,14 +154,14 @@ export function mountSwarmGame(host, options = {}) {
       try { source?.disconnect(); gain?.disconnect(); } catch (_) {}
     }
   }
-  function tone(type) {
+  function tone(type: string) {
     if (!sound || !audioUnlocked || !audioContext || destroyed || doc.hidden) return;
     if (audioContext.state !== 'running') {
       // Retain only the short start/preview cue while a gesture resume resolves.
       if (audioUnlocking && (type === 'wave-start' || type === 'preview')) pendingCue = { type, epoch: audioEpoch };
       return;
     }
-    const now = audioContext.currentTime;
+    const now = audioContext!.currentTime;
     const bucket = type === 'kill' || type === 'hit' ? 'action' : type;
     const cooldown = bucket === 'action' ? .045 : type === 'bite' ? .15 : type === 'warning' ? 1.2 : .18;
     if (type !== 'gameover' && now - (cueTimes.get(bucket) ?? -Infinity) < cooldown) return;
@@ -187,7 +190,7 @@ export function mountSwarmGame(host, options = {}) {
       note(370, 290, .16, 0, 'triangle', .12); note(250, 170, .18, .13, 'triangle', .12); note(150, 48, .30, .28, 'triangle', .13);
     }
   }
-  function damageSound(e) {
+  function damageSound(e: Extract<SwarmEvent,{type:"damage"}>) {
     let thresholds = warnedTargets.get(e.targetId);
     if (!thresholds) { thresholds = new Set(); warnedTargets.set(e.targetId, thresholds); }
     if (e.health <= 0 && !thresholds.has(0)) {
@@ -198,7 +201,7 @@ export function mountSwarmGame(host, options = {}) {
       if (crossed.length) tone('warning');
     }
   }
-  function render(s) {
+  function render(s: SwarmSnapshot) {
     if(destroyed) return;
     latestState=s;
     const restoreResultFocus=minimized && s.status==='gameover' && root.activeElement===$('launcher');
@@ -226,7 +229,7 @@ export function mountSwarmGame(host, options = {}) {
     if(restoreResultFocus)$('restart').focus({preventScroll:true});
     options.onState?.(s);
   }
-  function event(e) {
+  function event(e: SwarmEvent) {
     if(destroyed)return;
     if(e.type==='status' && (e.status==='paused'||e.status==='idle'||e.status==='gameover')) {
       // Final damage emits status before gameover: cancel old cues now, then
@@ -260,20 +263,20 @@ export function mountSwarmGame(host, options = {}) {
   }
   // Register before the engine's capture listener, which consumes bug hits.
   // This also unlocks a programmatically started game on its next real input.
-  const deferredAudioGesture=e=>{
-    if(e.key!=='Escape' && sessionStarted && ['running','intermission','paused'].includes(latestState?.status) && (!audioUnlocked||audioContext?.state!=='running')) unlockAudio(e);
+  const deferredAudioGesture=(e: Event & {key?: string})=>{
+    if(e.key!=='Escape' && sessionStarted && ['running','intermission','paused'].includes(latestState?.status!) && (!audioUnlocked||audioContext?.state!=='running')) unlockAudio(e);
   };
   const visibilityAudio=()=>{if(doc.hidden)silence(true);};
   win.addEventListener('pointerdown',deferredAudioGesture,true);
   win.addEventListener('keydown',deferredAudioGesture,true);
   doc.addEventListener('visibilitychange',visibilityAudio);
   disposers.push(()=>win.removeEventListener('pointerdown',deferredAudioGesture,true),()=>win.removeEventListener('keydown',deferredAudioGesture,true),()=>doc.removeEventListener('visibilitychange',visibilityAudio));
-  let engine;
+  let engine: SwarmCoreController;
   try { engine=createDomDefender({...options,onState:render,onEvent:event}); }
   catch(error) { destroy(); throw error; }
-  const start=e=>{silence(true);cueTimes.clear();warnedTargets.clear();feedPriority=0;feedHoldUntil=0;lastBiteFeedAt=-Infinity;sessionStarted=true;unlockAudio(e);escaped=false;minimized=false;closed=false;lastBest=engine.getSnapshot().best||0;engine.start();render(engine.getSnapshot());};
+  const start=(e?: Event)=>{silence(true);cueTimes.clear();warnedTargets.clear();feedPriority=0;feedHoldUntil=0;lastBiteFeedAt=-Infinity;sessionStarted=true;unlockAudio(e);escaped=false;minimized=false;closed=false;lastBest=engine.getSnapshot().best||0;engine.start();render(engine.getSnapshot());};
   const pause=()=>{silence(true);engine.pause();};
-  const resume=e=>{if(engine.getSnapshot().status==='paused')unlockAudio(e);engine.resume();};
+  const resume=(e?: Event)=>{if(engine.getSnapshot().status==='paused')unlockAudio(e);engine.resume();};
   const stop=()=>{silence(true);sessionStarted=false;clearTimeout(bannerTimer);clearTimeout(feedTimer);show('banner',false);minimized=false;closed=true;engine.stop();render(engine.getSnapshot());};
   const open=()=>{if(destroyed)return;const wasMinimized=minimized;escaped=false;minimized=false;closed=false;render(engine.getSnapshot());if(destroyed)return;if(engine.getSnapshot().status==='idle')$('start').focus();else if(wasMinimized)$('minimize').focus({preventScroll:true});};
   // Folding the HUD is presentation-only: waves, bugs, score and audio continue.
@@ -281,7 +284,7 @@ export function mountSwarmGame(host, options = {}) {
   const closeByPlayer=()=>{stop();options.onClose?.();};
   // Capture before the core's legacy pause shortcut. Keep Escape available to
   // the page too, so an open native dialog can close in the same keypress.
-  const exitOnEscape=e=>{if(destroyed||e.key!=='Escape'||e.repeat||e.isComposing)return;escaped=true;stop();announce('');};
+  const exitOnEscape=(e: KeyboardEvent)=>{if(destroyed||e.key!=='Escape'||e.repeat||e.isComposing)return;escaped=true;stop();announce('');};
   doc.addEventListener('keydown',exitOnEscape,true);
   disposers.push(()=>doc.removeEventListener('keydown',exitOnEscape,true));
   on('launcher',open);

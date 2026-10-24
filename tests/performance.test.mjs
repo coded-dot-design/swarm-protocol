@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 test('archived v1.0.9 optimization preserves its historical gameplay/DOM traces', () => {
   // The harness instruments built-ins, so run it in its own Node process.
-  const result = JSON.parse(execFileSync(process.execPath, [
+  const result = JSON.parse(execFileSync(process.execPath, ['--import', 'tsx',
     fileURLToPath(new URL('./engine-performance.mjs', import.meta.url)),
     '--engine', fileURLToPath(new URL('./fixtures/dom-defender-1.0.9.js', import.meta.url)),
   ], { encoding: 'utf8', timeout: 60000, maxBuffer: 1024 * 1024 }));
@@ -20,7 +20,7 @@ test('archived v1.0.9 optimization preserves its historical gameplay/DOM traces'
 });
 
 test('cached HUD updates preserve public state and rendered UI', () => {
-  const output = execFileSync(process.execPath, [
+  const output = execFileSync(process.execPath, ['--import', 'tsx',
     fileURLToPath(new URL('./widget-hud-performance.mjs', import.meta.url)),
   ], { encoding: 'utf8', timeout: 60000, maxBuffer: 1024 * 1024 });
   assert.ok(output.length > 0);
@@ -30,7 +30,7 @@ test('cached HUD updates preserve public state and rendered UI', () => {
 // Current gameplay intentionally changes spawn and pursuit traces. Historical
 // traces remain exact above; the current suite verifies behavior and work bounds.
 test('current liquid targets preserve feeding, waves, offscreen pursuit, input and bounded work', () => {
-  const result = JSON.parse(execFileSync(process.execPath, [
+  const result = JSON.parse(execFileSync(process.execPath, ['--import', 'tsx',
     fileURLToPath(new URL('./engine-performance.mjs', import.meta.url)), '--refined',
   ], { encoding: 'utf8', timeout: 60000, maxBuffer: 1024 * 1024 }));
   assert.equal(result.currentRefinement, true);

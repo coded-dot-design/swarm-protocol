@@ -1,3 +1,4 @@
+import type { Bug } from './runtime-types.js';
 // Internal presentation only: reuse the engine's cached target rectangles.
 const EDGES = [
   { bit: 1, name: 'top', arrow: '↑', direction: 'above' },
@@ -9,7 +10,7 @@ const EDGES = [
 /*! @license Bug icon derived from Lucide, ISC License. See THIRD_PARTY_NOTICES.md. */
 const bugIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m8 2 1.88 1.88M14.12 3.88 16 2M9 7.13v-1a3.003 3.003 0 1 1 6 0v1M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6M12 20v-9M6.53 9C4.6 8.8 3 7.1 3 5M6 13H2M3 21c0-2.1 1.7-3.9 3.8-4M20.97 5c0 2.1-1.6 3.8-3.5 4M22 13h-4M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg>`;
 
-export function attackEdge(bug, width, height) {
+export function attackEdge(bug: Pick<Bug,"target"|"attached">, width:number, height:number) {
   const target = bug.target;
   if (!bug.attached || !target?.rendered || !target.element.isConnected || target.health <= 0) return 0;
   const r = target.rect;
@@ -17,16 +18,16 @@ export function attackEdge(bug, width, height) {
   return (r.bottom <= 0 ? 1 : 0) | (r.top >= height ? 2 : 0) | (r.right <= 0 ? 4 : 0) | (r.left >= width ? 8 : 0);
 }
 
-export function getAttackEdges(bugs, width, height) {
+export function getAttackEdges(bugs: Pick<Bug,"target"|"attached">[], width:number, height:number) {
   let edges = 0;
   for (const bug of bugs) edges |= attackEdge(bug, width, height);
   return edges;
 }
 
 // Separate prices: low funds fall back to navigation, without discounting zaps.
-export function rescueOffer(score, jumps, zaps) {
+export function rescueOffer(score:number, jumps:number, zaps:number) {
   const jumpCost = 50 + jumps * 25, zapCost = 200 + zaps * 150 + jumps * 25;
-  return { jumpCost, zapCost, mode: score >= zapCost ? 'zap' : score >= jumpCost ? 'jump' : 'locked' };
+  return { jumpCost, zapCost, mode: (score >= zapCost ? 'zap' : score >= jumpCost ? 'jump' : 'locked') as 'zap'|'jump'|'locked' };
 }
 
 const styles = `
@@ -64,10 +65,10 @@ const styles = `
 `;
 
 /** Lazy controls. Only the four buttons intercept input; no timers or layout reads. */
-export function createAttackIndicators(doc, reducedMotion = false, onAction = () => {}) {
-  let host = null, announcement = null, current = 0, destroyed = false;
-  const nodes = [];
-  let previousOffer = null;
+export function createAttackIndicators(doc: Document, reducedMotion = false, onAction: (edge:number)=>void = () => {}) {
+  let host: HTMLDivElement | null = null, announcement: HTMLDivElement | null = null, current = 0, destroyed = false;
+  const nodes: {node:HTMLDivElement;message:HTMLButtonElement;action:HTMLSpanElement;activate:()=>void}[] = [];
+  let previousOffer: ReturnType<typeof rescueOffer> | null = null;
   function mount() {
     host = doc.createElement('div');
     host.setAttribute('data-swarm-attack-cues', '');
@@ -115,7 +116,7 @@ export function createAttackIndicators(doc, reducedMotion = false, onAction = ()
     doc.body.appendChild(host);
   }
   return {
-    update(edges, offer = rescueOffer(0, 0, 0)) {
+    update(edges:number, offer = rescueOffer(0, 0, 0)) {
       if (destroyed || (edges === current && offer.mode === previousOffer?.mode && offer.jumpCost === previousOffer.jumpCost && offer.zapCost === previousOffer.zapCost)) return;
       const directionChanged = edges !== current;
       current = edges;
@@ -123,7 +124,7 @@ export function createAttackIndicators(doc, reducedMotion = false, onAction = ()
       if (!host && edges) mount();
       if (!host) return;
       host.hidden = !edges;
-      const directions = [];
+      const directions: string[] = [];
       EDGES.forEach((edge, index) => {
         const visible = !!(edges & edge.bit);
         const { node, message, action } = nodes[index];
@@ -136,7 +137,7 @@ export function createAttackIndicators(doc, reducedMotion = false, onAction = ()
         if (visible) directions.push(edge.direction);
       });
       host.setAttribute('data-swarm-directions', EDGES.filter(edge => edges & edge.bit).map(edge => edge.name).join(' '));
-      if (directionChanged) announcement.textContent = edges ? `Other sections under attack ${directions.join(' and ')}. Use the alert to jump when you have enough points, or scroll to squash.` : '';
+      if (directionChanged) announcement!.textContent = edges ? `Other sections under attack ${directions.join(' and ')}. Use the alert to jump when you have enough points, or scroll to squash.` : '';
     },
     destroy() {
       destroyed = true;

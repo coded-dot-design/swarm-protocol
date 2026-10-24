@@ -10,10 +10,10 @@
   "icon": "bug",
   "versionNote": "The original DOM experiment.",
   "controls": [
-    "Click / tap \u2014 squash a bug",
-    "Scroll \u2014 outrun the swarm",
-    "Edge alerts \u2014 paid Jump or Jump + Zap",
-    "Esc \u2014 Recall and restore the page"
+    "Click / tap — squash a bug",
+    "Scroll — outrun the swarm",
+    "Edge alerts — paid Jump or Jump + Zap",
+    "Esc — Recall and restore the page"
   ],
   "facts": [
     {
@@ -56,11 +56,34 @@
   "code": "const swarm = installSwarm({\n  textSelector: \"[data-swarm-text]\",\n  targetSelector: \"[data-swarm-target]\",\n  keyboard: false,\n  triggerSelector: false,\n});\nawait swarm.start();\n// Later: swarm.destroy();",
   "importLine": "import { installSwarm } from \"@chriscooley/swarm-protocol\";",
   "engine": "Established Swarm engine",
-  "extra": "Optional hidden activation: \u2191 \u2191 \u2193 \u2193 \u2190 \u2192 \u2190 \u2192 B A Enter. A deferred entry can wait for load, delay and idle before installing the activation bootstrap; the game itself loads on first open or start.",
+  "extra": "Optional hidden activation: ↑ ↑ ↓ ↓ ← → ← → B A Enter. A deferred entry can wait for load, delay and idle before installing the activation bootstrap; the game itself loads on first open or start.",
   "sourcePaths": [
-    "src/dom-defender.js",
-    "src/target-health.js",
-    "src/swarm-loader.js",
+    "src/dom-defender.ts",
+    "src/target-health.ts",
+    "src/swarm-loader.ts",
     "PERFORMANCE.md"
+  ],
+  "characters": [
+    {
+      "icon": "bug",
+      "name": "Crawler",
+      "role": "Tier 1",
+      "rules": "Starts with one hit point. Feeds on real letters, changing each bite to 0 or 1. Squash it before it grows.",
+      "color": "#ff6b6b"
+    },
+    {
+      "icon": "bug",
+      "name": "Evolved crawler",
+      "role": "Tier 2 · 6 letters",
+      "rules": "After six letters it grows and gains one hit point. Earlier damage still counts; evolution does not fully heal it.",
+      "color": "#d984ff"
+    },
+    {
+      "icon": "bug",
+      "name": "Button hunter",
+      "role": "Tier 3 · 12 letters",
+      "rules": "After twelve letters it grows again and gains one more hit point. It hunts buttons, bites text on the way, and drains button integrity.",
+      "color": "#8573ee"
+    }
   ]
 }

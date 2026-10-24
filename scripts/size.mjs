@@ -38,7 +38,7 @@ const bootstrap = graph('dist/index.js', false);
 const complete = graph('dist/index.js', true);
 const game = new Set([...complete].filter(file => !bootstrap.has(file)));
 const scheduler = graph('dist/deferred.js', false);
-const loaderEntry = Object.keys(meta.outputs).find(file => meta.outputs[file].entryPoint === 'src/swarm-loader.js');
+const loaderEntry = Object.keys(meta.outputs).find(file => meta.outputs[file].entryPoint === 'src/swarm-loader.ts');
 if (!loaderEntry) throw new Error('Missing deferred bootstrap entry');
 const delayedBootstrap = new Set([...graph(loaderEntry, false)].filter(file => !scheduler.has(file)));
 const deferredComplete = graph('dist/deferred.js', true);

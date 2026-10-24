@@ -1,3 +1,11 @@
+import { createBitHighlights } from './bit-highlights.js';
+import type { Point, Rect, Palette, Background, Target, TextArea, TextRecord, Glyph, Bug, Particle, Surface, StyleRecord, CursorRecord, AimEffect, GameState, PointerNode } from './runtime-types.js';
+import type { SwarmEvent, SwarmStatus } from '../integration/swarm-types.js';
+import type {
+  SwarmCoreController,
+  SwarmCoreOptions,
+} from '../integration/swarm-types.js';
+
 import { createAttackIndicators, getAttackEdges, attackEdge, rescueOffer } from './attack-indicators.js';
 import { feedbackColors } from './feedback-colors.js';
 import { targetSignal, liquidFill, bubbleContrast } from './target-health.js';
@@ -9,7 +17,7 @@ import { guardTargetHover, hoverLock } from './target-hover.js';
  * All page mutations are recorded and reversed by stop(), restart or destroy().
  * A React island can own this controller without owning the page beneath it.
  */
-export function createDomDefender(options = {}) {
+export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreController {
   const doc = options.document || document;
   const win = doc.defaultView || window;
   const selectors = {
@@ -31,8 +39,8 @@ export function createDomDefender(options = {}) {
   const protectedPointerSelector = '[data-swarm-attack-cues],[data-swarm-ui],[data-swarm-ignore],dialog,[role="dialog"],[aria-modal="true"],form,input,textarea,select,option,[contenteditable]';
   const cursorSVG = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><g fill="none" stroke-linecap="round"><circle cx="16" cy="16" r="8" stroke="#101010" stroke-width="4"/><path d="M16 3v3m0 20v3M3 16h3m20 0h3" stroke="#101010" stroke-width="4"/><circle cx="16" cy="16" r="8" stroke="#06c4ff" stroke-width="1.5"/><path d="M16 3v3m0 20v3M3 16h3m20 0h3" stroke="#ecfcff" stroke-width="1.5"/></g><circle cx="16" cy="16" r="2" fill="#fff" stroke="#101010" stroke-width="1.5"/></svg>';
   const reticleCursor = `url("data:image/svg+xml,${encodeURIComponent(cursorSVG)}") 16 16, crosshair`;
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const rand = (a, b) => a + Math.random() * (b - a);
+  const clamp = (v:number, a:number, b:number) => Math.max(a, Math.min(b, v));
+  const rand = (a:number, b:number) => a + Math.random() * (b - a);
   const active = () => state.status === 'running' || state.status === 'intermission';
   const reducedMotion = options.reducedMotion ?? (win.matchMedia?.('(prefers-reduced-motion: reduce)').matches || false);
   const coarseQuery = win.matchMedia?.('(pointer: coarse)');
@@ -40,35 +48,36 @@ export function createDomDefender(options = {}) {
   const coarsePointer = () => width <= 640 || Boolean(coarseQuery?.matches);
   let best = 0;
   try { best = Math.max(0, Number(win.localStorage.getItem(bestKey)) || 0); } catch {}
-  const state = { status: 'idle', score: 0, best, wave: 0, kills: 0, combo: 1, elapsed: 0 };
-  let canvas = null, canvasHost = null, ctx = null, raf = 0, lastNow = 0, lastState = 0;
+  const bitHighlights = createBitHighlights(doc);
+  const state: GameState = { status: 'idle', score: 0, best, wave: 0, kills: 0, combo: 1, elapsed: 0 };
+  let canvas: HTMLCanvasElement = null!, canvasHost: HTMLDivElement = null!, ctx: CanvasRenderingContext2D = null!, raf = 0, lastNow = 0, lastState = 0;
   let width = win.innerWidth, height = win.innerHeight, ratio = 1;
-  let bugs = [], particles = [], targets = [], textAreas = [], surfaces = [], uiRects = [];
+  let bugs: Bug[] = [], particles: Particle[] = [], targets: Target[] = [], textAreas: TextArea[] = [], surfaces: Surface[] = [], uiRects: Rect[] = [];
   let remaining = 0, spawnIn = 0, nextWaveIn = 0, comboTime = -Infinity;
-  let pausedFrom = 'running', pausedForVisibility = false, destroyed = false;
-  let geometryDirty = true, geometryAt = 0, roundId = 0, suppressedClick = null;
+  let pausedFrom: SwarmStatus = 'running', pausedForVisibility = false, destroyed = false;
+  let geometryDirty = true, geometryAt = 0, roundId = 0, suppressedClick: {x:number;y:number;until:number} | null = null;
   let gameoverTimeout = 0;
   let jumps = 0, zaps = 0, rescueUntil = 0, zapCleared = false;
   let scrollX = win.scrollX || 0, scrollY = win.scrollY || 0;
-  let visibleTargets = [], availableTargets = [], localFood = false, foodSurveyed = 0;
-  let cachedOffer = null, offerScore = -1, offerJumps = -1, offerZaps = -1;
-  let foodQueue = [], foodCandidates = [], foodCursor = 0, foodScanIn = 0, foodRevision = 0, foodBudget = 0;
-  let glyphRange = null;
-  let cursorRecord = null, lastPointer = null, aimEffects = [];
-  const styleLedger = new Map();
-  let releaseHover = null;
-  const originalStyleAttributes = new Map();
-  const textLedger = new Map();
-  const attributeLedger = new Map();
-  const listeners = [];
+  let visibleTargets: Target[] = [], availableTargets: Target[] = [], localFood = false, foodSurveyed = 0;
+  let cachedOffer: ReturnType<typeof rescueOffer> | null = null, offerScore = -1, offerJumps = -1, offerZaps = -1;
+  let foodQueue: Glyph[] = [], foodCandidates: Glyph[] = [], foodCursor = 0, foodScanIn = 0, foodRevision = 0, foodBudget = 0;
+  let glyphRange: Range | null = null;
+  let cursorRecord: CursorRecord | null = null, lastPointer: (Point & {type:string;element:HTMLElement}) | null = null, aimEffects: AimEffect[] = [];
+  const styleLedger = new Map<HTMLElement,Map<string,StyleRecord>>();
+  let releaseHover: (()=>void) | null = null;
+  const originalStyleAttributes = new Map<HTMLElement,boolean>();
+  const textLedger = new Map<Node,TextRecord>();
+  const attributeLedger = new Map<Element,Map<string,{original:string|null;latest:string|null}>>();
+  const listeners: (()=>void)[] = [];
   const attackIndicators = createAttackIndicators(doc, reducedMotion, rescue);
 
-  function on(target, name, callback, settings) {
-    target.addEventListener(name, callback, settings);
-    listeners.push(() => target.removeEventListener(name, callback, settings));
+  function on<K extends keyof DocumentEventMap>(target: EventTarget, name: K, callback: (event: DocumentEventMap[K])=>void, settings?: boolean | AddEventListenerOptions) {
+    target.addEventListener(name, callback as EventListener, settings);
+    listeners.push(() => target.removeEventListener(name, callback as EventListener, settings));
   }
-  function emit(type, data = {}) {
-    options.onEvent?.({ type, ...data });
+  function emit(type: SwarmEvent["type"], data: Record<string,unknown> = {}) {
+    options.onEvent?.({ type, ...data } as SwarmEvent);
   }
   function getSnapshot() {
     const enrolled = targets.filter(t => t.enrolled && t.rendered && t.element.isConnected);
@@ -92,7 +101,7 @@ export function createDomDefender(options = {}) {
       options.onState?.(getSnapshot());
     }
   }
-  function status(value) {
+  function status(value: SwarmStatus) {
     state.status = value;
     if (value !== 'running') attackIndicators.update(0);
     if (value === 'running') syncCursor();
@@ -104,18 +113,18 @@ export function createDomDefender(options = {}) {
     emit('status', { status: value });
     notify(true);
   }
-  function setStyle(element, property, value, desiredPriority = '') {
+  function setStyle(element: HTMLElement, property: string, value: string, desiredPriority = '') {
     if (!styleLedger.has(element)) {
       styleLedger.set(element, new Map());
       originalStyleAttributes.set(element, cursorRecord?.element === element ? cursorRecord.hadStyle : element.hasAttribute('style'));
     }
-    const properties = styleLedger.get(element);
+    const properties = styleLedger.get(element)!;
     if (!properties.has(property)) properties.set(property, {
       original: element.style.getPropertyValue(property),
       priority: element.style.getPropertyPriority(property),
       latest: null, latestPriority: null, abandoned: false,
     });
-    const record = properties.get(property);
+    const record = properties.get(property)!;
     const current = element.style.getPropertyValue(property), priority = element.style.getPropertyPriority(property);
     // Once the host edits this property, its newer value owns the rest of the
     // round. Do not overwrite it on a later footprint or restore the old value.
@@ -126,15 +135,16 @@ export function createDomDefender(options = {}) {
     record.latestPriority = element.style.getPropertyPriority(property);
     record.requested = value;
   }
-  function setAttribute(element, name, value) {
+  function setAttribute(element: Element, name: string, value: string) {
     if (!attributeLedger.has(element)) attributeLedger.set(element, new Map());
-    const attributes = attributeLedger.get(element);
+    const attributes = attributeLedger.get(element)!;
     if (!attributes.has(name)) attributes.set(name, { original: element.getAttribute(name), latest: null });
-    if (attributes.get(name).latest === value && element.getAttribute(name) === value) return;
+    if (attributes.get(name)!.latest === value && element.getAttribute(name) === value) return;
     element.setAttribute(name, value);
-    attributes.get(name).latest = value;
+    attributes.get(name)!.latest = value;
   }
   function restorePage() {
+    bitHighlights.destroy();
     releaseHover?.();
     releaseHover = null;
     restoreCursor();
@@ -166,21 +176,21 @@ export function createDomDefender(options = {}) {
     foodQueue = []; foodCandidates = [];
     attributeLedger.clear();
   }
-  function rectVisible(r) {
+  function rectVisible(r: Rect) {
     return r.width > 0 && r.height > 0 && r.right > 0 && r.bottom > 0 && r.left < width && r.top < height;
   }
-  function contains(r, x, y, margin = 0) {
+  function contains(r: Rect, x:number, y:number, margin = 0) {
     return x >= r.left - margin && x <= r.right + margin && y >= r.top - margin && y <= r.bottom + margin;
   }
-  function forbiddenText(node) {
+  function forbiddenText(node: Node) {
     return node.parentElement?.closest('a,button,input,textarea,select,script,style,noscript,pre,code,[contenteditable],[data-swarm-ui],[data-swarm-ignore],[data-swarm-target],[aria-live]');
   }
   function discoverPage() {
-    targets = [...doc.querySelectorAll(selectors.target)].filter(element => !element.closest('[data-swarm-ignore]')).map((element, index) => ({
+    targets = [...doc.querySelectorAll<HTMLElement>(selectors.target)].filter(element => !element.closest('[data-swarm-ignore]')).map((element, index) => ({
       element,
       id: element.id || `swarm-target-${index + 1}`,
       label: element.getAttribute('data-swarm-label') || element.getAttribute('aria-label') || element.textContent.trim().slice(0, 48) || `Target ${index + 1}`,
-      health: 100, rect: null, visible: false, rendered: false, enrolled: false, bites: 0,
+      health: 100, rect: null!, visible: false, rendered: false, enrolled: false, bites: 0,
       originalBackground: null, palette: null, cornerRadius: 8, pulsePhase: index * .17, interactive: false, interactionUntil: 0,
       hovered: false, bubbleTime: 0, bubbleHeat: 0,
       hitUntil: 0, liquidUntil: 0, liquidBite: .5, liquidActive: false, moving: false, paintDirty: true, lastPaint: -Infinity,
@@ -196,11 +206,11 @@ export function createDomDefender(options = {}) {
           seenNodes.add(node);
         }
       }
-      const area = { element, nodes, rect: null, visible: false, revision: 0, records: [] };
+      const area: TextArea = { element, nodes, rect: null, visible: false, revision: 0, records: [] };
       for (const node of nodes) {
         const original = node.nodeValue || '';
         const chars = segmenter ? [...segmenter.segment(original)].map(part => part.segment) : Array.from(original);
-        const record = { node, original, latest: original, chars, offsets: [], glyphs: [], owner: area, abandoned: false };
+        const record: TextRecord = { node, original, latest: original, chars, offsets: [], glyphs: [], owner: area, abandoned: false };
         updateTextOffsets(record);
         let slot = 0;
         record.glyphs = chars.flatMap((letter, index) => /\p{L}/u.test(letter) ? [{ record, index, slot: slot++, letter, eaten: false, reservedBy: 0, rect: null, revision: -1, areaRevision: -1, measuredAt: -Infinity }] : []);
@@ -217,8 +227,8 @@ export function createDomDefender(options = {}) {
       for (const record of records) foodQueue.push(...record.glyphs.slice(offset, offset + 8));
     }
     foodCandidates = []; foodCursor = 0; foodScanIn = 0; foodRevision++; foodSurveyed = 0; localFood = false;
-    surfaces = [...doc.querySelectorAll(selectors.surface)].filter(el => !el.closest(`${selectors.ui},[data-swarm-ignore]`)).slice(0, 16)
-      .map(element => ({ element, rect: null, visible: false, damage: 0 }));
+    surfaces = [...doc.querySelectorAll<HTMLElement>(selectors.surface)].filter(el => !el.closest(`${selectors.ui},[data-swarm-ignore]`)).slice(0, 16)
+      .map(element => ({ element, rect: null!, visible: false, damage: 0 }));
     geometryDirty = true;
     refreshGeometry(true);
   }
@@ -243,7 +253,7 @@ export function createDomDefender(options = {}) {
     }
     for (const group of [targets, textAreas, surfaces]) for (const item of group) {
       const previousRect = item.rect;
-      item.visible = item.element.isConnected && !item.element.hidden;
+      item.visible = item.element.isConnected && !(item.element as HTMLElement).hidden;
       item.rect = item.element.getBoundingClientRect();
       // Attached bugs belong to their button, including inside nested scrollers.
       if ('enrolled' in item && previousRect) for (const bug of bugs) {
@@ -252,7 +262,7 @@ export function createDomDefender(options = {}) {
           bug.y += item.rect.top - previousRect.top;
         }
       }
-      if ('records' in item && previousRect && ['left', 'top', 'width', 'height'].some(key => previousRect[key] !== item.rect[key])) item.revision++;
+      if ('records' in item && previousRect && (['left', 'top', 'width', 'height'] as const).some(key => previousRect[key] !== item.rect![key])) item.revision++;
       if ('enrolled' in item) {
         const style = win.getComputedStyle?.(item.element);
         const display = style?.getPropertyValue('display');
@@ -265,7 +275,7 @@ export function createDomDefender(options = {}) {
         item.visible = item.visible && rectVisible(item.rect) && style?.getPropertyValue('display') !== 'none' && style?.getPropertyValue('visibility') !== 'hidden' && style?.getPropertyValue('visibility') !== 'collapse';
       }
     }
-    uiRects = [...doc.querySelectorAll(selectors.ui)]
+    uiRects = [...doc.querySelectorAll<HTMLElement>(selectors.ui)]
       .filter(el => !el.hidden).map(el => el.getBoundingClientRect()).filter(rectVisible);
     cacheTargets();
     syncCursor();
@@ -285,9 +295,9 @@ export function createDomDefender(options = {}) {
     canvas.setAttribute('data-dom-defender-canvas', '');
     shadow.append(style, canvas);
     doc.body.appendChild(canvasHost);
-    ctx = canvas.getContext('2d', { alpha: true });
+    ctx = canvas.getContext('2d', { alpha: true })!;
     if (!ctx) {
-      canvasHost.remove(); canvasHost = null; canvas = null;
+      canvasHost.remove(); canvasHost = null!; canvas = null!;
       throw new Error('DOM Defender requires a 2D canvas context.');
     }
   }
@@ -298,7 +308,7 @@ export function createDomDefender(options = {}) {
       if (target.visible) visibleTargets.push(target);
     }
   }
-  function chooseTarget(bug) {
+  function chooseTarget(bug: Bug) {
     const choices = bug.tier < 3 && visibleTargets.length ? visibleTargets : availableTargets;
     if (!choices.length) return null;
     let nearest = null, distance = Infinity;
@@ -323,7 +333,7 @@ export function createDomDefender(options = {}) {
       if (!uiRects.some(r => contains(r, x, y, 24)) && Math.hypot(x - px, y - py) >= 60) break;
       if (attempt === 11) return false; // Never spawn behind a full-screen host UI.
     }
-    const bug = {
+    const bug: Bug = {
       id: ++roundId, x, y, angle: 0, phase: rand(0, Math.PI * 2),
       color: tierColors[0], size: rand(1.05, 1.18), tier: 1, hp: 1, feeds: 0, lettersEaten: 0, hitFlash: 0,
       speed: (rand(110, 155) + Math.min(80, state.wave * 8)) * (coarsePointer() ? .72 : 1),
@@ -337,7 +347,7 @@ export function createDomDefender(options = {}) {
     bugs.push(bug);
     return true;
   }
-  function startWave(reason = 'start') {
+  function startWave(reason: "start"|"timer"|"clear" = 'start') {
     state.wave++;
     zapCleared = false;
     const arrivals = Math.max(0, Math.min(MAX_BUGS - bugs.length - remaining, 12 + (state.wave - 1) * 6));
@@ -352,20 +362,20 @@ export function createDomDefender(options = {}) {
     state.best = state.score;
     try { win.localStorage.setItem(bestKey, String(state.best)); } catch {}
   }
-  function rememberBackground(target) {
+  function rememberBackground(target: Target) {
     if (target.originalBackground) return;
     target.palette = readTargetPalette(target.element, doc);
     setStyle(target.element, 'transition', 'none', 'important');
     setAttribute(target.element, hoverLock, 'active');
     const style = win.getComputedStyle?.(target.element) || target.element.style;
-    const read = (name, fallback) => style.getPropertyValue(name) || fallback;
+    const read = (name:string, fallback:string) => style.getPropertyValue(name) || fallback;
     const images = cssLayers(read('background-image', 'none'));
-    target.palette.base = read('background-color', 'transparent');
-    target.palette.bubbles = bubbleContrast(target.palette.base === 'transparent' || target.palette.base === 'rgba(0, 0, 0, 0)' ? target.palette.power : target.palette.base);
-    const bubbleInk = target.palette.bubbles === '#ffffff' ? 'rgb(255 255 255 / .24)' : 'rgb(16 16 16 / .24)';
-    target.palette.calmBubbles = [[1.5, 17, 65], [3.5, 57, 32], [2.3, 83, 76]]
+    target.palette!.base = read('background-color', 'transparent');
+    target.palette!.bubbles! = bubbleContrast(target.palette!.base === 'transparent' || target.palette!.base === 'rgba(0, 0, 0, 0)' ? target.palette.power : target.palette!.base);
+    const bubbleInk = target.palette!.bubbles! === '#ffffff' ? 'rgb(255 255 255 / .24)' : 'rgb(16 16 16 / .24)';
+    target.palette!.calmBubbles! = [[1.5, 17, 65], [3.5, 57, 32], [2.3, 83, 76]]
       .map(([radius, x, y]) => `radial-gradient(circle ${radius}px at ${x}% ${y}%,${bubbleInk} 90%,transparent 100%)`);
-    const expand = (name, fallback) => {
+    const expand = (name:string, fallback:string) => {
       const values = cssLayers(read(name, fallback));
       return images.map((_, i) => values[i % values.length]);
     };
@@ -380,8 +390,8 @@ export function createDomDefender(options = {}) {
     };
   }
   const targetPaintProperties = ['background-color', 'background-image', 'background-size', 'background-position', 'background-repeat', 'background-origin', 'background-clip'];
-  function restoreProperties(element, names, release = false) {
-    const properties = styleLedger.get(element);
+  function restoreProperties(element: HTMLElement, names: string[], release = false) {
+    const properties = styleLedger.get(element)!;
     if (!properties) return;
     for (const name of names) {
       const record = properties.get(name);
@@ -395,7 +405,7 @@ export function createDomDefender(options = {}) {
       else record.abandoned = true;
     }
   }
-  function paintTarget(target) {
+  function paintTarget(target: Target) {
     target.paintDirty = false;
     target.lastPaint = state.elapsed;
     target.calm = coarsePointer();
@@ -415,27 +425,27 @@ export function createDomDefender(options = {}) {
     rememberBackground(target);
     if (target.calm) setStyle(el, '-webkit-tap-highlight-color', 'transparent', 'important');
     else restoreProperties(el, ['-webkit-tap-highlight-color'], true);
-    const base = target.originalBackground;
+    const base = target.originalBackground!;
     const signal = targetSignal(target.health, target.palette?.power);
     // One solid color with a hard horizontal edge: the fill drains downward.
     // Original background layers remain visible in the empty part of the tank.
-    const appendBase = (values, originals) => [...values, ...(base.images.length ? originals : [])].join(',');
+    const appendBase = (values:string[], originals:string[]) => [...values, ...(base.images.length ? originals : [])].join(',');
     const animated = !reducedMotion && !target.calm && target.visible;
     const ripple = animated ? Math.max(0, target.liquidUntil - state.elapsed) / .65 : 0;
     target.liquidActive = ripple > 0;
     const bubbles = animated ? {
-      color: target.palette.bubbles, time: target.bubbleTime,
+      color: target.palette!.bubbles!, time: target.bubbleTime,
       width: Math.max(1, target.rect.width), height: Math.max(1, target.rect.height),
     } : null;
     const layer = liquidFill(signal.fill, signal.color, ripple, .65 * (1 - ripple), target.liquidBite, 1, bubbles);
     // Mobile keeps the actual color in a native CSS gradient. Static radial
     // bubbles need no image decoding or continuous background replacement.
-    const calmBubbles = target.calm && !reducedMotion ? target.palette.calmBubbles : [];
+    const calmBubbles = target.calm && !reducedMotion ? target.palette!.calmBubbles! : [];
     const layers = [...calmBubbles, layer];
     const sizes = [...calmBubbles.map(() => `100% ${signal.fill}%`), '100% 100%'];
     const positions = [...calmBubbles.map(() => '0% 100%'), '0% 0%'];
     // Only the power background outranks host hover rules, including !important.
-    setStyle(el, 'background-color', target.palette.base, 'important');
+    setStyle(el, 'background-color', target.palette!.base, 'important');
     setStyle(el, 'background-image', [...layers, ...base.images].join(','), 'important');
     setStyle(el, 'background-size', appendBase(sizes, base.sizes), 'important');
     setStyle(el, 'background-position', appendBase(positions, base.positions), 'important');
@@ -443,11 +453,11 @@ export function createDomDefender(options = {}) {
     setStyle(el, 'background-origin', appendBase(layers.map(() => 'border-box'), base.origins), 'important');
     setStyle(el, 'background-clip', appendBase(layers.map(() => 'border-box'), base.clips), 'important');
   }
-  function targetInteraction(event) {
+  function targetInteraction(event: FocusEvent | PointerEvent) {
     if (!targets.length || destroyed) return;
     for (const target of targets) {
       const el = target.element;
-      if (!el.contains(event.target) && !el.contains(event.relatedTarget)) continue;
+      if (!el.contains(event.target as Node | null) && !el.contains(event.relatedTarget as Node | null)) continue;
       const interactive = el.matches?.(':hover, :focus-within') || false;
       const hovered = !coarsePointer() && (el.matches?.(':hover') || false);
       if (target.interactive === interactive && target.hovered === hovered) continue;
@@ -464,7 +474,7 @@ export function createDomDefender(options = {}) {
     // Paused rounds keep their phase/health but still allow native interaction.
     if (state.status === 'paused' && !doc.hidden) { refreshGeometry(); draw(); }
   }
-  function animateTargetHit(target) {
+  function animateTargetHit(target: Target) {
     if (coarsePointer()) {
       if (target.moving) {
         restoreProperties(target.element, ['translate', 'rotate'], true);
@@ -504,7 +514,7 @@ export function createDomDefender(options = {}) {
       ctx.restore();
     }
   }
-  function damageTarget(target, bug) {
+  function damageTarget(target: Target, bug: Bug) {
     target.bites++;
     bug.siphonUntil = state.elapsed + .16;
     target.health = Math.max(0, target.health - (1.15 + Math.min(state.wave - 1, 9) * .12));
@@ -534,20 +544,20 @@ export function createDomDefender(options = {}) {
       }, 900);
     }
   }
-  function updateTextOffsets(record) {
+  function updateTextOffsets(record: TextRecord) {
     let offset = 0;
     record.offsets = record.chars.map(char => { const start = offset; offset += char.length; return start; });
   }
-  function currentText(record) {
+  function currentText(record: TextRecord) {
     if (record.abandoned || !record.node.isConnected || forbiddenText(record.node)) return false;
     // A newer React/CMS value always wins, including during a pending chew.
     if (record.node.nodeValue !== record.latest) { record.abandoned = true; return false; }
     return true;
   }
-  function edibleGlyph(glyph) {
+  function edibleGlyph(glyph: Glyph) {
     return glyph && !glyph.eaten && glyph.record.owner.visible && currentText(glyph.record);
   }
-  function releaseFood(bug) {
+  function releaseFood(bug: Bug) {
     if (bug.food?.reservedBy === bug.id) bug.food.reservedBy = 0;
     bug.food = null;
     bug.chewing = false;
@@ -577,7 +587,7 @@ export function createDomDefender(options = {}) {
       bug.foodWaitUntil = state.elapsed + .25;
     }
   }
-  function measureGlyph(glyph, force = false) {
+  function measureGlyph(glyph: Glyph, force = false) {
     const unavailable = () => { glyph.rect = null; glyph.revision = -1; return null; };
     if (!edibleGlyph(glyph)) return unavailable();
     const record = glyph.record, area = record.owner;
@@ -587,7 +597,7 @@ export function createDomDefender(options = {}) {
     if (foodBudget <= 0) return undefined;
     foodBudget--;
     const parent = record.node.parentElement;
-    const style = win.getComputedStyle?.(parent);
+    const style = win.getComputedStyle?.(parent!);
     if (parent?.hidden || style?.getPropertyValue('display') === 'none' || style?.getPropertyValue('visibility') === 'hidden' || style?.getPropertyValue('visibility') === 'collapse') return unavailable();
     if (!doc.createRange) return unavailable();
     let r;
@@ -611,7 +621,7 @@ export function createDomDefender(options = {}) {
     glyph.measuredAt = state.elapsed;
     return glyph.rect;
   }
-  function scanFood(dt) {
+  function scanFood(dt:number) {
     foodBudget = 36;
     foodScanIn -= dt;
     if (foodScanIn > 0 || !foodQueue.length || !bugs.length) return;
@@ -631,7 +641,7 @@ export function createDomDefender(options = {}) {
       (foodSurveyed < foodQueue.length && textAreas.some(area => area.visible));
     if (foodCandidates.length > MAX_FOOD_CANDIDATES) foodCandidates.splice(0, foodCandidates.length - MAX_FOOD_CANDIDATES);
   }
-  function chooseFood(bug) {
+  function chooseFood(bug: Bug) {
     if (bug.tier >= 3 && (bug.attached || (bug.target && !bug.target.visible))) return null;
     // Continue along the same word/line before searching elsewhere. This makes
     // each changed letter readable as the result of the crawler touching it.
@@ -652,7 +662,7 @@ export function createDomDefender(options = {}) {
     }
     // Only five entries are ever inspected. Keep that same stable shortlist
     // without sorting the whole cache or recomputing distances in a comparator.
-    const nearest = [], distances = [];
+    const nearest: Glyph[] = [], distances: number[] = [];
     for (const glyph of foodCandidates) {
       // Shortlist cheaply; measureGlyph still validates host ownership, protected
       // ancestry and live contact before reserving or eating any candidate.
@@ -676,7 +686,7 @@ export function createDomDefender(options = {}) {
     }
     return null;
   }
-  function nickSurface(bug) {
+  function nickSurface(bug: Bug) {
     const surface = surfaces.find(s => s.visible && contains(s.rect, bug.x, bug.y, 4));
     if (!surface || surface.damage >= 12) return;
     surface.damage++;
@@ -684,7 +694,7 @@ export function createDomDefender(options = {}) {
     setStyle(surface.element, 'clip-path', `polygon(0 0, 100% 0, 100% 34%, calc(100% - ${n}px) 34%, calc(100% - ${n}px) 44%, 100% 44%, 100% 100%, 0 100%, 0 76%, ${Math.round(n * .7)}px 76%, ${Math.round(n * .7)}px 65%, 0 65%)`);
     setStyle(surface.element, 'filter', `saturate(${1 - surface.damage * .025})`);
   }
-  function eatGlyph(bug, glyph, r) {
+  function eatGlyph(bug: Bug, glyph: Glyph, r: Rect) {
     const record = glyph.record;
     const binary = Math.random() < .5 ? '0' : '1';
     record.chars[glyph.index] = binary;
@@ -693,6 +703,7 @@ export function createDomDefender(options = {}) {
     glyph.eaten = true;
     record.owner.revision++;
     updateTextOffsets(record);
+    bitHighlights.update(record);
     geometryDirty = true;
     bug.lastFood = glyph;
     releaseFood(bug);
@@ -712,7 +723,7 @@ export function createDomDefender(options = {}) {
     if (!reducedMotion && particles.length < MAX_PARTICLES) particles.push({ x: r.x, y: r.y, vx: (bug.x - r.x) / .25, vy: (bug.y - r.y) / .25, life: .25, total: .25, color: '#74dfa1', text: binary });
     emit('bite', { id: bug.id, x: r.x, y: r.y, letter: glyph.letter, binary, lettersEaten: bug.lettersEaten, tier: bug.tier, full: bug.tier === 3 });
   }
-  function chewGlyph(bug, dt) {
+  function chewGlyph(bug: Bug, dt:number) {
     if (!bug.food || !bug.chewing) return false;
     const glyph = bug.food;
     if (!edibleGlyph(glyph) || glyph.reservedBy !== bug.id) { releaseFood(bug); return false; }
@@ -732,7 +743,7 @@ export function createDomDefender(options = {}) {
     bug.chewLeft -= dt;
     return true;
   }
-  function stepBug(bug, dt) {
+  function stepBug(bug: Bug, dt:number) {
     bug.age += dt;
     bug.hitFlash = Math.max(0, bug.hitFlash - dt);
     const visibleLive = visibleTargets.length > 0;
@@ -777,7 +788,7 @@ export function createDomDefender(options = {}) {
     }
     let pinnedOffscreen = false;
     const orbitPoint = () => {
-      const r = target.rect;
+      const r = target!.rect;
       bug.orbit += dt * 1.45;
       return {
         x: (r.left + r.right) / 2 + Math.cos(bug.orbit) * Math.max(5, r.width / 2 - 12),
@@ -888,7 +899,7 @@ export function createDomDefender(options = {}) {
       bug.y += Math.sin(bug.angle) * travel - Math.cos(bug.angle) * sway;
       // Free crawlers return at their travel speed; never clamp scroll distance away.
     }
-    if (!scattering && bug.food && !bug.chewing && Math.hypot(bug.food.rect.x - bug.x, bug.food.rect.y - bug.y) <= 8 * bug.size + 4) {
+    if (!scattering && bug.food && !bug.chewing && Math.hypot(bug.food.rect!.x - bug.x, bug.food.rect!.y - bug.y) <= 8 * bug.size + 4) {
       // Only a fresh, unobscured glyph under the crawler's mouth can begin a
       // bite. A second live Range check occurs when the chew completes.
       const r = measureGlyph(bug.food, true);
@@ -901,13 +912,13 @@ export function createDomDefender(options = {}) {
         bug.chewX = r.x; bug.chewY = r.y;
       } else if (r === null) releaseFood(bug);
     }
-    if (bug.attached && target?.health > 0) {
+    if (bug.attached && target?.health! > 0) {
       bug.biteIn -= dt;
-      if (bug.biteIn <= 0) { damageTarget(target, bug); bug.biteIn = rand(.72, 1.1); }
+      if (bug.biteIn <= 0) { damageTarget(target!, bug); bug.biteIn = rand(.72, 1.1); }
     }
   }
-  let bugPaths;
-  function drawBug(bug, time) {
+  let bugPaths: {body:Path2D;shell:Path2D;legs:[number,number,Path2D][]} | undefined;
+  function drawBug(bug: Bug, time:number) {
     if (options.drawBug) { options.drawBug(ctx, bug, time); return; }
     // Offscreen missions keep simulating, without issuing invisible canvas work.
     const margin = 32 * bug.size;
@@ -915,7 +926,7 @@ export function createDomDefender(options = {}) {
     ctx.save();
     ctx.translate(bug.x, bug.y);
     ctx.rotate(bug.angle + Math.PI / 2);
-    const feeding = !reducedMotion && bug.attached && bug.target?.health > 0 && bug.siphonUntil > state.elapsed;
+    const feeding = !reducedMotion && bug.attached && bug.target?.health! > 0 && bug.siphonUntil > state.elapsed;
     const bitePulse = feeding ? Math.sin((1 - (bug.siphonUntil - state.elapsed) / .16) * Math.PI) * .04 : 0;
     ctx.scale(bug.size * (1 + bitePulse), bug.size * (1 - bitePulse));
     const gait = reducedMotion ? 0 : Math.sin(time * 17 + bug.phase) * Math.PI / 20;
@@ -958,7 +969,7 @@ export function createDomDefender(options = {}) {
       ctx.lineWidth = 1;
       ctx.globalAlpha = .7;
       ctx.beginPath();
-      ctx.arc(bug.chewX, bug.chewY, 2 + (reducedMotion ? 0 : Math.sin(time * 35) * .8), 0, Math.PI * 2);
+      ctx.arc(bug.chewX!, bug.chewY!, 2 + (reducedMotion ? 0 : Math.sin(time * 35) * .8), 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
     }
@@ -986,7 +997,7 @@ export function createDomDefender(options = {}) {
         const progress = 1 - p.life / p.total;
         ctx.globalAlpha *= .9;
         ctx.beginPath();
-        ctx.arc(p.x + Math.sin(progress * 7) * 2, p.y, p.radius * (1 + progress * .4), 0, Math.PI * 2);
+        ctx.arc(p.x + Math.sin(progress * 7) * 2, p.y, p.radius! * (1 + progress * .4), 0, Math.PI * 2);
         ctx.fillStyle = p.color;
         ctx.fill();
       } else if (p.text) {
@@ -1013,7 +1024,7 @@ export function createDomDefender(options = {}) {
     ctx.globalAlpha = 1;
     for (const effect of aimEffects) {
       const progress = 1 - effect.life / effect.total;
-      const radius = effect.kind === 'zap' ? (reducedMotion ? effect.radius : 12 + progress * (effect.radius - 12)) : reducedMotion ? 10 : 6 + progress * (effect.kind === 'kill' ? 14 : effect.kind === 'hit' ? 10 : 6);
+      const radius = effect.kind === 'zap' ? (reducedMotion ? effect.radius! : 12 + progress * (effect.radius! - 12)) : reducedMotion ? 10 : 6 + progress * (effect.kind === 'kill' ? 14 : effect.kind === 'hit' ? 10 : 6);
       ctx.save();
       ctx.globalAlpha = (1 - progress) * (effect.kind === 'miss' ? .45 : .85);
       ctx.beginPath();
@@ -1036,7 +1047,7 @@ export function createDomDefender(options = {}) {
       ctx.restore();
     }
   }
-  function frame(now) {
+  function frame(now:number) {
     raf = 0;
     if (!active() || destroyed) return;
     const dt = Math.min(.05, (now - lastNow) / 1000 || 0);
@@ -1116,7 +1127,7 @@ export function createDomDefender(options = {}) {
     status('intermission');
     emit('wave-clear', { wave: state.wave, bonus });
   }
-  function scatterNeighbors(killed) {
+  function scatterNeighbors(killed: Bug) {
     const anchor = killed.target;
     let count = 0;
     for (const friend of bugs) {
@@ -1142,7 +1153,7 @@ export function createDomDefender(options = {}) {
     }
     if (count) emit('scatter', { count, x: killed.x, y: killed.y, ...(anchor ? { targetId: anchor.id } : {}) });
   }
-  function kill(bug) {
+  function kill(bug: Bug) {
     zapCleared = false;
     scatterNeighbors(bug);
     releaseFood(bug);
@@ -1169,12 +1180,12 @@ export function createDomDefender(options = {}) {
       cachedOffer = rescueOffer(state.score, jumps, zaps);
       offerScore = state.score; offerJumps = jumps; offerZaps = zaps;
     }
-    return cachedOffer;
+    return cachedOffer!;
   }
   function updateAttackIndicators() {
     attackIndicators.update(state.status === 'running' && !doc.hidden ? getAttackEdges(bugs, width, height) : 0, getRescueOffer());
   }
-  function rescue(edge) {
+  function rescue(edge:number) {
     if (destroyed || state.status !== 'running' || doc.hidden || state.elapsed < rescueUntil) return;
     syncScroll();
     refreshGeometry(true);
@@ -1183,7 +1194,7 @@ export function createDomDefender(options = {}) {
     let target = null, distance = Infinity;
     // Resolve the nearest still-attacked base now, not the one shown last frame.
     for (const bug of bugs) if (attackEdge(bug, width, height) & edge) {
-      const r = bug.target.rect, d = Math.hypot((r.left + r.right) / 2 - width / 2, (r.top + r.bottom) / 2 - height / 2);
+      const r = bug.target!.rect, d = Math.hypot((r.left + r.right) / 2 - width / 2, (r.top + r.bottom) / 2 - height / 2);
       if (d < distance) { target = bug.target; distance = d; }
     }
     if (!target?.element.scrollIntoView) { updateAttackIndicators(); return; }
@@ -1222,15 +1233,15 @@ export function createDomDefender(options = {}) {
     updateAttackIndicators();
     notify(true);
   }
-  function protectedPointer(path) {
+  function protectedPointer(path: PointerNode[]) {
     return path.some(element => {
       if (element.closest?.(protectedPointerSelector)) return true;
       const button = element.closest?.('button');
       return button && !button.closest?.(selectors.target);
     });
   }
-  function pointerPath(event) {
-    return event.composedPath?.() || [event.target];
+  function pointerPath(event: Event) {
+    return (event.composedPath?.() || [event.target]) as PointerNode[];
   }
   function restoreCursor() {
     if (!cursorRecord) return;
@@ -1242,7 +1253,7 @@ export function createDomDefender(options = {}) {
     }
     if (!record.hadStyle && !element.getAttribute('style')) element.removeAttribute('style');
   }
-  function setCursor(element, path = [element]) {
+  function setCursor(element: HTMLElement | null, path: PointerNode[] = [element!]) {
     if (state.status !== 'running' || doc.hidden || lastPointer?.type !== 'mouse' || !element?.style || !element.isConnected || protectedPointer(path)) {
       restoreCursor();
       return;
@@ -1260,22 +1271,22 @@ export function createDomDefender(options = {}) {
   function syncCursor() {
     if (!lastPointer || state.status !== 'running' || doc.hidden || lastPointer.type !== 'mouse') { restoreCursor(); return; }
     const element = doc.elementFromPoint?.(lastPointer.x, lastPointer.y) || lastPointer.element;
-    setCursor(element);
+    setCursor(element as HTMLElement);
   }
-  function trackPointer(event) {
-    lastPointer = { x: event.clientX, y: event.clientY, type: event.pointerType || 'mouse', element: event.target };
-    setCursor(event.target, pointerPath(event));
+  function trackPointer(event: PointerEvent) {
+    lastPointer = { x: event.clientX, y: event.clientY, type: event.pointerType || 'mouse', element: event.target as HTMLElement };
+    setCursor(event.target as HTMLElement, pointerPath(event));
   }
   function leavePointer() {
     lastPointer = null;
     restoreCursor();
   }
-  function addAimEffect(x, y, kind) {
+  function addAimEffect(x:number, y:number, kind: AimEffect["kind"]) {
     const total = reducedMotion ? .16 : kind === 'zap' ? .5 : kind === 'kill' ? .36 : kind === 'hit' ? .28 : .24;
     if (aimEffects.length >= MAX_AIM_EFFECTS) aimEffects.shift();
     aimEffects.push({ x, y, kind, life: total, total });
   }
-  function pointerDown(event) {
+  function pointerDown(event: PointerEvent) {
     // A new physical press replaces any missing compatibility click from the
     // previous press. A genuine miss must never inherit hit suppression.
     suppressedClick = null;
@@ -1304,7 +1315,7 @@ export function createDomDefender(options = {}) {
       emit('hit', { id: hit.id, hp: hit.hp, tier: hit.tier, x: hit.x, y: hit.y });
     }
   }
-  function clickCapture(event) {
+  function clickCapture(event: MouseEvent) {
     if (!suppressedClick || event.detail === 0) return;
     if (protectedPointer(pointerPath(event))) { suppressedClick = null; return; }
     const hit = suppressedClick;
@@ -1380,13 +1391,13 @@ export function createDomDefender(options = {}) {
     destroyed = true;
     for (const off of listeners) off();
     canvasHost?.remove();
-    canvasHost = null; canvas = null; ctx = null;
+    canvasHost = null!; canvas = null!; ctx = null!;
     attackIndicators.destroy();
   }
   on(win, 'pointerdown', pointerDown, { capture: true, passive: false });
   on(win, 'pointermove', trackPointer, { capture: true, passive: true });
   on(win, 'pointerover', trackPointer, { capture: true, passive: true });
-  for (const name of ['pointerover', 'pointerout', 'focusin', 'focusout']) on(win, name, targetInteraction, { capture: true, passive: true });
+  for (const name of ['pointerover', 'pointerout', 'focusin', 'focusout'] as const) on(win, name, targetInteraction, { capture: true, passive: true });
   on(win, 'pointerout', event => { if (!event.relatedTarget) leavePointer(); }, { passive: true });
   on(win, 'pointercancel', () => { suppressedClick = null; aimEffects = []; leavePointer(); }, { passive: true });
   on(win, 'blur', leavePointer);

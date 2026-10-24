@@ -1,3 +1,4 @@
+import type { CSSRuleView } from './runtime-types.js';
 import { cssLayers } from './target-palette.js';
 
 export const hoverLock = 'data-swarm-hover-locked';
@@ -5,11 +6,11 @@ export const hoverLock = 'data-swarm-hover-locked';
 // Disable native hover selectors only inside powered targets. This also covers
 // labels, SVG icons, pseudo-elements and ancestor/group hover rules without
 // copying computed styles onto every child. No pointer/click events are blocked.
-export function guardTargetHover(doc) {
-  const edits = [], visited = new Set();
+export function guardTargetHover(doc: Document) {
+  const edits: [CSSRuleView,string,string][] = [], visited = new Set<CSSStyleSheet>();
   const exclusion = `:not(:where([${hoverLock}="active"],[${hoverLock}="active"] *))`;
-  function walk(rules, inheritedHover = false) {
-    for (const rule of rules || []) {
+  function walk(rules: CSSRuleList, inheritedHover = false) {
+    for (const rule of (rules || []) as unknown as CSSRuleView[]) {
       const original = rule.selectorText;
       const hover = inheritedHover || /:hover\b/.test(original || '');
       if (original && hover) {
@@ -33,7 +34,7 @@ export function guardTargetHover(doc) {
       else if (rule.cssRules) walk(rule.cssRules, hover);
     }
   }
-  function visit(sheet) {
+  function visit(sheet: CSSStyleSheet) {
     if (visited.has(sheet)) return;
     visited.add(sheet);
     try { walk(sheet.cssRules); } catch { /* Cross-origin CSS is not readable. */ }

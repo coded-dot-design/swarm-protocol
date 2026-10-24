@@ -1,4 +1,5 @@
-export function cssLayers(value) {
+import type { CSSRuleView, Palette } from './runtime-types.js';
+export function cssLayers(value:string) {
   const layers = [];
   let depth = 0, start = 0, quote = '';
   for (let i = 0; i < value.length; i++) {
@@ -15,8 +16,8 @@ export function cssLayers(value) {
 // Resolve a button's native hover surface once per round, not on pointer moves.
 // Only background/custom-property declarations are replayed; no events are fired
 // and original stylesheets are never changed. Unreadable sheets are skipped.
-export function readTargetPalette(element, doc) {
-  const win = doc.defaultView;
+export function readTargetPalette(element: HTMLElement, doc: Document): Palette {
+  const win = doc.defaultView!;
   const computed = () => win.getComputedStyle?.(element) || element.style;
   const initial = computed();
   const base = initial.getPropertyValue('background-color') || 'transparent';
@@ -24,14 +25,14 @@ export function readTargetPalette(element, doc) {
   const fallback = initial.getPropertyValue('border-top-color') || initial.getPropertyValue('color') || '#06c4ff';
   const marker = 'data-swarm-color-probe';
   const previous = element.getAttribute(marker), originalStyle = element.getAttribute('style'), normalizedStyle = element.style.cssText;
-  const temporary = ['transition', 'background-color'].map(name => [name, element.style.getPropertyValue(name), element.style.getPropertyPriority(name)]);
-  let probe = null, color = base;
-  const solid = value => value && value !== 'transparent' && !/^rgba?\([^,]+,[^,]+,[^,]+,\s*0(?:\.0+)?\s*\)$|\/\s*0(?:\.0+)?%?\s*\)$/.test(value);
+  const temporary = ['transition', 'background-color'].map(name => [name, element.style.getPropertyValue(name), element.style.getPropertyPriority(name)] as const);
+  let probe: HTMLStyleElement | null = null, color = base;
+  const solid = (value:string) => value && value !== 'transparent' && !/^rgba?\([^,]+,[^,]+,[^,]+,\s*0(?:\.0+)?\s*\)$|\/\s*0(?:\.0+)?%?\s*\)$/.test(value);
   try {
     element.setAttribute(marker, '');
-    const rules = (list, parent = '') => {
+    const rules = (list: CSSRuleList, parent = ''): string => {
       let output = '';
-      for (const rule of list || []) {
+      for (const rule of (list || []) as unknown as CSSRuleView[]) {
         if (rule.selectorText) {
           const selector = parent ? (rule.selectorText.includes('&') ? rule.selectorText.replaceAll('&', `:is(${parent})`) : `${parent} ${rule.selectorText}`) : rule.selectorText;
           const hover = selector.replace(/:hover\b/g, `:is(:hover,[${marker}])`);
@@ -70,7 +71,7 @@ export function readTargetPalette(element, doc) {
       }
       if (css) {
         probe = doc.createElement('style');
-        const nonce = doc.querySelector?.('style[nonce],script[nonce]')?.nonce;
+        const nonce = doc.querySelector?.<HTMLElement>('style[nonce],script[nonce]')?.nonce;
         if (nonce) probe.nonce = nonce;
         probe.textContent = css;
         (doc.head || doc.body).appendChild(probe);

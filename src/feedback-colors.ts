@@ -10,6 +10,6 @@ const dark = {
   shards: ['#ff6b6b', '#d984ff', '#8573ee'],
 };
 
-export function feedbackColors(darkMode) {
+export function feedbackColors(darkMode: boolean) {
   return darkMode ? dark : light;
 }

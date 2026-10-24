@@ -47,3 +47,30 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
+
+  tag-version:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: release-version
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Tag the checked version once
+        shell: bash
+        run: |
+          version="$(node -p 'JSON.parse(require("node:fs").readFileSync("package.json", "utf8")).version')"
+          tag="v$version"
+          git check-ref-format "refs/tags/$tag"
+          git fetch origin --tags
+          if git show-ref --verify --quiet "refs/tags/$tag"; then
+            echo "$tag already exists; keeping its original commit."
+            exit 0
+          fi
+          git tag "$tag"
+          git push origin "refs/tags/$tag"

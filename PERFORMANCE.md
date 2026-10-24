@@ -205,3 +205,19 @@ node tests/widget-hud-performance.mjs
 The harness also accepts `--engine`, `--baseline`, and `--report` paths. It instruments built-in operations only within its own Node process. Production modules contain no test hooks.
 
 The scheduler suite covers page-load/delay/idle ordering, timer fallback, hidden-tab suspension, import races, and cancellation. The loader regression suite covers deferred-import cancellation, concurrent open/start intent, synchronous callback reentrancy, full Escape exit/relock, the held-footer activation window, gesture cancellation, and resource cleanup. Package tests cover SSR and the generated declaration exports. Real-browser checks are still needed for a host site's fonts, layout, CSP, form behavior, scrolling, touch, and audio; these fixtures are not a browser or device benchmark.
+
+## TypeScript migration (1.2.0)
+
+All runtime modules now compile under strict TypeScript. The migration fingerprint
+suite compares normalized emitted JavaScript with the 1.1.0 sources. Only the new
+native text-highlight import, initialization, update and cleanup hooks are excluded
+from that comparison; gameplay, audio, controls, waves and navigation are unchanged.
+When intentionally changing gameplay later, review and update the historical parity
+check rather than silently treating its baseline as a new performance measurement.
+
+Bit highlights paint the real mutated text in a lighter cyan color, using native
+Ranges without wrappers or geometry reads. Ranges update only after a text write;
+Recall removes owned paint. A maximum of 8,000 highlighted bits bounds decoration.
+Unsupported browsers retain the actual 0/1 mutation. Character rotation is omitted
+to preserve native inline layout. Existing particle and cached Path2D drawing limits
+remain unchanged; TypeScript itself does not make the emitted game run faster.
