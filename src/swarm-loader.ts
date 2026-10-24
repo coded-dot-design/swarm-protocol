@@ -214,6 +214,7 @@ export function installSwarm(options: SwarmInstallOptions = {}): SwarmInstallati
         surfaceSelector: options.surfaceSelector,
         bestKey: storageKey,
         reducedMotion: options.reducedMotion,
+        lockZoom: options.lockZoom,
         initiallyClosed: false,
         showLauncher: false,
         onState(snapshot) { lastSnapshot = snapshot; notifyHost('onState', snapshot); },

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.1
+
+- Reversible mobile pinch/double-tap zoom lock while playing; native scrolling remains available. Pause and Recall restore the host policy. Set `lockZoom: false` to opt out.
+
 ## 1.2.0
 
 - Strict TypeScript runtime migration; emitted gameplay parity against 1.1.0. Native colored bit highlights preserve text layout and Recall. Abstract site previews.

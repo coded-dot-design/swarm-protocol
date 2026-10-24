@@ -78,6 +78,8 @@ export interface SwarmCoreOptions extends SwarmCallbacks {
   surfaceSelector?: string;
   bestKey?: string;
   reducedMotion?: boolean;
+  /** Temporarily lock mobile pinch/double-tap zoom during a round; default true. */
+  lockZoom?: boolean;
   document?: Document;
   drawBug?: (context: CanvasRenderingContext2D, bug: SwarmBug, time: number) => void;
 }
@@ -109,6 +111,8 @@ export interface SwarmInstallOptions extends SwarmCallbacks {
   /** Local best score; mute preference uses this key plus ':sound'. */
   storageKey?: string;
   reducedMotion?: boolean;
+  /** Temporarily lock mobile pinch/double-tap zoom during a round; default true. */
+  lockZoom?: boolean;
   /** The plain key sequence is the portable default; false disables it. */
   keyboard?: 'sequence' | false;
   /** Hold marked footer text for 900ms, then tap it within the 5-second cue. */

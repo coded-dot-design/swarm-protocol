@@ -1,3 +1,4 @@
+import { createMobileZoomLock } from '../shared/zoom-lock.js';
 import { createBitHighlights } from './bit-highlights.js';
 import type { Point, Rect, Palette, Background, Target, TextArea, TextRecord, Glyph, Bug, Particle, Surface, StyleRecord, CursorRecord, AimEffect, GameState, PointerNode } from './runtime-types.js';
 import type { SwarmEvent, SwarmStatus } from '../integration/swarm-types.js';
@@ -48,6 +49,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
   const coarsePointer = () => width <= 640 || Boolean(coarseQuery?.matches);
   let best = 0;
   try { best = Math.max(0, Number(win.localStorage.getItem(bestKey)) || 0); } catch {}
+  const zoomLock = createMobileZoomLock(doc, options.lockZoom !== false);
   const bitHighlights = createBitHighlights(doc);
   const state: GameState = { status: 'idle', score: 0, best, wave: 0, kills: 0, combo: 1, elapsed: 0 };
   let canvas: HTMLCanvasElement = null!, canvasHost: HTMLDivElement = null!, ctx: CanvasRenderingContext2D = null!, raf = 0, lastNow = 0, lastState = 0;
@@ -103,6 +105,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
   }
   function status(value: SwarmStatus) {
     state.status = value;
+    zoomLock.setActive(value === 'running' || value === 'intermission');
     if (value !== 'running') attackIndicators.update(0);
     if (value === 'running') syncCursor();
     else restoreCursor();
@@ -144,6 +147,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     attributes.get(name)!.latest = value;
   }
   function restorePage() {
+    zoomLock.setActive(false);
     bitHighlights.destroy();
     releaseHover?.();
     releaseHover = null;

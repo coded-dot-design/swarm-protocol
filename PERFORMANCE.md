@@ -210,7 +210,7 @@ The scheduler suite covers page-load/delay/idle ordering, timer fallback, hidden
 
 All runtime modules now compile under strict TypeScript. The migration fingerprint
 suite compares normalized emitted JavaScript with the 1.1.0 sources. Only the new
-native text-highlight import, initialization, update and cleanup hooks are excluded
+native text-highlight and mobile zoom policy hooks are excluded
 from that comparison; gameplay, audio, controls, waves and navigation are unchanged.
 When intentionally changing gameplay later, review and update the historical parity
 check rather than silently treating its baseline as a new performance measurement.
