@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.2
+
+- Attach pulse rings and latched bug sprites to their actual button. Use a vivid neon palette and full-brightness pink binary highlights.
+
 ## 1.2.1
 
 - Reversible mobile pinch/double-tap zoom lock while playing; native scrolling remains available. Pause and Recall restore the host policy. Set `lockZoom: false` to opt out.

@@ -388,9 +388,9 @@ async function verifyMinimize(path, showLauncher) {
     noLateReopen: true, focusTransferred: true, collapsedHostMarker: true, cleanup: true };
 }
 
-// The new minus control is the sole intentional markup addition. Compare all
-// pre-existing HUD nodes without changing or rewriting the historical fixture.
-const historicalCheckpoints = checkpoints => checkpoints.map(checkpoint => ({ ...checkpoint,
+// Compare historical HUD behavior and cache efficiency, normalizing the
+// intentionally updated neon palette and excluding the newer minus control.
+const historicalCheckpoints = checkpoints => JSON.parse(JSON.stringify(checkpoints).replaceAll('rgb(101, 255, 0)', 'rgb(116, 223, 161)').replaceAll('rgb(0, 229, 255)', 'rgb(6, 196, 255)').replaceAll('rgb(255, 52, 59)', 'rgb(255, 107, 107)').replaceAll('rgb(255, 234, 0)', 'rgb(255, 185, 107)')).map(checkpoint => ({ ...checkpoint,
   state: { ...checkpoint.state, ui: Object.fromEntries(Object.entries(checkpoint.state.ui).filter(([id]) => id !== 'minimize')) }
 }));
 

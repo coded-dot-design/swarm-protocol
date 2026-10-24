@@ -43,7 +43,7 @@ const styles = `
 .left{left:0}.right{right:0}
 .left::before,.right::before{inset:0}
 .message{all:unset;box-sizing:border-box;pointer-events:auto!important;cursor:pointer;min-height:44px;color:inherit;font:inherit;position:absolute;display:flex;align-items:center;justify-content:center;gap:9px;width:max-content;max-width:calc(100vw - 32px);padding:8px 12px;border:1px solid #ff806d55;border-radius:7px;background:#16171bf5;text-align:left}
-.message:hover{background:#28262b}.message:focus-visible{outline:2px solid #06c4ff;outline-offset:3px}.message[aria-disabled="true"]{cursor:default}.message[data-mode="zap"] .action{color:#74dfa1}
+.message:hover{background:#28262b}.message:focus-visible{outline:2px solid #00e5ff;outline-offset:3px}.message[aria-disabled="true"]{cursor:default}.message[data-mode="zap"] .action{color:#65ff00}
 .top .message{left:50%;top:max(12px,env(safe-area-inset-top));transform:translateX(-50%)}
 .bottom .message{left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%)}
 .left .message{left:max(12px,env(safe-area-inset-left));top:50%;transform:translateY(-50%);max-width:195px}

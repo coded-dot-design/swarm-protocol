@@ -15,7 +15,7 @@ const enemy = ({ship:"ship",runner:"runner",bug:"bug",tank:"tank"})[game.icon];
       <div class="arena-copy"><span class="arena-line">THE PAGE IS</span><span class="arena-line">THE PLAYFIELD<span class="blinking-dot">.</span></span></div>
       <div class="demo-path"><i></i><i></i><i></i><i></i><i></i><i></i></div>
       <div class="arena-character"><Icon kind={game.icon} size={76}/></div>
-      <div class="arena-enemy one"><Icon kind={enemy} size={34} color={game.icon === "tank" ? "#fa9361" : undefined}/></div><div class="arena-enemy two"><Icon kind={enemy} size={28} color={game.icon === "tank" ? "#f36979" : game.icon === "bug" ? "#e9ad69" : undefined}/></div><div class="arena-targets"><button data-arcade-target data-virus-target data-swarm-target>SPAWN_01</button><button data-arcade-target data-virus-target data-swarm-target>SPAWN_02</button></div>
+      <div class="arena-enemy one"><Icon kind={enemy} size={34}/></div><div class="arena-enemy two"><Icon kind={enemy} size={28}/></div><div class="arena-targets"><button data-arcade-target data-virus-target data-swarm-target>SPAWN_01</button><button data-arcade-target data-virus-target data-swarm-target>SPAWN_02</button></div>
       <div class="display-bottom"><span>{game.versionNote}</span><span>ARCADE SIGNALS / DOM TERRAIN</span></div>
     </div>
   </div>
@@ -26,4 +26,5 @@ const enemy = ({ship:"ship",runner:"runner",bug:"bug",tank:"tank"})[game.icon];
     <div class="game-loop"><div class="eyebrow">THE LOOP</div><ol>{game.loop.map((step,i)=><li><span>0{i+1}</span>{step}</li>)}</ol><div class="controls" data-virus-ignore data-swarm-ignore><h3>Know your controls.</h3>{game.controls.map(control=><p>{control}</p>)}</div></div>
     <div class="game-notes">{game.chapters.slice(0,2).map(chapter=><article><h3>{chapter.title}</h3><p>{chapter.body}</p></article>)}<details><summary data-virus-ignore data-swarm-ignore>Open the engineering notes <span>+</span></summary><div>{game.chapters.slice(2).map(chapter=><article><h3>{chapter.title}</h3><p>{chapter.body}</p></article>)}<p>{game.extra}</p><div class="source-links" data-virus-ignore data-swarm-ignore>{game.sourcePaths.map(path=><a href={`${repo}/blob/main/${path}`}>{path} ↗</a>)}</div></div></details></div>
   </div>
+  {game.palette?.length > 0 && <footer class="game-palette" aria-label={`${game.name} color palette`} data-virus-ignore data-swarm-ignore><div class="eyebrow">GAME PALETTE / FULL SIGNAL</div><div class="palette-bar">{game.palette.map(swatch=><div class="palette-swatch"><i style={`--swatch:${swatch.color}`} aria-hidden="true"></i><span>{swatch.label}<code>{swatch.color}</code></span></div>)}</div></footer>}
 </section>

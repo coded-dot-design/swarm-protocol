@@ -1,0 +1,15 @@
+{
+  "version": "1.2.2",
+  "note": "Reviewed neon palette and native attachment changes. The original TypeScript migration baseline remains archived unchanged. Behavior is checked by deterministic gameplay tests and browser attachment regressions.",
+  "modules": {
+    "dom-defender": "f04d6bc324cd1454c1de9d942c1ed1e650beec14fc5c3af89cbb02009cd029eb",
+    "attack-indicators": "3439a94dd63eddc24e60242e49c7a798cde3041358d3c62c7833164c63431421",
+    "feedback-colors": "68b7303ee9fb4e9dcde9aa06e78dcedbb27c743f3585ba3f30e1cd677f45ab03",
+    "target-health": "6b61975908546454c1f4c803776d9c9f00b28201cce2504e079e739144abec49",
+    "target-hover": "775a3f113479b7fcc37ac2f62107c17c27019f40ad6af56cba51b729dab08585",
+    "target-palette": "b0f117e454edc944ef60e0ef4ce8292accfbcb9ff09939c8e8270b956d9cd6d2",
+    "swarm-widget": "59286dcb498463b766383edb259751491494ae1bc4ba2713a6afce07c185d62f",
+    "swarm-loader": "23f376f76aab2b49301f276e18e45e02eb5bfecafca097a5e96c649d5cc46dda",
+    "swarm-deferred": "e6233af0c3e536431013bbd3bf0654fe45caad7074fc53a27e970b8bb27ec3e5"
+  }
+}

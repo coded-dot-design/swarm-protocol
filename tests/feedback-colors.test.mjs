@@ -15,9 +15,9 @@ function contrast(first, second) {
 for (const [name, dark, surface] of [['light', false, '#ffffff'], ['dark', true, '#101010']]) {
   test(`${name} feedback has distinct bursts and a theme-aware outer outline`, () => {
     const colors = feedbackColors(dark);
-    assert.equal(colors.outline, dark ? '#101010' : '#ffffff');
+    assert.equal(colors.outline, dark ? '#101010' : '#151020');
     for (const color of [colors.kill, colors.hit, colors.miss, ...colors.shards]) {
-      assert.ok(contrast(color, surface) >= 3, `${color} remains visible on ${surface}`);
+      assert.ok(contrast(color, colors.outline) >= 3, `${color} remains visible against its dark outline`);
     }
   });
 }

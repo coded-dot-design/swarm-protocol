@@ -75,21 +75,43 @@
       "name": "Crawler",
       "role": "Tier 1",
       "rules": "Starts with one hit point. Feeds on real letters, changing each bite to 0 or 1. Squash it before it grows.",
-      "color": "#ff6b6b"
+      "color": "#ff343b"
     },
     {
       "icon": "bug",
       "name": "Evolved crawler",
       "role": "Tier 2 \u00b7 6 letters",
       "rules": "After six letters it grows and gains one hit point. Earlier damage still counts; evolution does not fully heal it.",
-      "color": "#d984ff"
+      "color": "#ff168f"
     },
     {
       "icon": "bug",
       "name": "Button hunter",
       "role": "Tier 3 \u00b7 12 letters",
       "rules": "After twelve letters it grows again and gains one more hit point. It hunts buttons, bites text on the way, and drains button integrity.",
-      "color": "#8573ee"
+      "color": "#a855ff"
+    }
+  ],
+  "palette": [
+    {
+      "label": "Cursor",
+      "color": "#00e5ff"
+    },
+    {
+      "label": "Crawler",
+      "color": "#ff343b"
+    },
+    {
+      "label": "Evolved / bits",
+      "color": "#ff168f"
+    },
+    {
+      "label": "Hunter",
+      "color": "#a855ff"
+    },
+    {
+      "label": "Score",
+      "color": "#65ff00"
     }
   ]
 }
