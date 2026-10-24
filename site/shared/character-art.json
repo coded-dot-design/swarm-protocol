@@ -1,13 +1,13 @@
 {
   "byte-runner": {
     "source": "byte-runner",
-    "version": "0.7.0",
+    "version": "0.8.0",
     "sprites": {
       "runner": {
-        "viewBox": "-2 -1 28 29",
+        "viewBox": "-2 -1 28 31",
         "layers": [
           {
-            "d": "M4 23h4v2h1v2H2v-2h2ZM17 23h4v2h2v2h-7v-2h1Z",
+            "d": "M4 23h3v1h1v3h-1v1h-3v-1h-1v-3h1ZM17 23h3v1h1v3h-1v1h-3v-1h-1v-3h1Z",
             "fill": "#3ecb74"
           },
           {
@@ -29,10 +29,10 @@
         ]
       },
       "runner-overclock": {
-        "viewBox": "-2 -1 28 29",
+        "viewBox": "-2 -1 28 31",
         "layers": [
           {
-            "d": "M4 23h4v2h1v2H2v-2h2ZM17 23h4v2h2v2h-7v-2h1Z",
+            "d": "M4 23h3v1h1v3h-1v1h-3v-1h-1v-3h1ZM17 23h3v1h1v3h-1v1h-3v-1h-1v-3h1Z",
             "fill": "#8de45c"
           },
           {
