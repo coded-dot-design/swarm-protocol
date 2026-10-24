@@ -1,3 +1,4 @@
+import { healthColor } from './target-health.js';
 import type { SwarmSnapshot, SwarmEvent, SwarmCoreController, SwarmController, SwarmGameOptions } from '../integration/swarm-types.js';
 
 import { createDomDefender } from './dom-defender.js';
@@ -218,11 +219,11 @@ export function mountSwarmGame(host: HTMLElement, options: SwarmGameOptions = {}
     $('pressure').classList.toggle('frenzy',!!s.frenzy&&s.status==='running');
     setText('pursuit',s.status==='intermission'?'Swarm contained':s.frenzy?(offscreen?offscreen+' offscreen · hunting':'Frenzy · no button in view'):offscreen?offscreen+' bugs offscreen':'Contain the swarm');
     setText('waveclock','Next wave '+Math.max(0,Math.ceil(s.nextWaveIn||0))+'s');
-    const health=Math.round(s.integrity ?? 100), color=health>55?'#74dfa1':health>25?'#ffb96b':'#ff6b6b';
+    const health=Math.round(s.integrity ?? 100), color=healthColor(health);
     setText('integrity',health+'%');setStyle('integrity','color',color);setStyle('bar','width',health+'%');setStyle('bar','background',color);
     const targets=(s.targets||[]).slice(0,4).map(t=>({label:String(t.label||'Button').slice(0,18),health:Math.round(t.health),visible:t.visible!==false}));
     const key=JSON.stringify(targets);
-    if(key!==previousTargetMarkup){ $('targets').replaceChildren(...targets.map(t=>{const span=doc.createElement('span'),dot=doc.createElement('i');dot.style.background=t.health>50?'#74dfa1':t.health>0?'#ffb96b':'#ff6b6b';span.classList.toggle('offscreen',!t.visible);span.append(dot,doc.createTextNode(t.label+' '+t.health+'%'+(t.visible?'':' · offscreen')));return span;}));previousTargetMarkup=key; }
+    if(key!==previousTargetMarkup){ $('targets').replaceChildren(...targets.map(t=>{const span=doc.createElement('span'),dot=doc.createElement('i');dot.style.background=healthColor(t.health);span.classList.toggle('offscreen',!t.visible);span.append(dot,doc.createTextNode(t.label+' '+t.health+'%'+(t.visible?'':' · offscreen')));return span;}));previousTargetMarkup=key; }
     if(s.status==='intermission') { setText('feed','Wave cleared · next wave in '+Math.max(1,Math.ceil(s.nextWaveIn||1))+'s');$('feed').className='feed good'; }
     if(s.status==='gameover') { setText('total',(s.score||0).toLocaleString());setText('finalwave',s.wave||1);setText('finalkills',s.kills||0);setText('best',(s.best||0).toLocaleString());setText('record',s.score>lastBest?'NEW PERSONAL BEST':'FINAL SCORE'); }
     if(s.status!==lastStatus){if(s.status==='paused') announce('Game paused.');if(s.status==='gameover') announce('Game over. Your score is '+s.score+'.'); lastStatus=s.status;}

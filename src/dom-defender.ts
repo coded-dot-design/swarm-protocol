@@ -10,7 +10,7 @@ import type {
 
 import { createAttackIndicators, getAttackEdges, attackEdge, rescueOffer } from './attack-indicators.js';
 import { feedbackColors } from './feedback-colors.js';
-import { targetSignal, liquidFill, bubbleContrast } from './target-health.js';
+import { targetSignal, liquidFill, bubbleContrast, fadeSignal } from './target-health.js';
 import { readTargetPalette, cssLayers } from './target-palette.js';
 import { guardTargetHover, hoverLock } from './target-hover.js';
 
@@ -201,7 +201,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
       health: 100, rect: null!, visible: false, rendered: false, enrolled: false, bites: 0,
       originalBackground: null, palette: null, cornerRadius: 8, pulsePhase: index * .17, interactive: false, interactionUntil: 0,
       hovered: false, bubbleTime: 0, bubbleHeat: 0,
-      hitUntil: 0, liquidUntil: 0, liquidBite: .5, liquidActive: false, moving: false, paintDirty: true, lastPaint: -Infinity,
+      hitUntil: 0, liquidUntil: 0, liquidBite: .5, liquidActive: false, moving: false, paintDirty: true, lastPaint: -Infinity, signalColor: '', colorFrom: '', colorAt: 0, colorActive: false,
     }));
     const seenNodes = new Set();
     textAreas = [...doc.querySelectorAll(selectors.text)].filter(el => !el.closest(selectors.ui)).map(element => {
@@ -435,6 +435,14 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     else restoreProperties(el, ['-webkit-tap-highlight-color'], true);
     const base = target.originalBackground!;
     const signal = targetSignal(target.health, target.palette?.power);
+    if (target.signalColor !== signal.color) {
+      target.colorFrom = target.signalColor || signal.color;
+      target.signalColor = signal.color;
+      target.colorAt = state.elapsed;
+    }
+    const colorProgress = reducedMotion ? 1 : Math.min(1, (state.elapsed - target.colorAt) / .35);
+    target.colorActive = target.colorFrom !== target.signalColor && colorProgress < 1;
+    const fillColor = fadeSignal(target.colorFrom, target.signalColor, colorProgress);
     // One solid color with a hard horizontal edge: the fill drains downward.
     // Original background layers remain visible in the empty part of the tank.
     const appendBase = (values:string[], originals:string[]) => [...values, ...(base.images.length ? originals : [])].join(',');
@@ -445,7 +453,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
       color: target.palette!.bubbles!, time: target.bubbleTime,
       width: Math.max(1, target.rect.width), height: Math.max(1, target.rect.height),
     } : null;
-    const layer = liquidFill(signal.fill, signal.color, ripple, .65 * (1 - ripple), target.liquidBite, 1, bubbles);
+    const layer = liquidFill(signal.fill, fillColor, ripple, .65 * (1 - ripple), target.liquidBite, 1, bubbles);
     // Mobile keeps the actual color in a native CSS gradient. Static radial
     // bubbles need no image decoding or continuous background replacement.
     const calmBubbles = target.calm && !reducedMotion ? target.palette!.calmBubbles! : [];
@@ -1079,7 +1087,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
         target.bubbleHeat += ((target.hovered ? 1 : 0) - target.bubbleHeat) * Math.min(1, dt * 8);
         target.bubbleTime += dt * (1 + target.bubbleHeat * 3);
       }
-      if (target.rendered && (target.paintDirty || bubbling || target.liquidActive) && state.elapsed - target.lastPaint >= 1 / 12) paintTarget(target);
+      if (target.rendered && (target.paintDirty || bubbling || target.liquidActive || target.colorActive) && state.elapsed - target.lastPaint >= 1 / 12) paintTarget(target);
       if (target.health > 0 && !reducedMotion) target.pulsePhase = (target.pulsePhase + dt / (targetSignal(target.health, target.palette?.power).period * (calm ? 1.5 : 1))) % 1;
       animateTargetHit(target);
     }

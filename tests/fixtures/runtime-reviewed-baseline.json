@@ -1,14 +1,14 @@
 {
-  "version": "1.2.5",
-  "note": "Original v1.0.13 palette restored; DOM ownership, target effects, and gameplay preserved.",
+  "version": "1.2.6",
+  "note": "Reviewed first-bite mint fade and earlier amber/coral health stages. Original bug palette, damage, DOM ownership, and gameplay preserved.",
   "modules": {
-    "dom-defender": "8e05f6609251017d41be37ec8615e322542fd05f439e9d952aea10dd1d7399f3",
+    "dom-defender": "9ff86fa3526c028edf5bb2d18986e61630c55519d1983ce2ac5a7e233251b2f4",
     "attack-indicators": "82a6fd4b77f44c3476d204ef0cdad387b07c391666ec86ac1fa3074f1c157272",
     "feedback-colors": "80b165fc93845d474549c4e3563859466e8fb10f1f6995c48db9a3329a8f13a0",
-    "target-health": "c7e3efa4bc506fb3b6050d8a56a890b4044acb85e2a1e55dd1f7a5f850e32d06",
+    "target-health": "d540d5d8506bacbdc4f6e508f2af7792d3cad361ab837f8edd51ddb62354786d",
     "target-hover": "775a3f113479b7fcc37ac2f62107c17c27019f40ad6af56cba51b729dab08585",
     "target-palette": "33f0cb707bf70ebc17a3aa2ec4801835787746f1ed5355ecf080e1155bdd67b3",
-    "swarm-widget": "55f5fb6e2f50e065b41bf3ebbd62a47660fe12034d46983628ec7ecf7e7accc3",
+    "swarm-widget": "565ecda718f695425a3700477686b61a62c34fc5e7f1f816cbf46102aa47c1cf",
     "swarm-loader": "cd1d6b76679e461242dc316dd8564dbc92cca2a533fe1888a88084a04ee795ff",
     "swarm-deferred": "e6233af0c3e536431013bbd3bf0654fe45caad7074fc53a27e970b8bb27ec3e5"
   }

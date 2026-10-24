@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createDomDefender } from '../src/dom-defender.js';
-import { targetSignal, liquidFill, bubbleContrast } from '../src/target-health.js';
+import { targetSignal, liquidFill, bubbleContrast, fadeSignal, healthColor } from '../src/target-health.js';
 import { readTargetPalette } from '../src/target-palette.js';
 import { fixture } from './helpers/engine-fixture.mjs';
 
@@ -38,7 +38,7 @@ test('real bites drain a liquid background without touching labels or native but
     p.tick(1 / 60);
     const raw = p.lead.style.getPropertyValue('background-image');
     const image = raw.includes('data:image/svg+xml,') ? decodeURIComponent(raw.split('data:image/svg+xml,')[1].split('"')[0]) : raw;
-    for (const color of ['rgb(255, 255, 255)', '#ffb96b', '#ff6b6b']) if (image.includes(color)) colors.add(color);
+    for (const color of ['rgb(255, 255, 255)', '#74dfa1', '#ffb96b', '#ff6b6b']) if (image.includes(color)) colors.add(color);
     sawRipple ||= image.includes('<svg');
     sawMovement ||= Boolean(p.lead.style.getPropertyValue('translate'));
     assert.equal(p.lead.style.getPropertyValue('color'), '#234567');
@@ -51,7 +51,7 @@ test('real bites drain a liquid background without touching labels or native but
     if (p.lead.getAttribute('data-swarm-infected') === 'breached') break;
   }
   assert.ok(sawRipple && sawMovement);
-  assert.deepEqual(colors, new Set(['rgb(255, 255, 255)', '#ffb96b', '#ff6b6b']));
+  assert.deepEqual(colors, new Set(['rgb(255, 255, 255)', '#74dfa1', '#ffb96b', '#ff6b6b']));
   assert.equal(p.lead.getAttribute('data-swarm-infected'), 'breached');
   assert.equal(p.lead.style.getPropertyValue('background-image'), 'linear-gradient(90deg,white,gray)');
   assert.equal(p.lead.style.getPropertyValue('rotate'), '-3deg');
@@ -346,4 +346,38 @@ test('changing pointer capability switches the fill path without resetting healt
   assert.equal(p.lead.style.getPropertyValue('-webkit-tap-highlight-color'), '');
   assert.equal(p.engine.getSnapshot().targets[0].health, 100);
   p.finish();
+});
+
+
+test('the first bite turns any native button green, with earlier yellow and red stages', () => {
+  for (const native of ['#8573ee', '#f4457a', '#06c4ff', '#ffffff']) {
+    assert.equal(targetSignal(100,native).color,native);
+    assert.equal(targetSignal(98.85,native).color,'#74dfa1');
+    assert.equal(targetSignal(76,native).color,'#74dfa1');
+    assert.equal(targetSignal(75,native).color,'#ffb96b');
+    assert.equal(targetSignal(35,native).color,'#ff6b6b');
+  }
+  assert.equal(healthColor(75),'#ffb96b');
+  assert.equal(fadeSignal('#8573ee','#74dfa1',0),'#8573ee');
+  assert.match(fadeSignal('#8573ee','#74dfa1',.5),/color-mix.*#74dfa1 50%.*#8573ee/);
+  assert.equal(fadeSignal('#8573ee','#74dfa1',1),'#74dfa1');
+});
+for (const mobile of [false,true]) test(`${mobile?'mobile':'desktop'} first-bite color fades promptly without changing damage or button ownership`,()=>{
+  const p=fixture(createDomDefender,{noText:true,footer:true,mobile});
+  p.lead.style.setProperty('--swarm-power-color','#8573ee');
+  p.call('start');
+  for(let i=0;i<900&&!p.events.some(e=>e.type==='damage');i++)p.tick(1/60);
+  const first=p.events.find(e=>e.type==='damage');assert.ok(first);
+  assert.equal(first.health,98.85);
+  p.tick(.18);
+  const readFill=()=>{const raw=p.lead.style.getPropertyValue('background-image');return raw.includes('data:image')?decodeURIComponent(raw):raw;};
+  const mid=readFill();
+  assert.match(mid,/color-mix.*#74dfa1/);
+  p.call('pause');const paused=p.lead.style.cssText;p.tick(1);assert.equal(p.lead.style.cssText,paused);
+  p.call('resume');p.tick(.3);
+  const settled=readFill();
+  assert.ok(settled.includes('#74dfa1'));assert.ok(!settled.includes('color-mix'));
+  if(mobile)assert.ok(!settled.includes('data:image'));
+  p.call('stop');assert.equal(p.lead.style.getPropertyValue('background-image'),'');
+  p.lead.style.removeProperty('--swarm-power-color');p.finish();
 });

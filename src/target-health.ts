@@ -1,3 +1,10 @@
+// Damage colors are independent of the host button's brand color.
+export const healthColor = (health: number) => health > 75 ? '#74dfa1' : health > 35 ? '#ffb96b' : '#ff6b6b';
+export function fadeSignal(from: string, to: string, progress: number) {
+  if (progress >= 1 || from === to) return to;
+  if (progress <= 0) return from;
+  return `color-mix(in srgb, ${to} ${Math.round(progress * 100)}%, ${from})`;
+}
 const bubbleRadii = [1.25, 2.2, 3.8, 1.7, 5.2, 3.1];
 
 // A solid health fill. Lower health gives the beacon a slower cadence.
@@ -5,7 +12,7 @@ export function targetSignal(health:number, powerColor = '#06c4ff') {
   const fill = Math.max(0, Math.min(100, health));
   return {
     fill: Math.round(fill * 10) / 10,
-    color: fill > 60 ? powerColor : fill > 25 ? '#ffb96b' : '#ff6b6b',
+    color: fill >= 100 ? powerColor : healthColor(fill),
     period: .7 + 2.1 * (1 - fill / 100),
   };
 }

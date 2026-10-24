@@ -217,7 +217,7 @@ mobile.addEventListener("change", () => closeMenu());
 
 // CSS owns the motion. Observe visibility once per illustration to avoid offscreen work.
 const diagrams = document.querySelectorAll<HTMLElement>(
-  ".system-map,.tick-map,.ownership-map",
+  ".system-map,.tick-map,.ownership-map,.hero-crossover",
 );
 const visibleDiagrams = new Set<Element>();
 function syncDiagramMotion() {
@@ -262,7 +262,7 @@ if ("IntersectionObserver" in window) {
         button.setAttribute("aria-pressed", String(paused));
         button.setAttribute(
           "aria-label",
-          paused ? "Resume diagram animation" : "Pause diagram animation",
+          `${paused ? "Resume" : "Pause"} ${button.dataset.motionLabel || "diagram"} animation`,
         );
         button.title = paused ? "Resume animation" : "Pause animation";
         syncDiagramMotion();

@@ -1,4 +1,5 @@
 ---
 import UiIcon from './UiIcon.astro';
+const {label='diagram'}=Astro.props;
 ---
-<button class="motion-toggle" data-motion-toggle data-virus-ignore data-swarm-ignore aria-label="Pause diagram animation" aria-pressed="false" title="Pause animation"><UiIcon name="pause" class="motion-pause" size={16}/><UiIcon name="play" class="motion-play" size={16}/></button>
+<button class="motion-toggle" data-motion-toggle data-motion-label={label} data-virus-ignore data-swarm-ignore aria-label={`Pause ${label} animation`} aria-pressed="false" title="Pause animation"><UiIcon name="pause" class="motion-pause" size={16}/><UiIcon name="play" class="motion-play" size={16}/></button>

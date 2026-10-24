@@ -10,10 +10,10 @@
   "icon": "bug",
   "versionNote": "The original DOM experiment.",
   "controls": [
-    "Click / tap \u2014 squash a bug",
-    "Scroll \u2014 outrun the swarm",
-    "Edge alerts \u2014 paid Jump or Jump + Zap",
-    "Esc \u2014 Recall and restore the page"
+    "Click / tap — squash a bug",
+    "Scroll — outrun the swarm",
+    "Edge alerts — paid Jump or Jump + Zap",
+    "Esc — Recall and restore the page"
   ],
   "facts": [
     {
@@ -42,7 +42,7 @@
     },
     {
       "title": "The button is a living health bar.",
-      "body": "Damage drains a fill behind the real button label. Desktop surfaces ripple and bubble; mobile uses stable native CSS gradients and quiet radial bubbles. Beacon cadence slows as health drops. The label, icon and original handler remain part of the host page."
+      "body": "The first bite fades the button to mint green. Yellow starts at 75% health, then coral red at 35%. Damage drains a fill behind the real label. Desktop surfaces ripple and bubble; mobile uses stable native CSS gradients and quiet radial bubbles. The label, icon and original handler remain part of the host page."
     },
     {
       "title": "Rescue is a decision, not a teleport cheat.",
@@ -56,7 +56,7 @@
   "code": "const swarm = installSwarm({\n  textSelector: \"[data-swarm-text]\",\n  targetSelector: \"[data-swarm-target]\",\n  keyboard: false,\n  triggerSelector: false,\n});\nawait swarm.start();\n// Later: swarm.destroy();",
   "importLine": "import { installSwarm } from \"@chriscooley/swarm-protocol\";",
   "engine": "Established Swarm engine",
-  "extra": "Optional hidden activation: \u2191 \u2191 \u2193 \u2193 \u2190 \u2192 \u2190 \u2192 B A Enter. A deferred entry can wait for load, delay and idle before installing the activation bootstrap; the game itself loads on first open or start.",
+  "extra": "Optional hidden activation: ↑ ↑ ↓ ↓ ← → ← → B A Enter. A deferred entry can wait for load, delay and idle before installing the activation bootstrap; the game itself loads on first open or start.",
   "sourcePaths": [
     "src/dom-defender.ts",
     "src/target-health.ts",
@@ -67,7 +67,7 @@
     {
       "icon": "reticle",
       "name": "Cursor target",
-      "role": "You \u00b7 aim and squash",
+      "role": "You · aim and squash",
       "rules": "Move the crosshair over a bug and click to hit it. On touchscreens, tap the bug directly. Larger bugs can take more than one hit."
     },
     {
@@ -80,14 +80,14 @@
     {
       "icon": "bug",
       "name": "Evolved crawler",
-      "role": "Tier 2 \u00b7 6 letters",
+      "role": "Tier 2 · 6 letters",
       "rules": "After six letters it grows and gains one hit point. Earlier damage still counts; evolution does not fully heal it.",
       "color": "#d984ff"
     },
     {
       "icon": "bug",
       "name": "Button hunter",
-      "role": "Tier 3 \u00b7 12 letters",
+      "role": "Tier 3 · 12 letters",
       "rules": "After twelve letters it grows again and gains one more hit point. It hunts buttons, bites text on the way, and drains button integrity.",
       "color": "#8573ee"
     }

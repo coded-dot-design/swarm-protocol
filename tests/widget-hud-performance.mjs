@@ -117,6 +117,17 @@ function makeFixture() {
     ui: Object.fromEntries([...host.shadowRoot.elements].map(([id, element]) => [id, serialize(element)])) }) };
 }
 
+async function widgetSource(path) {
+  let source = await readFile(path, 'utf8');
+  // Keep the historical rendering workload, with the approved damage stages.
+  // This comparison measures DOM writes, not the previous color thresholds.
+  if (path === args.baseline) source = source
+    .replace(/health>55/g, 'health>75').replace(/health>25/g, 'health>35')
+    .replace(/t.health>50/g, 't.health>75').replace(/t.health>0/g, 't.health>35');
+  return transformSync(source, {loader: path.endsWith('.ts') ? 'ts' : 'js'}).code
+    .replace(/(["'])\.\/target-health\.js\1/g, JSON.stringify(new URL('../src/target-health.ts', import.meta.url).href));
+}
+
 async function run(path, label, options = {}) {
   const fixture = makeFixture(), checkpoints = [], repeated = {}, callbacks = [];
   let engine, optionsForEngine, state = structuredClone(baseSnapshot);
@@ -131,7 +142,7 @@ async function run(path, label, options = {}) {
     };
     return engine;
   };
-  const source = transformSync(await readFile(path, 'utf8'), {loader: path.endsWith('.ts') ? 'ts' : 'js'}).code.replace(
+  const source = (await widgetSource(path)).replace(
     /import\s*\{\s*createDomDefender\s*\}\s*from\s*[\x27\x22]\.\/dom-defender\.js[\x27\x22];/,
     'const createDomDefender = globalThis.__swarmHudEngineFactory;'
   );
@@ -211,7 +222,7 @@ async function verifyEscapeExit(path) {
     };
     return engine;
   };
-  const source = transformSync(await readFile(path, 'utf8'), {loader: path.endsWith('.ts') ? 'ts' : 'js'}).code.replace(
+  const source = (await widgetSource(path)).replace(
     /import\s*\{\s*createDomDefender\s*\}\s*from\s*[\x27\x22]\.\/dom-defender\.js[\x27\x22];/,
     'const createDomDefender = globalThis.__swarmHudEngineFactory;'
   );
@@ -281,7 +292,7 @@ async function verifyMountFailure(path) {
         }
       };
     };
-    const source = transformSync(await readFile(path, 'utf8'), {loader: path.endsWith('.ts') ? 'ts' : 'js'}).code.replace(
+    const source = (await widgetSource(path)).replace(
       /import\s*\{\s*createDomDefender\s*\}\s*from\s*[\x27\x22]\.\/dom-defender\.js[\x27\x22];/,
       'const createDomDefender = globalThis.__swarmHudEngineFactory;'
     );
@@ -319,7 +330,7 @@ async function verifyMinimize(path, showLauncher) {
     };
     return engine;
   };
-  const source = transformSync(await readFile(path, 'utf8'), {loader: path.endsWith('.ts') ? 'ts' : 'js'}).code.replace(
+  const source = (await widgetSource(path)).replace(
     /import\s*\{\s*createDomDefender\s*\}\s*from\s*[\x27\x22]\.\/dom-defender\.js[\x27\x22];/,
     'const createDomDefender = globalThis.__swarmHudEngineFactory;'
   );
