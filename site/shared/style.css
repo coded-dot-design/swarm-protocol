@@ -1,14 +1,14 @@
 :root {
   color-scheme: dark;
-  --bg: #0c1119;
-  --surface: #141d29;
-  --raised: #1d2a3b;
-  --ink: #f4f7ff;
-  --muted: #afbed0;
-  --faint: #8d9eb4;
-  --line: #304055;
+  --bg: #100a1b;
+  --surface: #1a112b;
+  --raised: #281b40;
+  --ink: #fff4ff;
+  --muted: #cec0e0;
+  --faint: #b39acd;
+  --line: #49345e;
   --accent: #ff168f;
-  --accent-ink: #0c2015;
+  --accent-ink: #21051a;
   --grid: #ffffff05;
   --mono: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-family: Inter, Arial, Helvetica, sans-serif;
@@ -1576,7 +1576,7 @@ html[data-theme="light"] :is(.hero-art, .game-display) {
   background-color: #fff;
   border-color: #171022;
 }
-html[data-theme="light"] .hero-art {
+.hero-art {
   box-shadow: 7px 7px 0 #ff168f;
 }
 html[data-theme="light"] :is(.art-character, .arena-character, .arena-enemy) {
@@ -1586,7 +1586,7 @@ html[data-theme="light"] :is(.art-character, .arena-character, .arena-enemy) {
 .arena-enemy.two { color: #a855ff; }
 html[data-theme="light"] .art-bullet { background: #00e5ff; }
 html[data-theme="light"] .art-character.amber { color: #ff343b; }
-html[data-theme="light"] .button.primary {
+.button.primary {
   border-color: var(--ink);
   box-shadow: 3px 3px 0 var(--ink);
 }
@@ -1594,7 +1594,7 @@ html[data-theme="light"] .theme-switch button[aria-pressed="true"] {
   background: #ff168f;
   color: #21051a;
 }
-html[data-theme="light"] .game-tab > svg {
+.game-tab > svg {
   color: var(--accent);
   background: #151020;
   padding: 7px;
@@ -1660,3 +1660,22 @@ html[data-theme="light"] :is(button, a, summary):focus-visible {
 
 /* Real target buttons use the section signal color, including in preview art. */
 .art-button,.arena-targets button{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);--virus-power-color:var(--accent);--swarm-power-color:var(--accent)}
+
+/* Hard neon edges and small physical details make every theme feel like an arcade. */
+.hero-art,.game-display{border-color:var(--ink)}
+.game-display{box-shadow:7px 7px 0 var(--accent);border-radius:7px}
+.game-section{border-radius:8px;border-top-width:5px}
+.button,.art-button,.arena-targets button{border-color:var(--ink);box-shadow:3px 3px 0 var(--ink);transition:transform 140ms cubic-bezier(.2,.8,.2,1),box-shadow 140ms cubic-bezier(.2,.8,.2,1)}
+.button.quiet{background:var(--surface)}
+.button:hover{filter:none}
+@media(hover:hover) and (pointer:fine){
+  .button:hover,.art-button:hover,.arena-targets button:hover{transform:translate(-2px,-2px);box-shadow:5px 5px 0 var(--ink)}
+}
+.button:active,.art-button:active,.arena-targets button:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--ink);transition-duration:55ms}
+.button:focus-visible,.art-button:focus-visible,.arena-targets button:focus-visible{outline:2px solid var(--ink);outline-offset:6px}
+.section-heading .index{display:inline-block;padding:3px 7px;background:var(--accent);color:var(--accent-ink);border:1px solid var(--ink);box-shadow:2px 2px 0 var(--ink);transform:rotate(-5deg);text-decoration:none!important}
+.character-portrait{border-color:var(--accent);box-shadow:3px 3px 0 var(--accent);border-radius:5px;transform:rotate(-3deg)}
+.character-guide li:nth-child(even) .character-portrait{transform:rotate(3deg)}
+.game-tab>svg{border:1px solid var(--accent);box-shadow:2px 2px 0 var(--accent);border-radius:4px}
+.palette-swatch i{box-shadow:2px 2px 0 var(--ink);border-radius:3px}
+@media(prefers-reduced-motion:reduce){.button,.art-button,.arena-targets button{transition:none}}

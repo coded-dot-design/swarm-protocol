@@ -128,12 +128,12 @@ jobs:
               exit 1
             }
             existing_tag="$(gh api "repos/${GH_REPO}/git/matching-refs/tags/${RELEASE_TAG}" --jq ".[] | select(.ref == \"refs/tags/${RELEASE_TAG}\") | .object.sha")"
-            if [[ -n "$existing_tag" ]]; then
-              echo "::error::Tag ${RELEASE_TAG} already exists. It will not be moved or reused by a release branch."
-              exit 1
+            # Main's checked-version job may have created this immutable tag.
+            # Never move it; the exact-commit check below must still pass.
+            if [[ -z "$existing_tag" ]]; then
+              gh api --method POST "repos/${GH_REPO}/git/refs" \
+                -f "ref=refs/tags/${RELEASE_TAG}" -f "sha=${RELEASE_SHA}" > /dev/null
             fi
-            gh api --method POST "repos/${GH_REPO}/git/refs" \
-              -f "ref=refs/tags/${RELEASE_TAG}" -f "sha=${RELEASE_SHA}" > /dev/null
           fi
 
           # Resolve lightweight and annotated tags to their commit, and ensure

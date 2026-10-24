@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.3
+
+- Raise buttons and browser panels with hard shadows in both themes; use ink-purple dark surfaces and bright arcade details.
+- Publish checked release assets when the automatic version job already created the same immutable tag. Mismatched tags and existing release assets remain protected.
+
 ## 1.2.2
 
 - Attach pulse rings and latched bug sprites to their actual button. Use a vivid neon palette and full-brightness pink binary highlights.
