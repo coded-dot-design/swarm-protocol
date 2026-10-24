@@ -88,12 +88,13 @@ for (const name of names) {
     execFileSync("npm", ["run", "build"], { cwd: gameRoot, stdio: "inherit" });
   }
   const contentPath = resolve(gameRoot, "site/game.json");
+  const contentRef = config.contentRefs?.[name];
   let content;
-  if (existsSync(contentPath)) content = read(contentPath);
+  if (!contentRef && existsSync(contentPath)) content = read(contentPath);
   else {
     // Website content can advance independently of an unchanged game release.
     // Fetch only a pinned commit; do not switch the game's checked-out version.
-    const ref = config.contentRefs?.[name];
+    const ref = contentRef;
     if (!ref || !/^[a-f0-9]{40}$/.test(ref))
       throw new Error(`Missing pinned site content for ${name}`);
     execFileSync("git", ["fetch", "--depth", "1", "origin", ref], {
