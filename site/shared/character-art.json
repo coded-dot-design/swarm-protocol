@@ -1,21 +1,17 @@
 {
   "byte-runner": {
     "source": "byte-runner",
-    "version": "0.6.0",
+    "version": "0.7.0",
     "sprites": {
       "runner": {
-        "viewBox": "-2 -2 28 28",
+        "viewBox": "-2 -1 28 29",
         "layers": [
           {
-            "d": "M4 20h4v2h1v2H2v-2h2ZM17 20h4v2h2v2h-7v-2h1Z",
+            "d": "M4 23h4v2h1v2H2v-2h2ZM17 23h4v2h2v2h-7v-2h1Z",
             "fill": "#3ecb74"
           },
           {
-            "d": "M8 3h12v1H8ZM6 4h15v1H6ZM4 5h18v1H4ZM3 6h20v1H3ZM2 7h22v1H2ZM1 8h24v1H1ZM0 9h25v1H0ZM0 10h24v1H0ZM-1 11h21v1H-1ZM-1 12h18v1H-1ZM-1 13h21v1H-1ZM0 14h24v1H0ZM0 15h25v1H0ZM1 16h23v1H1ZM2 17h21v1H2ZM3 18h19v1H3ZM4 19h17v1H4ZM6 20h14v1H6ZM8 21h10v1H8Z",
-            "fill": "#19774d"
-          },
-          {
-            "d": "M8 4h12v1H8ZM6 5h15v1H6ZM4 6h18v1H4ZM3 7h20v1H3ZM2 8h22v1H2ZM1 9h23v1H1ZM1 10h19v1H1ZM0 11h17v1H0ZM0 12h15v1H0ZM0 13h17v1H0ZM1 14h19v1H1ZM1 15h23v1H1ZM2 16h21v1H2ZM3 17h19v1H3ZM4 18h17v1H4ZM6 19h14v1H6ZM8 20h10v1H8Z",
+            "d": "M9 3h6v1H9ZM6 4h12v1H6ZM5 5h14v1H5ZM4 6h16v1H4ZM3 7h18v1H3ZM2 8h20v1H2ZM1 9h22v1H1ZM1 10h20v1H1ZM1 11h18v1H1ZM0 12h17v1H0ZM0 13h15v1H0ZM0 14h12v1H0ZM0 15h12v1H0ZM0 16h15v1H0ZM0 17h17v1H0ZM1 18h18v1H1ZM1 19h20v1H1ZM1 20h22v1H1ZM2 21h20v1H2ZM3 22h18v1H3ZM4 23h16v1H4ZM5 24h14v1H5ZM6 25h12v1H6ZM9 26h6v1H9Z",
             "fill": "#3ecb74"
           },
           {
@@ -33,18 +29,14 @@
         ]
       },
       "runner-overclock": {
-        "viewBox": "-2 -2 28 28",
+        "viewBox": "-2 -1 28 29",
         "layers": [
           {
-            "d": "M4 20h4v2h1v2H2v-2h2ZM17 20h4v2h2v2h-7v-2h1Z",
+            "d": "M4 23h4v2h1v2H2v-2h2ZM17 23h4v2h2v2h-7v-2h1Z",
             "fill": "#8de45c"
           },
           {
-            "d": "M8 3h12v1H8ZM6 4h15v1H6ZM4 5h18v1H4ZM3 6h20v1H3ZM2 7h22v1H2ZM1 8h24v1H1ZM0 9h25v1H0ZM0 10h24v1H0ZM-1 11h21v1H-1ZM-1 12h18v1H-1ZM-1 13h21v1H-1ZM0 14h24v1H0ZM0 15h25v1H0ZM1 16h23v1H1ZM2 17h21v1H2ZM3 18h19v1H3ZM4 19h17v1H4ZM6 20h14v1H6ZM8 21h10v1H8Z",
-            "fill": "#438c40"
-          },
-          {
-            "d": "M8 4h12v1H8ZM6 5h15v1H6ZM4 6h18v1H4ZM3 7h20v1H3ZM2 8h22v1H2ZM1 9h23v1H1ZM1 10h19v1H1ZM0 11h17v1H0ZM0 12h15v1H0ZM0 13h17v1H0ZM1 14h19v1H1ZM1 15h23v1H1ZM2 16h21v1H2ZM3 17h19v1H3ZM4 18h17v1H4ZM6 19h14v1H6ZM8 20h10v1H8Z",
+            "d": "M9 3h6v1H9ZM6 4h12v1H6ZM5 5h14v1H5ZM4 6h16v1H4ZM3 7h18v1H3ZM2 8h20v1H2ZM1 9h22v1H1ZM1 10h20v1H1ZM1 11h18v1H1ZM0 12h17v1H0ZM0 13h15v1H0ZM0 14h12v1H0ZM0 15h12v1H0ZM0 16h15v1H0ZM0 17h17v1H0ZM1 18h18v1H1ZM1 19h20v1H1ZM1 20h22v1H1ZM2 21h20v1H2ZM3 22h18v1H3ZM4 23h16v1H4ZM5 24h14v1H5ZM6 25h12v1H6ZM9 26h6v1H9Z",
             "fill": "#8de45c"
           },
           {
