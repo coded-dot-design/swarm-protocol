@@ -74,9 +74,9 @@ function update(snapshot: Snapshot) {
   stateLabel.textContent = state;
   pause.textContent = state === "paused" ? "Resume" : "Pause";
   pause.disabled = !["running", "paused", "intermission"].includes(state);
-  if (state === "destroyed" || state === "idle") {
-    bar.hidden = true;
-  }
+  // Lazy games may emit idle before start resolves; reveal the bar again
+  // when that same session becomes active.
+  bar.hidden = state === "destroyed" || state === "idle";
 }
 for (const button of document.querySelectorAll<HTMLButtonElement>(
   "[data-launch]",
