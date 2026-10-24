@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.4
+
+- Keep native 0/1 highlight text bright with a transparent background, so light page surfaces show through.
+
 ## 1.2.3
 
 - Raise buttons and browser panels with hard shadows in both themes; use ink-purple dark surfaces and bright arcade details.
