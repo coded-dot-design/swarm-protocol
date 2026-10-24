@@ -1,3 +1,4 @@
+import { controlIcons, controlStyles } from "../shared/game-controls.js";
 import { healthColor } from './target-health.js';
 import type { SwarmSnapshot, SwarmEvent, SwarmCoreController, SwarmController, SwarmGameOptions } from '../integration/swarm-types.js';
 
@@ -6,14 +7,9 @@ import { createDomDefender } from './dom-defender.js';
 /*! @license Bug icon derived from Lucide, ISC License. See THIRD_PARTY_NOTICES.md. */
 const bugIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 2 1.88 1.88M14.12 3.88 16 2M9 7.13v-1a3.003 3.003 0 1 1 6 0v1M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6M12 20v-9M6.53 9C4.6 8.8 3 7.1 3 5M6 13H2M3 21c0-2.1 1.7-3.9 3.8-4M20.97 5c0 2.1-1.6 3.8-3.5 4M22 13h-4M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg>`;
 const icons = {
+  ...controlIcons,
   target: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6"/><path d="M12 1v4m0 14v4M1 12h4m14 0h4"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>',
-  minimize: '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 10s3-5 8-5 8 5 8 5-3 5-8 5-8-5-8-5Z"/><circle cx="10" cy="10" r="2.3"/></svg>',
-  close: '<svg viewBox="0 0 20 20"><path d="m5 5 10 10M15 5 5 15"/></svg>',
-  pause: '<svg viewBox="0 0 20 20"><path d="M7 5v10M13 5v10"/></svg>',
-  play: '<svg viewBox="0 0 20 20"><path d="m7 4 9 6-9 6z"/></svg>',
   arrow: '<svg viewBox="0 0 20 20"><path d="M4 10h12m-5-5 5 5-5 5"/></svg>',
-  sound: '<svg viewBox="0 0 20 20"><path d="M3 8h3l4-4v12l-4-4H3zM14 6q4 4 0 8"/></svg>',
-  mute: '<svg viewBox="0 0 20 20"><path d="M3 8h3l4-4v12l-4-4H3zM14 8l4 4m0-4-4 4"/></svg>'
 };
 
 const styles = `
@@ -33,10 +29,10 @@ export function mountSwarmGame(host: HTMLElement, options: SwarmGameOptions = {}
   if (!host || !host.isConnected) throw new Error('Swarm Protocol needs a connected host element.');
   host.setAttribute('data-swarm-ui', '');
   const root = host.shadowRoot || host.attachShadow({ mode: 'open' });
-  root.innerHTML = `<style>${styles}</style>
+  root.innerHTML = `<style>${styles}${controlStyles}.panel.compact .intro,.panel.compact #active,.panel.compact .pauseview,.panel.compact .result{display:none}.top .led{display:none}</style>
     <button class="launcher" id="launcher" aria-label="Open Swarm Protocol game" hidden>${icons.target}<span class="label">Swarm Protocol</span></button>
     <section class="panel" id="panel" aria-label="Swarm Protocol game">
-      <header class="top"><span class="led" id="led"></span><span class="brand">SWARM PROTOCOL</span><button class="icon" id="sound" title="Mute sound" aria-label="Mute game sound" aria-pressed="true">${icons.sound}</button><button class="icon" id="pause" title="Pause game" aria-label="Pause game" hidden>${icons.pause}</button><button class="icon" id="minimize" title="Minimize scoreboard (game keeps running)" aria-label="Minimize scoreboard" hidden>${icons.minimize}</button><button class="icon" id="close" title="Close and restore page" aria-label="Close game and restore page">${icons.close}</button></header>
+      <header class="top game-header"><span class="led" id="led"></span><span class="brand game-title">SWARM PROTOCOL</span><div class="game-actions"><button class="icon" id="sound" title="Mute sound" aria-label="Mute game sound" aria-pressed="true">${icons.sound}</button><button class="icon" id="pause" title="Pause game" aria-label="Pause game">${icons.pause}</button><button class="icon" id="minimize" title="Minimize scoreboard" aria-label="Minimize scoreboard" aria-expanded="true">${icons.minimize}</button><button class="icon" id="close" title="Close and restore page" aria-label="Close game and restore page">${icons.close}</button></div></header>
       <div class="intro" id="intro"><div class="introhead"><span class="mascot">${bugIcon}</span><div><div class="eyebrow">A LITTLE CONTAINMENT FAILURE</div><h2>The lab has a leak.</h2></div></div><p>They bite letters one at a time. At 6 letters they grow; at 12 they hunt buttons, biting letters in their path. Squash them first.</p><div class="rules"><span class="rulebug">${bugIcon}1 hit</span><span class="rulebug">${bugIcon}2 hits</span><span class="rulebug">${bugIcon}3 hits</span></div><button class="primary" id="start">Release the swarm ${icons.arrow}</button><div class="smallnote">Fast kills pay. Alerts let you spend points to jump or zap.</div><div class="exitnote">Press <kbd>Esc</kbd> to completely exit.</div></div>
       <div id="active" hidden><div class="game"><div class="scoreline"><div><div class="scorelabel">SCORE</div><div class="score" id="score">000000</div></div><div class="wave">WAVE<strong id="wave">01</strong></div></div><div class="stats"><span><b id="kills">0</b> squashed</span><span><b id="alive">0</b> active</span><b class="combo" id="combo">×1</b></div><div class="pressure" id="pressure"><span id="pursuit">Contain the swarm</span><span class="clock" id="waveclock">Next wave 18s</span></div><div class="integrityhead"><span>BUTTON INTEGRITY</span><strong id="integrity">100%</strong></div><div class="meter"><span id="bar"></span></div><div class="targets" id="targets"></div></div><div class="feed" id="feed">Kill them before they feed.</div></div>
       <div class="pauseview" id="paused" hidden><div class="eyebrow">TIMEOUT</div><h2>Swarm on standby.</h2><p>The bugs can wait. Your score and the page are exactly where you left them.</p><button class="primary" id="resume">Resume game ${icons.play}</button><button class="secondary" id="quit">Quit & restore page</button></div>
@@ -205,12 +201,18 @@ export function mountSwarmGame(host: HTMLElement, options: SwarmGameOptions = {}
   function render(s: SwarmSnapshot) {
     if(destroyed) return;
     latestState=s;
-    const restoreResultFocus=minimized && s.status==='gameover' && root.activeElement===$('launcher');
+    const restoreResultFocus=minimized && s.status==='gameover' && root.activeElement===$('minimize');
     if(minimized && s.status==='gameover'){minimized=false;closed=false;}
     const playing=['running','intermission'].includes(s.status), canMinimize=playing||s.status==='paused';
-    const launcherVisible=minimized || (closed && !escaped && options.showLauncher !== false), panelVisible=!closed&&!minimized;
+    const launcherVisible=closed && !escaped && options.showLauncher !== false, panelVisible=!closed;
+    $('panel').classList.toggle('compact',minimized);
     flagHost('data-swarm-collapsed',launcherVisible);flagHost('data-swarm-round',canMinimize);
-    show('launcher',launcherVisible); show('panel',panelVisible); show('hint',panelVisible&&playing); show('intro',s.status==='idle'); show('active',playing); show('paused',s.status==='paused'); show('result',s.status==='gameover'); show('pause',playing);show('minimize',canMinimize);
+    show('launcher',launcherVisible); show('panel',panelVisible); show('hint',panelVisible&&playing&&!minimized); show('intro',s.status==='idle'); show('active',playing); show('paused',s.status==='paused'); show('result',s.status==='gameover'); show('pause',true);show('minimize',true);
+    $('pause').disabled=!canMinimize;$('minimize').disabled=!canMinimize;
+    const pauseLabel=s.status==='paused'?'Resume game':'Pause game';
+    if($('pause').getAttribute('aria-label')!==pauseLabel){$('pause').innerHTML=s.status==='paused'?icons.play:icons.pause;$('pause').setAttribute('aria-label',pauseLabel);}
+    const foldLabel=minimized?'Expand scoreboard':'Minimize scoreboard';
+    if($('minimize').getAttribute('aria-label')!==foldLabel){$('minimize').innerHTML=minimized?controlIcons.expand:icons.minimize;$('minimize').setAttribute('aria-label',foldLabel);$('minimize').setAttribute('aria-expanded',String(!minimized));}
     const minimizeTitle=s.status==='paused'?'Minimize scoreboard (stays paused)':'Minimize scoreboard (game keeps running)';
     if($('minimize').title!==minimizeTitle)$('minimize').title=minimizeTitle;
     $('panel').classList.toggle('playing',playing);$('led').classList.toggle('live',playing);
@@ -281,7 +283,7 @@ export function mountSwarmGame(host: HTMLElement, options: SwarmGameOptions = {}
   const stop=()=>{silence(true);sessionStarted=false;clearTimeout(bannerTimer);clearTimeout(feedTimer);show('banner',false);minimized=false;closed=true;engine.stop();render(engine.getSnapshot());};
   const open=()=>{if(destroyed)return;const wasMinimized=minimized;escaped=false;minimized=false;closed=false;render(engine.getSnapshot());if(destroyed)return;if(engine.getSnapshot().status==='idle')$('start').focus();else if(wasMinimized)$('minimize').focus({preventScroll:true});};
   // Folding the HUD is presentation-only: waves, bugs, score and audio continue.
-  const minimize=()=>{if(destroyed||closed||minimized||!['running','intermission','paused'].includes(engine.getSnapshot().status))return;minimized=true;clearTimeout(bannerTimer);show('banner',false);render(engine.getSnapshot());if(!destroyed&&minimized)$('launcher').focus({preventScroll:true});};
+  const minimize=()=>{if(destroyed||closed||minimized||!['running','intermission','paused'].includes(engine.getSnapshot().status))return;minimized=true;clearTimeout(bannerTimer);show('banner',false);render(engine.getSnapshot());if(!destroyed&&minimized)$('minimize').focus({preventScroll:true});};
   const closeByPlayer=()=>{stop();options.onClose?.();};
   // Capture before the core's legacy pause shortcut. Keep Escape available to
   // the page too, so an open native dialog can close in the same keypress.
@@ -289,7 +291,7 @@ export function mountSwarmGame(host: HTMLElement, options: SwarmGameOptions = {}
   doc.addEventListener('keydown',exitOnEscape,true);
   disposers.push(()=>doc.removeEventListener('keydown',exitOnEscape,true));
   on('launcher',open);
-  on('close',closeByPlayer);on('start',start);on('restart',start);on('restore',closeByPlayer);on('quit',closeByPlayer);on('pause',pause);on('resume',resume);on('minimize',minimize);
+  on('close',closeByPlayer);on('start',start);on('restart',start);on('restore',closeByPlayer);on('quit',closeByPlayer);on('pause',e=>engine.getSnapshot().status==='paused'?resume(e):pause());on('resume',resume);on('minimize',()=>minimized?open():minimize());
   on('sound',e=>{sound=!sound;silence(!sound);try{win.localStorage.setItem(soundKey,sound?'on':'off');}catch(_){}soundButton();if(sound){unlockAudio(e);tone('preview');}});
   function destroy(){if(destroyed)return;destroyed=true;minimized=false;silence(true);clearTimeout(bannerTimer);clearTimeout(feedTimer);engine?.destroy();disposers.forEach(fn=>fn());try{masterGain?.disconnect();}catch(_){}if(audioContext)audioContext.close().catch(()=>{});root.replaceChildren();for(const name of hostFlags.keys())host.removeAttribute(name);hostFlags.clear();}
   // A consumer can throw in the first onState call, before receiving a handle.

@@ -125,6 +125,7 @@ async function widgetSource(path) {
     .replace(/health>55/g, 'health>75').replace(/health>25/g, 'health>35')
     .replace(/t.health>50/g, 't.health>75').replace(/t.health>0/g, 't.health>35');
   return transformSync(source, {loader: path.endsWith('.ts') ? 'ts' : 'js'}).code
+    .replace(/(["'])\.\.\/shared\/game-controls\.js\1/g, JSON.stringify(new URL('../shared/game-controls.ts', import.meta.url).href))
     .replace(/(["'])\.\/target-health\.js\1/g, JSON.stringify(new URL('../src/target-health.ts', import.meta.url).href));
 }
 
@@ -338,27 +339,29 @@ async function verifyMinimize(path, showLauncher) {
   const widget = module.mountSwarmGame(fixture.host, { initiallyClosed: false, showLauncher, onState: value => callbacks.push(value) });
   const ui = id => fixture.host.shadowRoot.elements.get(id);
   const folded = () => {
-    assert.equal(ui('panel').hidden, true); assert.equal(ui('hint').hidden, true);
-    assert.equal(ui('launcher').hidden, false, 'Minimized round always has a visible FAB');
-    assert.equal(fixture.host.getAttribute('data-swarm-collapsed'), '', 'Collapsed marker enables a control-sized host');
+    assert.equal(ui('panel').hidden, false); assert.equal(ui('hint').hidden, true);
+    assert.equal(ui('minimize').getAttribute('aria-expanded'), 'false');
+    assert.equal(ui('pause').hidden, false); assert.equal(ui('close').hidden, false);
+    assert.equal(ui('launcher').hidden, true, 'Persistent header replaces the minimized FAB');
+    assert.equal(fixture.host.getAttribute('data-swarm-collapsed'), null);
   };
   const expanded = () => {
     assert.equal(ui('panel').hidden, false); assert.equal(ui('launcher').hidden, true);
     assert.equal(fixture.host.getAttribute('data-swarm-collapsed'), null);
   };
-  assert.equal(ui('minimize').hidden, true, 'Idle intro has no minimize control');
+  assert.equal(ui('minimize').disabled, true, 'Idle retains a stable action row');
   widget.minimize(); expanded(); assert.equal(calls.start, 0);
   widget.start(); assert.equal(ui('minimize').hidden, false);
   const initial = widget.getSnapshot(), initialCalls = { ...calls };
   ui('minimize').focus(); ui('minimize').fire('click'); folded();
-  assert.equal(fixture.doc.focusedId, 'launcher', 'Keyboard focus moves off the hidden minus');
+  assert.equal(fixture.doc.focusedId, 'minimize', 'Keyboard focus stays on the visible fold toggle');
   assert.deepEqual(widget.getSnapshot(), initial); assert.deepEqual(calls, initialCalls, 'Minimize never invokes an engine control');
   engine.emit({ score: 240, elapsed: 8.2, kills: 4, alive: 8, nextWaveIn: 9.8 }); folded();
   assert.equal(callbacks.at(-1).score, 240, 'Live state callbacks continue while folded');
   assert.equal(ui('score').textContent, '000240');
   engine.emit({ status: 'intermission', elapsed: 12, score: 590, kills: 12, alive: 0, nextWaveIn: 2.4 }); folded();
   const intermission = widget.getSnapshot(), callsBeforeOpen = { ...calls };
-  ui('launcher').fire('click'); expanded();
+  ui('minimize').fire('click'); expanded();
   assert.deepEqual(widget.getSnapshot(), intermission); assert.deepEqual(calls, callsBeforeOpen, 'Manual reopen does not start or resume');
   assert.equal(fixture.doc.focusedId, 'minimize', 'Manual reopen restores focus to a visible header control');
   widget.minimize(); folded(); widget.pause(); folded();
@@ -372,7 +375,7 @@ async function verifyMinimize(path, showLauncher) {
   const callsBeforeGameover = { ...calls };
   engine.emit({ status: 'gameover', score: 870, best: 870, wave: 3, kills: 19, alive: 0, integrity: 0 });
   expanded(); assert.equal(ui('result').hidden, false); assert.equal(ui('total').textContent, '870');
-  assert.equal(ui('minimize').hidden, true); assert.equal(fixture.doc.focusedId, 'restart', 'Focused collapsed FAB moves to visible results');
+  assert.equal(ui('minimize').disabled, true); assert.equal(fixture.doc.focusedId, 'restart', 'Focused collapsed FAB moves to visible results');
   assert.deepEqual(calls, callsBeforeGameover, 'Auto-results never invokes an engine control');
   widget.minimize(); expanded();
   widget.stop(); assert.equal(state.status, 'idle'); assert.equal(ui('panel').hidden, true);
@@ -400,18 +403,18 @@ async function verifyMinimize(path, showLauncher) {
 }
 
 // Compare historical HUD behavior and cache efficiency, normalizing the
-// intentionally updated neon palette and excluding the newer minus control.
+// intentional palette updates; header behavior is checked by the lifecycle suite.
 const historicalCheckpoints = checkpoints => JSON.parse(JSON.stringify(checkpoints).replaceAll('rgb(101, 255, 0)', 'rgb(116, 223, 161)').replaceAll('rgb(0, 229, 255)', 'rgb(6, 196, 255)').replaceAll('rgb(255, 52, 59)', 'rgb(255, 107, 107)').replaceAll('rgb(255, 234, 0)', 'rgb(255, 185, 107)')).map(checkpoint => ({ ...checkpoint,
-  state: { ...checkpoint.state, ui: Object.fromEntries(Object.entries(checkpoint.state.ui).filter(([id]) => id !== 'minimize')) }
+  state: { ...checkpoint.state, ui: Object.fromEntries(Object.entries(checkpoint.state.ui).filter(([id]) => !['minimize','pause','close','sound'].includes(id))) }
 }));
 
 const before = await run(resolve(args.baseline), 'before');
 const after = await run(resolve(args.widget), 'after');
-assert.deepEqual(historicalCheckpoints(after.checkpoints), before.checkpoints, 'all pre-existing HUD nodes must match historical render');
+assert.deepEqual(historicalCheckpoints(after.checkpoints), historicalCheckpoints(before.checkpoints), 'all pre-existing HUD nodes must match historical render');
 assert.deepEqual(after.callbacks, before.callbacks, 'public snapshot callbacks must be unchanged');
 const hiddenBefore = await run(resolve(args.baseline), 'hidden-before', { showLauncher: false, initiallyClosed: false });
 const hiddenAfter = await run(resolve(args.widget), 'hidden-after', { showLauncher: false, initiallyClosed: false });
-assert.deepEqual(historicalCheckpoints(hiddenAfter.checkpoints), hiddenBefore.checkpoints, 'hidden-launcher pre-existing HUD nodes must match');
+assert.deepEqual(historicalCheckpoints(hiddenAfter.checkpoints), historicalCheckpoints(hiddenBefore.checkpoints), 'hidden-launcher pre-existing HUD nodes must match');
 assert.deepEqual(hiddenAfter.callbacks, hiddenBefore.callbacks);
 const escapeExit = await verifyEscapeExit(resolve(args.widget));
 const failedMount = await verifyMountFailure(resolve(args.widget));
@@ -423,7 +426,7 @@ const report = {
   methodology: 'Stub engine, minimal shadow DOM, CSSOM color normalization; 500 identical snapshots across running/frenzy/paused/intermission/gameover. No browser frame-rate claim.',
   checkpoints: after.checkpoints.length, snapshotCallbacks: after.callbacks.length,
   traceHash: createHash('sha256').update(JSON.stringify(historicalCheckpoints(after.checkpoints))).digest('hex'),
-  historicalParityScope: 'All pre-existing HUD nodes and callbacks; new minus button excluded and verified by separate minimize lifecycle tests.',
+  historicalParityScope: 'Gameplay HUD nodes and callbacks; shared header controls are verified by separate lifecycle and browser tests.',
   parity: true, normalAndHiddenLauncher: true, lifecycleCleanup: true, escapeExit, failedMount, minimize,
   repeatedSnapshots: { before: total(before), after: total(after) },
   repeatedByPhase: { before: before.repeated, after: after.repeated },

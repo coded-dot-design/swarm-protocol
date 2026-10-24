@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.0
+
+Adopt the shared scoreboard action icons and keep pause, sound and close accessible when minimized. Preserve existing sounds, palette, engine state and behavior.
+
 ## 1.2.4
 
 - Keep native 0/1 highlight text bright with a transparent background, so light page surfaces show through.
