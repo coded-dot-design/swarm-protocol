@@ -3041,3 +3041,211 @@ html[data-theme="light"] :is(.engineering,.embed-section){background:transparent
     padding-inline: 24px;
   }
 }
+
+/* Fact and size cards: same hard-shadow card language as the game display and buttons. */
+.game-facts {
+  gap: 18px;
+  padding: 26px 7px 30px 0;
+  border: 0;
+}
+.game-facts > div,
+.game-facts > div:first-child,
+.size-grid > div {
+  padding: 16px 18px 14px;
+  border: 2px solid var(--ink);
+  border-radius: 7px;
+  background: var(--surface);
+  box-shadow: 5px 5px 0 var(--accent);
+}
+.game-facts > div:first-child {
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+}
+.size-grid > div {
+  padding: 20px;
+}
+@media (max-width: 650px) {
+  .game-facts > div:nth-child(3) {
+    padding-left: 18px;
+    border-left: 2px solid var(--ink);
+  }
+}
+
+/* Keyboard guide: outlined mechanical keycaps with a neon edge. */
+.controls,
+.controls.x {
+  border-left: 0;
+}
+.keymap {
+  list-style: none;
+  margin: 4px 0 14px;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.keymap li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 22px;
+  padding: 0;
+  font: 11px/1.5 var(--mono);
+}
+.keymap .key-pair {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.keymap .keys {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.keymap li span.key-action {
+  font: 11px/1.4 var(--mono);
+  color: var(--ink);
+}
+.keymap li.key-row-label {
+  gap: 6px;
+}
+.keycap {
+  --cap: var(--accent);
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 7px 3px;
+  font: 700 12px/1 var(--mono);
+  color: var(--ink);
+  background:
+    linear-gradient(var(--surface), var(--surface)) padding-box,
+    var(--cap) border-box;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  box-shadow:
+    inset 0 -4px 0 color-mix(in srgb, var(--cap) 30%, var(--surface)),
+    0 3px 0 var(--ink);
+  transition: transform 120ms cubic-bezier(0.34, 1.7, 0.5, 1), box-shadow 120ms;
+}
+.keycap::after {
+  content: "";
+  position: absolute;
+  inset: 3px 4px 7px;
+  border: 1px dashed color-mix(in srgb, var(--cap) 45%, transparent);
+  border-radius: 3px;
+  pointer-events: none;
+}
+.keycap.wide {
+  min-width: 52px;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+}
+.keycap.mouse {
+  min-width: 0;
+  gap: 1px;
+  grid-auto-flow: column;
+  padding: 0 8px 3px 6px;
+}
+.keycap.mouse svg {
+  width: 13px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+}
+.keycap.mouse small {
+  font-size: 9px;
+  margin-left: 5px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .keymap li:hover .keycap {
+    transform: translateY(2px);
+    box-shadow:
+      inset 0 -2px 0 color-mix(in srgb, var(--cap) 30%, var(--surface)),
+      0 1px 0 var(--ink),
+      0 0 12px color-mix(in srgb, var(--cap) 45%, transparent);
+  }
+}
+/* Arrow keys sit as an inverted T; WASD as a staggered row of four. */
+.key-cluster {
+  display: inline-grid;
+  grid-template-columns: repeat(3, 30px);
+  grid-template-rows: repeat(2, 30px);
+  gap: 3px;
+}
+.key-cluster .keycap {
+  min-width: 0;
+  padding: 0 0 3px;
+}
+.key-cluster .keycap:first-child {
+  grid-column: 2;
+}
+.key-cluster .keycap:nth-child(2) {
+  grid-area: 2 / 1;
+}
+.key-cluster .keycap:nth-child(3) {
+  grid-area: 2 / 2;
+}
+.key-cluster .keycap:nth-child(4) {
+  grid-area: 2 / 3;
+}
+.key-or {
+  font-style: normal;
+  color: var(--faint);
+  font-size: 10px;
+}
+.key-chip {
+  display: inline-block;
+  padding: 3px 8px;
+  border: 1px dashed var(--accent);
+  border-radius: 4px;
+  font: 10px/1.4 var(--mono);
+  color: var(--muted);
+}
+.keymap li span.key-label {
+  margin-right: 6px;
+  font: 700 10px var(--mono);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--accent-text, var(--accent));
+}
+.keymap li span.key-chip {
+  color: var(--muted);
+  font-size: 10px;
+}
+/* The keyboard guide needs the full row on phones. */
+@media (max-width: 650px) {
+  .game-loop .controls {
+    grid-column: 1 / -1;
+    padding: 18px 0 0;
+    border-top: 1px solid var(--line);
+  }
+}
+.keymap .keys {
+  flex-wrap: nowrap;
+}
+.keymap .key-pair {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+.keymap .key-pair .key-chip {
+  white-space: nowrap;
+}
+@media (max-width: 420px) {
+  .keymap .keys {
+    flex-wrap: wrap;
+  }
+  .keymap .key-pair .key-chip,
+  .keymap li span.key-chip {
+    white-space: normal;
+    max-width: 100%;
+  }
+  .key-cluster {
+    grid-template-columns: repeat(3, 26px);
+    grid-template-rows: repeat(2, 26px);
+  }
+  .key-cluster .keycap {
+    height: 26px;
+  }
+}

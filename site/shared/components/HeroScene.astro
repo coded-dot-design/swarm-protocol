@@ -3,23 +3,58 @@ import PromoCharacter from './PromoCharacter.astro';
 import Character from './AbstractIcon.astro';
 import UiIcon from './UiIcon.astro';
 import MotionToggle from './MotionToggle.astro';
+// One 6s loop. The tank and interceptor stay inside the browser card; enemies from the
+// other games (flies, aliens) spill past its edges. Every hit is a CSS-only explosion.
+const SHIP = { x: 340, y: 26, size: 96, muzzle: [356, 112] };
+const TANK = { x: 176, y: 244, size: 96, muzzle: [272, 286] };
+const kills = [
+  { by: 'ship', at: 0.9, kind: 'fly-chaser', art: 'fly', x: 214, y: 118, size: 50, color: '#06c4ff', idle: 'fly-dodge' },
+  { by: 'tank', at: 2.4, kind: 'alien', art: 'promo', x: 376, y: 206, size: 54, color: '#b1a1e8', idle: 'alien-step' },
+  { by: 'ship', at: 3.9, kind: 'alien', art: 'promo', x: -44, y: 128, size: 46, color: '#f4457a', idle: 'alien-step' },
+  { by: 'tank', at: 5.4, kind: 'fly-interceptor', art: 'fly', x: 470, y: 252, size: 40, color: '#4bce82', idle: 'fly-dodge' },
+].map((k) => {
+  const [mx, my] = (k.by === 'ship' ? SHIP : TANK).muzzle;
+  const cx = k.x + k.size / 2, cy = k.y + k.size / 2;
+  const len = Math.hypot(cx - mx, cy - my), ux = (cx - mx) / len, uy = (cy - my) / len;
+  return { ...k, cx, cy, mx, my, tx: cx - mx, ty: cy - my, ux, uy, hit: k.at + 0.35 };
+});
+// Ten pixel shards per blast, fanned evenly with slight variation.
+const shards = Array.from({ length: 10 }, (_, i) => {
+  const a = (i / 10) * Math.PI * 2 + (i % 2) * 0.3, d = 46 + (i % 3) * 16;
+  return { dx: Math.round(Math.cos(a) * d), dy: Math.round(Math.sin(a) * d), r: (i % 2 ? 1 : -1) * (90 + i * 25), s: 4 + (i % 3) * 2 };
+});
+const tones = ['#ffe14d', '#f4457a', '#06c4ff', '#fff4ff'];
 ---
-<div data-byte-obstacle class="hero-art hero-crossover" role="group" aria-label="A tank and interceptor defend a real page from flies, aliens and a swarm bug.">
+<div data-byte-obstacle class="hero-art hero-crossover" role="group" aria-label="A tank and interceptor blast flies and aliens off a real page.">
   <div class="code-chrome"><span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>your.page / under attack</span><MotionToggle label="scene"/></div>
   <div class="promo-stage">
     <div class="promo-page"><div class="promo-title">HELLO,<br/><span>WORL<span class="binary">01</span></span></div><div class="promo-lines" aria-hidden="true"><i></i><i></i></div><button class="art-button promo-button" data-arcade-target data-virus-target data-swarm-target>BUTTON_01 <UiIcon name="arrow-up-right" size={14}/></button></div>
     <svg class="promo-action" viewBox="0 0 500 360" fill="none" aria-hidden="true">
-      <g transform="translate(315 20) rotate(-135 52 52)"><g class="promo-motion promo-ship"><PromoCharacter kind="ship" size={104} color="#06c4ff"/></g></g>
-      <g transform="translate(267 140)"><g class="promo-motion promo-fly hit-by-ship"><Character kind="fly-chaser" size={43}/></g></g>
-      <g transform="translate(326 165)"><g class="promo-motion promo-fly second"><Character kind="fly-interceptor" size={32}/></g></g>
-      <g transform="translate(-17 152) rotate(-12 21 21)"><g class="promo-motion promo-bug"><PromoCharacter kind="bug" size={42} color="#ff6b6b"/></g></g>
-      <g transform="translate(16 279) rotate(-12 55 50)"><g class="promo-motion promo-tank"><PromoCharacter kind="tank" size={110} color="#74dfa1"/></g></g>
-      <g transform="translate(338 236)"><g class="promo-motion promo-alien hit-by-tank"><PromoCharacter kind="alien" size={52} color="#b1a1e8"/></g></g>
-      <g transform="translate(411 280)"><g class="promo-motion promo-alien reserve"><PromoCharacter kind="alien" size={31} color="#f4457a"/></g></g>
-      <path class="promo-motion ship-shot" d="m336 109-10 10" stroke="#06c4ff" stroke-width="4"/>
-      <path class="promo-motion tank-shot" d="m126 321 17-4" stroke="#74dfa1" stroke-width="5"/>
-      <g transform="translate(288 161)"><g class="promo-motion ship-impact" stroke="#06c4ff" stroke-width="3"><path d="M-12-12-20-20M12-12l8-8M12 12l8 8M-12 12l-8 8"/></g></g>
-      <g transform="translate(364 262)"><g class="promo-motion tank-impact" stroke="#74dfa1" stroke-width="4"><path d="M-16 0h-10M16 0h10M0-16v-10M0 16v10M-13-13l-6-6M13 13l6 6"/></g></g>
+      <g transform="translate(-50 -40) rotate(-14 20 20)"><g class="promo-motion promo-bug"><PromoCharacter kind="bug" size={40} color="#ff6b6b"/></g></g>
+      <g transform="translate(482 340)"><g class="promo-motion reserve"><PromoCharacter kind="alien" size={30} color="#8573ee"/></g></g>
+      {kills.map((k, i) => (
+        <g transform={`translate(${k.x} ${k.y})`}>
+          <g class="promo-motion die" style={`animation-delay:${k.hit}s`}>
+            <g class={`promo-motion ${k.idle}`} style={`animation-delay:-${i * 0.7}s`}>
+              {k.art === 'fly' ? <Character kind={k.kind} size={k.size}/> : <PromoCharacter kind="alien" size={k.size} color={k.color}/>}
+            </g>
+          </g>
+        </g>
+      ))}
+      <g transform={`translate(${SHIP.x} ${SHIP.y}) rotate(-135 ${SHIP.size / 2} ${SHIP.size / 2})`}><g class="promo-motion recoil-ship" style="animation-delay:0.9s"><PromoCharacter kind="ship" size={SHIP.size} color="#06c4ff"/></g></g>
+      <g transform={`translate(${TANK.x} ${TANK.y}) rotate(-6 ${TANK.size / 2} ${TANK.size / 2})`}><g class="promo-motion recoil-tank" style="animation-delay:2.4s"><PromoCharacter kind="tank" size={TANK.size} color="#4bce82"/></g></g>
+      {kills.map((k) => (
+        <path class="promo-motion shot" d={`M${k.mx} ${k.my}l${(k.ux * 16).toFixed(1)} ${(k.uy * 16).toFixed(1)}`} stroke={k.by === 'ship' ? '#06c4ff' : '#4bce82'} stroke-width="5" stroke-linecap="square" style={`--tx:${k.tx.toFixed(1)}px;--ty:${k.ty.toFixed(1)}px;animation-delay:${k.at}s`}/>
+      ))}
+      {kills.map((k) => (
+        <g transform={`translate(${k.cx} ${k.cy})`} class="boom" style={`--d:${k.hit}s`}>
+          <circle class="promo-motion boom-flash" r="16" fill="#fff4ff"/>
+          <circle class="promo-motion boom-core" r="12" fill="#ffe14d"/>
+          <circle class="promo-motion boom-ring" r="14" stroke={k.color} stroke-width="4"/>
+          <rect class="promo-motion boom-ring square" x="-14" y="-14" width="28" height="28" stroke="#f4457a" stroke-width="3"/>
+          {shards.map((s, j) => <rect class="promo-motion shard" x={-s.s / 2} y={-s.s / 2} width={s.s} height={s.s} fill={j % 3 === 0 ? k.color : tones[j % tones.length]} style={`--dx:${s.dx}px;--dy:${s.dy}px;--r:${s.r}deg`}/>)}
+        </g>
+      ))}
     </svg>
     <div class="promo-status"><span class="led"></span> SAME PAGE. DIFFERENT RULES.</div>
   </div>
@@ -32,20 +67,32 @@ import MotionToggle from './MotionToggle.astro';
 .promo-lines{margin-top:5%}.promo-lines i{height:1cqw;width:40%;background:var(--line);margin:1.6cqw 0}.promo-lines i:last-child{width:29%}
 .hero-crossover .promo-button{position:relative;margin-top:8%;font-size:clamp(7px,2cqw,10px);min-height:30px;padding:2.4% 3.5%;gap:3cqw;z-index:2;background:var(--raised);color:var(--muted);border-color:var(--line);box-shadow:none}
 .promo-action{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:3}.promo-status{position:absolute;bottom:14px;right:16px;display:flex;align-items:center;gap:7px;font:8px var(--mono);color:var(--faint)}
-.promo-motion{animation-duration:5s;animation-iteration-count:infinite;animation-play-state:paused!important;transform-box:fill-box;transform-origin:center}.hero-crossover[data-motion="true"] .promo-motion{animation-play-state:running!important}
-.promo-ship{animation-name:ship-recoil}.promo-tank{animation-name:tank-recoil}.promo-fly{animation-name:fly-dodge;animation-timing-function:steps(4)}.promo-fly.second{animation-delay:-2s}.promo-bug{animation-name:bug-skitter;animation-timing-function:steps(4)}.hit-by-ship{animation-name:fly-hit}.hit-by-tank{animation-name:alien-hit}.reserve{animation-name:alien-step;animation-timing-function:steps(3)}
-.ship-shot{animation-name:ship-fire;opacity:0}.tank-shot{animation-name:tank-fire;opacity:0}.ship-impact{animation-name:ship-impact;opacity:0}.tank-impact{animation-name:tank-impact;opacity:0}
-@keyframes ship-recoil{0%,18%,34%,100%{transform:translateY(0)}21%{transform:translateY(8px)}26%{transform:translateY(-3px)}}
-@keyframes tank-recoil{0%,59%,76%,100%{transform:translateX(0)}62%{transform:translateX(-9px)}68%{transform:translateX(2px)}}
-@keyframes ship-fire{0%,19%{opacity:0;transform:translate(0,0)}20%{opacity:1;transform:translate(0,0)}30%{opacity:1;transform:translate(-38px,42px)}31%,100%{opacity:0;transform:translate(-38px,42px)}}
-@keyframes tank-fire{0%,60%{opacity:0;transform:translate(0,0)}61%{opacity:1;transform:translate(0,0)}73%{opacity:1;transform:translate(218px,-54px)}74%,100%{opacity:0;transform:translate(218px,-54px)}}
-@keyframes ship-impact{0%,29%,40%,100%{opacity:0;transform:scale(.6)}31%{opacity:1;transform:scale(1)}39%{opacity:0;transform:scale(1.7)}}
-@keyframes tank-impact{0%,72%,84%,100%{opacity:0;transform:scale(.6)}74%{opacity:1;transform:scale(1)}83%{opacity:0;transform:scale(1.7)}}
-@keyframes fly-hit{0%,29%,44%,100%{transform:translate(0,0);opacity:1}31%,36%{transform:translate(-6px,6px) rotate(-12deg);opacity:.2}}
-@keyframes alien-hit{0%,72%,89%,100%{transform:scale(1);opacity:1}74%,79%{transform:scale(.8) rotate(9deg);opacity:.25}}
-@keyframes fly-dodge{0%,100%{transform:translate(0,0)}50%{transform:translate(12px,-9px)}}
-@keyframes bug-skitter{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
-@keyframes alien-step{0%,100%{transform:translateX(0)}50%{transform:translateX(-10px)}}
+/* Motion is opt-in via the scene toggle; everything shares one 6s clock (3s for shooter recoil, 1.5s for hit shake). */
+.promo-motion{animation-duration:6s;animation-iteration-count:infinite;animation-play-state:paused!important;transform-box:fill-box;transform-origin:center}
+.hero-crossover[data-motion="true"] .promo-motion,.hero-crossover[data-motion="true"] .promo-stage{animation-play-state:running!important}
+.fly-dodge{animation-name:fly-dodge;animation-duration:1.4s;animation-timing-function:steps(4)}
+.alien-step,.reserve{animation-name:alien-step;animation-duration:1.2s;animation-timing-function:steps(3)}
+.promo-bug{animation-name:bug-skitter;animation-duration:1s;animation-timing-function:steps(4)}
+.recoil-ship{animation-name:ship-recoil;animation-duration:3s}.recoil-tank{animation-name:tank-recoil;animation-duration:3s}
+.die{animation-name:die}
+.shot{animation-name:shot;opacity:0;transform-box:view-box;transform-origin:0 0}
+.boom .promo-motion{animation-delay:var(--d);opacity:0}
+.boom-flash{animation-name:boom-flash}.boom-core{animation-name:boom-core}.boom-ring{animation-name:boom-ring}.boom-ring.square{animation-name:boom-square}.shard{animation-name:shard;animation-timing-function:cubic-bezier(.15,.8,.3,1)}
+/* Every hit (1.25s, 2.75s, 4.25s, 5.75s) jolts the page for 90ms. */
+.promo-stage{animation:hit-shake 1.5s 1.25s infinite paused}
+@keyframes hit-shake{0%,7%,100%{transform:none}1.5%{transform:translate(-5px,3px) rotate(-.6deg)}3%{transform:translate(4px,-3px) rotate(.5deg)}4.5%{transform:translate(-3px,-2px)}6%{transform:translate(2px,1px)}}
+@keyframes ship-recoil{0%,6%,100%{transform:translate(0,0)}1.5%{transform:translate(9px,-9px)}3.5%{transform:translate(-2px,2px)}}
+@keyframes tank-recoil{0%,6%,100%{transform:translateX(0)}1.5%{transform:translateX(-12px)}3.5%{transform:translateX(3px)}}
+@keyframes shot{0%{opacity:1;transform:translate(0,0)}5.8%{opacity:1;transform:translate(var(--tx),var(--ty))}6%,100%{opacity:0;transform:translate(var(--tx),var(--ty))}}
+@keyframes die{0%{transform:scale(1);opacity:1;filter:none}.8%{transform:scale(1.45) rotate(8deg);opacity:1;filter:brightness(4)}2.5%{transform:scale(.1) rotate(-30deg);opacity:0}54%{transform:scale(.1);opacity:0;filter:none}58%{transform:scale(1.3);opacity:1}61%,100%{transform:scale(1);opacity:1}}
+@keyframes boom-flash{0%{transform:scale(.3);opacity:1}2%{transform:scale(3);opacity:1}5%,100%{transform:scale(3.8);opacity:0}}
+@keyframes boom-core{0%{transform:scale(.4);opacity:1}3%{transform:scale(2.4);opacity:1}8%,100%{transform:scale(.2);opacity:0}}
+@keyframes boom-ring{0%{transform:scale(.5);opacity:1}8%,100%{transform:scale(5.5);opacity:0}}
+@keyframes boom-square{0%{transform:scale(.4) rotate(0);opacity:1}10%,100%{transform:scale(4.2) rotate(90deg);opacity:0}}
+@keyframes shard{0%{transform:translate(0,0) rotate(0);opacity:1}9%{transform:translate(var(--dx),var(--dy)) rotate(var(--r));opacity:1}12%,100%{transform:translate(var(--dx),calc(var(--dy) + 14px)) rotate(var(--r));opacity:0}}
+@keyframes fly-dodge{0%,100%{transform:translate(0,0)}50%{transform:translate(10px,-8px)}}
+@keyframes bug-skitter{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes alien-step{0%,100%{transform:translateX(0)}50%{transform:translateX(-8px)}}
 @media(max-width:760px){.hero-crossover{max-width:470px;width:calc(100% - 40px);margin:40px auto 24px}.promo-status{font-size:6px;bottom:10px;right:10px}}
-@media(prefers-reduced-motion:reduce){.hero-crossover *{animation:none!important}.ship-shot,.tank-shot,.ship-impact,.tank-impact{opacity:0}}
+@media(prefers-reduced-motion:reduce){.hero-crossover *,.promo-stage{animation:none!important}.shot,.boom .promo-motion{opacity:0}}
 </style>
