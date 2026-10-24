@@ -1,76 +1,51 @@
 ---
 import PromoCharacter from './PromoCharacter.astro';
+import Character from './AbstractIcon.astro';
 import UiIcon from './UiIcon.astro';
 import MotionToggle from './MotionToggle.astro';
-import brandIcon from '../assets/dom-virus-icon.svg?raw';
 ---
-<div data-byte-obstacle class="hero-art hero-crossover" role="group" aria-label="DOM Virus crossover: a giant frog eats bugs, a tank shoots aliens, and a ship and swarm escape the browser.">
-  <div class="code-chrome"><span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>document.body</span><MotionToggle label="scene"/></div>
+<div data-byte-obstacle class="hero-art hero-crossover" role="group" aria-label="A tank and interceptor defend a real page from flies, aliens and a swarm bug.">
+  <div class="code-chrome"><span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>your.page / under attack</span><MotionToggle label="scene"/></div>
   <div class="promo-stage">
-    <div class="promo-page">
-      <div class="code-tag">&lt;main <span>id="playground"</span>&gt;</div>
-      <div class="promo-title">HELLO,<br/><span>WORL<span class="binary">01</span></span></div>
-      <div class="promo-lines" aria-hidden="true"><i></i><i></i><i></i></div>
-      <button class="art-button promo-button" data-arcade-target data-virus-target data-swarm-target>BUTTON_01 <UiIcon name="layers" size={15}/><span class="promo-button-bug"><PromoCharacter kind="bug" size={30} color="#d984ff"/></span></button>
-      <div class="code-tag promo-close">&lt;/main&gt;</div>
-    </div>
+    <div class="promo-page"><div class="promo-title">HELLO,<br/><span>WORL<span class="binary">01</span></span></div><div class="promo-lines" aria-hidden="true"><i></i><i></i></div><button class="art-button promo-button" data-arcade-target data-virus-target data-swarm-target>BUTTON_01 <UiIcon name="arrow-up-right" size={14}/></button></div>
     <svg class="promo-action" viewBox="0 0 500 360" fill="none" aria-hidden="true">
-      <g transform="translate(280 -78) rotate(16 48 48)"><g class="promo-motion promo-ship"><PromoCharacter kind="ship" size={108} color="#06c4ff"/></g></g>
-      <g transform="translate(393 22)"><g class="promo-motion promo-frog"><PromoCharacter kind="frog" size={126} color="#3ecb74" left/></g></g>
-      <g transform="translate(344 75) rotate(12 18 18)"><g class="promo-motion promo-prey"><PromoCharacter kind="bug" size={37} color="#ff6b6b"/></g></g>
-      <g transform="translate(304 54) rotate(-12 13 13)"><g class="promo-motion promo-prey second"><PromoCharacter kind="bug" size={25} color="#d984ff"/></g></g>
-      <g transform="translate(-28 280) rotate(-24 68 50)"><g class="promo-motion promo-tank"><PromoCharacter kind="tank" size={138} color="#ee6875"/></g></g>
-      <g class="promo-motion promo-shots" stroke="#ee6875" stroke-width="5" stroke-linecap="square"><path d="m124 313 14-6m25-11 14-6m25-11 14-6"/></g>
-      <g transform="translate(216 220)"><g class="promo-motion promo-alien hit"><PromoCharacter kind="alien" size={58} color="#b1a1e8"/></g></g>
-      <g transform="translate(294 258) rotate(10 22 22)"><g class="promo-motion promo-alien"><PromoCharacter kind="alien" size={45} color="#f4457a"/></g></g>
-      <g transform="translate(352 211)"><g class="promo-motion promo-alien little"><PromoCharacter kind="alien" size={31} color="#06c4ff"/></g></g>
-      <g transform="translate(-18 154) rotate(-20 20 20)"><g class="promo-motion promo-bug"><PromoCharacter kind="bug" size={43} color="#ff6b6b"/></g></g>
-      <g transform="translate(10 102) rotate(20 13 13)"><g class="promo-motion promo-bug second"><PromoCharacter kind="bug" size={26} color="#8573ee"/></g></g>
-      <g transform="translate(164 335) rotate(-15 15 15)"><g class="promo-motion promo-bug"><PromoCharacter kind="bug" size={34} color="#d984ff"/></g></g>
-      <g transform="translate(224 366) rotate(15 11 11)"><g class="promo-motion promo-bug second"><PromoCharacter kind="bug" size={23} color="#ff6b6b"/></g></g>
-      <g class="promo-motion promo-fragments" fill="#f4457a"><path d="M242 201h6v6h-6Zm29 21h5v5h-5Zm-57 51h4v4h-4Z"/></g>
-      <g fill="#74dfa1"><path d="M-8 75h6v6h-6ZM388-13h5v5h-5Zm99 174h6v6h-6Z"/></g>
+      <g transform="translate(315 20) rotate(-135 52 52)"><g class="promo-motion promo-ship"><PromoCharacter kind="ship" size={104} color="#06c4ff"/></g></g>
+      <g transform="translate(267 140)"><g class="promo-motion promo-fly hit-by-ship"><Character kind="fly-chaser" size={43}/></g></g>
+      <g transform="translate(326 165)"><g class="promo-motion promo-fly second"><Character kind="fly-interceptor" size={32}/></g></g>
+      <g transform="translate(-17 152) rotate(-12 21 21)"><g class="promo-motion promo-bug"><PromoCharacter kind="bug" size={42} color="#ff6b6b"/></g></g>
+      <g transform="translate(16 279) rotate(-12 55 50)"><g class="promo-motion promo-tank"><PromoCharacter kind="tank" size={110} color="#74dfa1"/></g></g>
+      <g transform="translate(338 236)"><g class="promo-motion promo-alien hit-by-tank"><PromoCharacter kind="alien" size={52} color="#b1a1e8"/></g></g>
+      <g transform="translate(411 280)"><g class="promo-motion promo-alien reserve"><PromoCharacter kind="alien" size={31} color="#f4457a"/></g></g>
+      <path class="promo-motion ship-shot" d="m336 109-10 10" stroke="#06c4ff" stroke-width="4"/>
+      <path class="promo-motion tank-shot" d="m126 321 17-4" stroke="#74dfa1" stroke-width="5"/>
+      <g transform="translate(288 161)"><g class="promo-motion ship-impact" stroke="#06c4ff" stroke-width="3"><path d="M-12-12-20-20M12-12l8-8M12 12l8 8M-12 12l-8 8"/></g></g>
+      <g transform="translate(364 262)"><g class="promo-motion tank-impact" stroke="#74dfa1" stroke-width="4"><path d="M-16 0h-10M16 0h10M0-16v-10M0 16v10M-13-13l-6-6M13 13l6 6"/></g></g>
     </svg>
-    <div class="promo-stamp" aria-hidden="true"><Fragment set:html={brandIcon}/><span>DOM VIRUS</span></div>
+    <div class="promo-status"><span class="led"></span> SAME PAGE. DIFFERENT RULES.</div>
   </div>
-  <div class="art-caption"><span>REAL ELEMENTS. TOTAL CHAOS.</span><span>0 dependencies*</span></div>
 </div>
 <style>
-.hero-crossover{width:calc(100% - 42px);margin:52px 21px 38px;overflow:visible;isolation:isolate}
-.hero-crossover .code-chrome{padding:9px 14px;min-height:42px}
-.hero-crossover .code-chrome>:nth-child(2){margin-inline:auto}
-.promo-stage{position:relative;aspect-ratio:500/360;container-type:inline-size;background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:20px 20px}
-.promo-page{position:absolute;inset:0;padding:6% 7%}
-.promo-page .code-tag{font-size:clamp(7px,2cqw,10px)}
-.promo-title{font:700 10.6cqw/1.1 var(--mono);letter-spacing:-.7cqw;margin:5% 0 4%;color:var(--ink)}
-.promo-title>span{color:var(--faint)}.promo-title .binary{font-size:9cqw;letter-spacing:-.6cqw;color:#f4457a}
-.promo-lines i{display:block;width:47%;height:1cqw;background:var(--line);margin:1.4cqw 0}.promo-lines i:nth-child(2){width:38%}.promo-lines i:nth-child(3){width:43%}
-.promo-button{position:relative;margin-top:5%;padding:2% 2.8%;font-size:clamp(7px,2cqw,10px);min-height:32px;gap:3cqw;background:#f4457a;color:#21051a;z-index:2}
-.promo-button-bug{position:absolute;right:-16px;top:-18px;pointer-events:none;transform:rotate(18deg)}
-.promo-close{margin:5% 0 0 30%}
-.promo-action{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:3}
-.promo-stamp{position:absolute;right:8%;bottom:9%;width:12%;padding:1.2%;border:1px solid var(--line);border-radius:3px;transform:rotate(9deg);background:var(--surface);box-shadow:3px 3px 0 #f4457a;z-index:1}
-.promo-stamp :global(svg){display:block;width:100%;height:auto}.promo-stamp span{display:block;margin-top:4px;font:600 clamp(5px,1.35cqw,7px)/1.1 var(--mono);text-align:center;white-space:nowrap}
-.hero-crossover .art-caption{font-size:clamp(6px,1.5vw,8px);padding:14px 12px;min-height:42px;gap:24px}
-.promo-motion{animation-play-state:paused!important;transform-box:fill-box;transform-origin:center}
-.hero-crossover[data-motion="true"] .promo-motion{animation-play-state:running!important}
-.promo-frog{animation:promo-hop 1.6s steps(2,end) infinite}
-.promo-frog :global(.frog-jaw-open){animation:promo-chomp 800ms steps(1,end) infinite paused}
-.promo-frog :global(.frog-jaw-closed){animation:promo-chomp 800ms steps(1,end) infinite reverse paused}
-.hero-crossover[data-motion="true"] :global(.frog-jaw-open),.hero-crossover[data-motion="true"] :global(.frog-jaw-closed){animation-play-state:running}
-.promo-ship{animation:promo-float 4s ease-in-out infinite}.promo-bug{animation:promo-crawl 2.8s ease-in-out infinite}.promo-bug.second{animation-delay:-1.4s}
-.promo-prey{animation:promo-snack 3.2s ease-in-out infinite}.promo-prey.second{animation-delay:-1.6s}
-.promo-tank{animation:promo-recoil 3.2s ease-out infinite}.promo-shots{animation:promo-fire 3.2s linear infinite}.promo-fragments{animation:promo-impact 3.2s ease-out infinite}
-.promo-alien{animation:promo-float 3.2s ease-in-out infinite}.promo-alien.hit{animation:promo-hit 3.2s steps(1,end) infinite}.promo-alien.little{animation-delay:-1.6s}
-@keyframes promo-chomp{0%,49%{opacity:1}50%,100%{opacity:0}}
-@keyframes promo-hop{0%,100%{transform:translate(0,0)}50%{transform:translate(-3px,-3px)}}
-@keyframes promo-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
-@keyframes promo-crawl{0%,100%{transform:translate(0,0) rotate(-4deg)}50%{transform:translate(5px,-6px) rotate(4deg)}}
-@keyframes promo-snack{0%,15%{transform:translateX(-7px);opacity:1}65%{transform:translateX(25px);opacity:1}78%,100%{transform:translateX(34px) scale(.6);opacity:0}}
-@keyframes promo-recoil{0%,22%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}35%{transform:translateX(0)}}
-@keyframes promo-fire{0%,22%{opacity:0;transform:translate(-14px,6px)}25%,47%{opacity:1}55%,100%{opacity:0;transform:translate(24px,-11px)}}
-@keyframes promo-impact{0%,48%,80%,100%{opacity:0;transform:scale(.8)}52%,64%{opacity:1;transform:scale(1.2)}}
-@keyframes promo-hit{0%,48%,65%,100%{opacity:1}50%,62%{opacity:.5}}
-@media(max-width:760px){.hero-crossover{width:calc(100% - 42px);max-width:490px;margin:38px auto 34px}.hero-crossover .art-caption{gap:12px}.promo-button :global(.ui-icon){width:12px;height:12px}}
-@media(prefers-reduced-motion:reduce){.hero-crossover *,.hero-crossover :global(.frog-jaw-open),.hero-crossover :global(.frog-jaw-closed){animation:none!important}.hero-crossover :global(.frog-jaw-closed){display:none}.promo-shots,.promo-fragments{opacity:1}}
+.hero-crossover{width:calc(100% - 48px);margin:42px 24px 24px;overflow:visible;isolation:isolate;transform:rotate(-2deg)}
+.hero-crossover .code-chrome{padding:9px 14px;min-height:44px}.hero-crossover .code-chrome>:nth-child(2){margin-inline:auto;font-size:9px}
+.promo-stage{position:relative;aspect-ratio:500/360;container-type:inline-size}.promo-page{position:absolute;inset:0;padding:12% 10%}
+.promo-title{font:700 10cqw/1.08 var(--mono);letter-spacing:-.5cqw;color:var(--ink)}.promo-title>span{color:var(--faint)}.promo-title .binary{color:var(--accent-text,var(--accent));display:inline-block;transform:rotate(-7deg)}
+.promo-lines{margin-top:5%}.promo-lines i{height:1cqw;width:40%;background:var(--line);margin:1.6cqw 0}.promo-lines i:last-child{width:29%}
+.hero-crossover .promo-button{position:relative;margin-top:8%;font-size:clamp(7px,2cqw,10px);min-height:30px;padding:2.4% 3.5%;gap:3cqw;z-index:2;background:var(--raised);color:var(--muted);border-color:var(--line);box-shadow:none}
+.promo-action{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:3}.promo-status{position:absolute;bottom:14px;right:16px;display:flex;align-items:center;gap:7px;font:8px var(--mono);color:var(--faint)}
+.promo-motion{animation-duration:5s;animation-iteration-count:infinite;animation-play-state:paused!important;transform-box:fill-box;transform-origin:center}.hero-crossover[data-motion="true"] .promo-motion{animation-play-state:running!important}
+.promo-ship{animation-name:ship-recoil}.promo-tank{animation-name:tank-recoil}.promo-fly{animation-name:fly-dodge;animation-timing-function:steps(4)}.promo-fly.second{animation-delay:-2s}.promo-bug{animation-name:bug-skitter;animation-timing-function:steps(4)}.hit-by-ship{animation-name:fly-hit}.hit-by-tank{animation-name:alien-hit}.reserve{animation-name:alien-step;animation-timing-function:steps(3)}
+.ship-shot{animation-name:ship-fire;opacity:0}.tank-shot{animation-name:tank-fire;opacity:0}.ship-impact{animation-name:ship-impact;opacity:0}.tank-impact{animation-name:tank-impact;opacity:0}
+@keyframes ship-recoil{0%,18%,34%,100%{transform:translateY(0)}21%{transform:translateY(8px)}26%{transform:translateY(-3px)}}
+@keyframes tank-recoil{0%,59%,76%,100%{transform:translateX(0)}62%{transform:translateX(-9px)}68%{transform:translateX(2px)}}
+@keyframes ship-fire{0%,19%{opacity:0;transform:translate(0,0)}20%{opacity:1;transform:translate(0,0)}30%{opacity:1;transform:translate(-38px,42px)}31%,100%{opacity:0;transform:translate(-38px,42px)}}
+@keyframes tank-fire{0%,60%{opacity:0;transform:translate(0,0)}61%{opacity:1;transform:translate(0,0)}73%{opacity:1;transform:translate(218px,-54px)}74%,100%{opacity:0;transform:translate(218px,-54px)}}
+@keyframes ship-impact{0%,29%,40%,100%{opacity:0;transform:scale(.6)}31%{opacity:1;transform:scale(1)}39%{opacity:0;transform:scale(1.7)}}
+@keyframes tank-impact{0%,72%,84%,100%{opacity:0;transform:scale(.6)}74%{opacity:1;transform:scale(1)}83%{opacity:0;transform:scale(1.7)}}
+@keyframes fly-hit{0%,29%,44%,100%{transform:translate(0,0);opacity:1}31%,36%{transform:translate(-6px,6px) rotate(-12deg);opacity:.2}}
+@keyframes alien-hit{0%,72%,89%,100%{transform:scale(1);opacity:1}74%,79%{transform:scale(.8) rotate(9deg);opacity:.25}}
+@keyframes fly-dodge{0%,100%{transform:translate(0,0)}50%{transform:translate(12px,-9px)}}
+@keyframes bug-skitter{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+@keyframes alien-step{0%,100%{transform:translateX(0)}50%{transform:translateX(-10px)}}
+@media(max-width:760px){.hero-crossover{max-width:470px;width:calc(100% - 40px);margin:40px auto 24px}.promo-status{font-size:6px;bottom:10px;right:10px}}
+@media(prefers-reduced-motion:reduce){.hero-crossover *{animation:none!important}.ship-shot,.tank-shot,.ship-impact,.tank-impact{opacity:0}}
 </style>

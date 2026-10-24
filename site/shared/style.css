@@ -3022,3 +3022,14 @@ html[data-theme="light"] .astro-code span {
     transition: none;
   }
 }
+
+/* Open editorial sections; only the individual diagrams and code cards are framed. */
+.hero,.engineering,.embed-section{border:0;box-shadow:none;border-radius:0;background:transparent}
+.engineering,.embed-section{margin:80px 0 56px;padding:24px 30px}
+.technical-grid,.technical-grid.reverse{grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr);gap:clamp(32px,5vw,76px);align-items:center;margin-bottom:76px}
+.technical-grid>div{order:0;max-width:36em}.technical-grid>figure,.technical-grid.reverse>figure{order:1;width:100%;max-width:440px;justify-self:end}
+.technical-grid h3{font-size:clamp(25px,2.5vw,34px);letter-spacing:-1px;line-height:1.12;margin-bottom:20px}
+.technical-grid p{font-size:13px;line-height:1.85}
+@media(max-width:760px){.engineering,.embed-section{margin:56px 0 40px;padding:18px 20px}.technical-grid,.technical-grid.reverse{grid-template-columns:minmax(0,1fr);gap:26px;margin-bottom:52px}.technical-grid>div{max-width:none}.technical-grid>figure,.technical-grid.reverse>figure{justify-self:center;max-width:440px}}
+
+html[data-theme="light"] :is(.engineering,.embed-section){background:transparent}

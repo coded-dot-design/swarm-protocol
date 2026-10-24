@@ -1,33 +1,55 @@
 ---
 import UiIcon from './UiIcon.astro';
 import MotionToggle from './MotionToggle.astro';
-import Character from './AbstractIcon.astro';
 const { mode = 'board' } = Astro.props;
-const steps = [
-  { icon: 'target', title: 'Measure', note: 'Refresh geometry only when due.', color: 'teal' },
-  { icon: 'chip', title: 'Simulate', note: 'Move, collide, score. Keep counts bounded.', color: 'pink' },
-  { icon: 'layers', title: 'Render', note: 'Reuse sprites. Update owned SVG and canvas.', color: 'violet' },
-  { icon: 'play', title: 'Continue', note: 'Schedule the next frame only while playing.', color: 'mint' },
-];
+const stages = ['MEASURE','SIMULATE','RENDER','CONTINUE'];
 ---
-{mode === 'board' ? <figure class="system-map" aria-label="The board adapter reads real page geometry and writes only owned mutations. It drives DOM-attached SVG and elements, plus a canvas and HUD. Recall restores owned changes.">
-  <figcaption class="map-heading"><UiIcon name="browser"/><span>THE PAGE, IN PLAY</span><span class="map-badge">LIVE DOM</span><MotionToggle/></figcaption>
-  <div class="map-document">
-    <div class="map-document-title"><span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span><code>your-page.html</code></div>
-    <div class="map-elements"><div><b>Aa</b><span>Headings</span></div><div><svg viewBox="0 0 48 28" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M4 5h40M4 14h31M4 23h36"/></svg><span>Real text</span></div><div><UiIcon name="cursor" size={30}/><span>Buttons</span></div></div>
+{mode === 'board' ? <figure class="system-map lab-diagram" aria-label="Measure real page elements, cache their geometry, and render through the board adapter.">
+  <figcaption class="map-heading"><span class="lab-index">01</span><span>THE PAGE BECOMES THE BOARD</span><MotionToggle/></figcaption>
+  <svg class="lab-art" viewBox="0 0 400 300" role="img" aria-label="A scan highlights text and a button, then sends their geometry to the board adapter and two renderers.">
+    <rect x="22" y="10" width="356" height="124" rx="5" class="lab-surface"/><path d="M22 34h356" class="lab-line"/><circle cx="35" cy="22" r="3" fill="#ee6875"/><circle cx="47" cy="22" r="3" fill="#b1a1e8"/><circle cx="59" cy="22" r="3" fill="#63bfc8"/>
+    <text x="358" y="26" text-anchor="end" class="lab-tiny">document.body</text>
+    <text x="42" y="69" class="lab-word">Hello, world.</text><path d="M42 86h155m-155 13h116" class="lab-line"/>
+    <rect x="254" y="55" width="102" height="48" rx="4" class="lab-button"/><text x="305" y="84" text-anchor="middle" class="lab-label">BUTTON</text>
+    <rect x="34" y="43" width="177" height="67" rx="2" class="lab-scan lab-animated"/><path d="M34 47v-4h7m163 0h7v7M34 103v7h7m163 0h7v-7" class="lab-corners"/>
+    <path d="M112 135v30h88m105-30v30H200v20" class="lab-line"/><path d="M112 135v30h88v20M305 135v30H200" class="lab-packet lab-animated"/>
+    <rect x="121" y="184" width="158" height="42" rx="5" class="lab-core"/><text x="200" y="210" text-anchor="middle" class="lab-label">BOARD ADAPTER</text>
+    <path d="M200 227v20H99v18m101-18h101v18" class="lab-line"/><path d="M200 227v20H99v18M200 247h101v18" class="lab-packet output-packet lab-animated"/>
+    <text x="99" y="286" text-anchor="middle" class="lab-label">NATIVE DOM + SVG</text><text x="301" y="286" text-anchor="middle" class="lab-label">CANVAS + HUD</text>
+  </svg>
+  <div class="map-exchange lab-key"><span><UiIcon name="arrow-down" size={15}/> Read geometry</span><span>Write owned changes <UiIcon name="arrow-up" size={15}/></span></div>
+</figure> : mode === 'frame' ? <figure class="tick-map lab-diagram" aria-label="One loop progresses through measurement, simulation, rendering and the next frame. Work remains bounded.">
+  <figcaption class="map-heading"><span class="lab-index">02</span><span>A FRAME, NOT A FREE-FOR-ALL</span><MotionToggle/></figcaption>
+  <div class="frame-machine">
+    <svg viewBox="0 0 360 270" class="frame-circuit" aria-hidden="true"><rect x="60" y="40" width="240" height="190" rx="55" class="lab-line"/><rect x="60" y="40" width="240" height="190" rx="55" pathLength="100" class="frame-tracer lab-animated"/></svg>
+    <div class="frame-heart"><b>01</b><span>ANIMATION LOOP</span><code>requestAnimationFrame</code></div>
+    <ol class="frame-steps">{stages.map((label,i)=><li class={`frame-step step-${i} lab-animated`}><small>0{i+1}</small><strong>{label}</strong><span>{['Cache geometry','Move + collide','Reuse pixels','Only while playing'][i]}</span></li>)}</ol>
   </div>
-  <div class="map-exchange"><span><UiIcon name="arrow-down" size={18}/> Read geometry</span><span>Owned mutations <UiIcon name="arrow-up" size={18}/></span></div>
-  <div class="map-adapter"><span class="map-chip"><UiIcon name="chip" size={30}/></span><div><small>THE TRANSLATION LAYER</small><strong>Board adapter</strong></div><div class="map-capabilities"><span>Geometry cache</span><span>Collisions</span><span>Ownership ledger</span></div></div>
-  <svg class="map-branches" viewBox="0 0 400 36" fill="none" aria-hidden="true"><path d="M200 0v14H90v21m110-21h110v21M84 28l6 7 6-7m208 0 6 7 6-7" stroke="currentColor" stroke-width="1.5"/></svg>
-  <div class="map-outputs"><div class="map-output native-output"><div class="output-preview"><span class="mini-element">Button <Character kind="bug" size={25}/></span><Character kind="runner" size={34}/></div><strong>Inside your DOM</strong><span>SVG + attached elements</span><small>Scrolls with the page</small></div><div class="map-output canvas-output"><div class="output-preview mini-canvas"><Character kind="ship" size={43}/><span class="mini-score">0100</span></div><strong>Canvas + HUD</strong><span>Cached pixels + controls</span><small>Isolated UI styles</small></div></div>
-  <div class="map-recall"><UiIcon name="recall" size={19}/><span><b>Recall</b> restores game-owned changes.</span></div>
-</figure> : mode === 'frame' ? <figure class="tick-map" aria-label="One animation loop measures geometry when due, advances the simulation, recycles and renders, then schedules another frame only while running.">
-  <figcaption class="map-heading"><UiIcon name="clock"/><span>EVERY FRAME HAS A JOB</span><MotionToggle/></figcaption>
-  <div class="tick-intro"><span class="tick-orbit"><UiIcon name="recall" size={62}/><b>1</b></span><div><strong>One loop.</strong><span>requestAnimationFrame</span><small>Bounded work. Time-based motion.</small></div></div>
-  <ol class="tick-stages">{steps.map((step,i)=><li class={`tick-stage signal-${step.color}`}><span class="stage-icon"><UiIcon name={step.icon} size={25}/></span><span class="stage-number">0{i+1}</span><strong>{step.title}</strong><p>{step.note}</p><UiIcon name="arrow-right" class="stage-arrow" size={18}/></li>)}</ol>
-  <div class="map-recall"><UiIcon name="pause" size={18}/><span>Pause, hidden tabs, and Recall stop the loop.</span></div>
-</figure> : <figure class="ownership-map" aria-label="Remember the original text, apply a game-owned edit, then restore it only if the page has not made a newer change.">
-  <figcaption class="map-heading"><UiIcon name="recall"/><span>LEAVE THE PAGE AS YOU FOUND IT</span><MotionToggle/></figcaption>
-  <ol><li><span class="ownership-step">01</span><div><small>REMEMBER THE ORIGINAL</small><strong>Hello, world.</strong><span>The real text node stays in place.</span></div></li><li><span class="ownership-step"><UiIcon name="code"/></span><div><small>MAKE AN OWNED EDIT</small><strong>H<em>01</em>lo, w<em>10</em>ld.</strong><span>Track the last value the game wrote.</span></div></li><li><span class="ownership-step"><UiIcon name="check"/></span><div><small>RECALL & RESTORE</small><strong>Hello, world.</strong><span>Restore only when that value still matches.</span></div></li></ol>
-  <div class="map-recall"><UiIcon name="check" size={18}/><span>Your app’s newer edits always win.</span></div>
+  <div class="lab-key"><span class="signal-dot"></span> Reuse objects. Bound the work. Repeat.</div>
+</figure> : <figure class="ownership-map lab-diagram" aria-label="An original text node changes to game-owned binary digits, then returns to its original value on Recall. New application edits are preserved.">
+  <figcaption class="map-heading"><span class="lab-index">03</span><span>CHANGE IT. GIVE IT BACK.</span><MotionToggle/></figcaption>
+  <div class="ownership-demo">
+    <div class="node-address"><UiIcon name="text" size={18}/><code>TextNode #0042</code><span>SAME NODE</span></div>
+    <div class="owned-word"><span class="original-word lab-animated">Hello, world.</span><span class="changed-word lab-animated">H<em>01</em>lo, w<em>10</em>ld.</span></div>
+    <div class="ownership-ledger"><span>ORIGINAL</span><code>"Hello, world."</code><span>LAST WRITE</span><code>"H01lo, w10ld."</code></div>
+    <div class="ownership-phases"><span class="phase-original lab-animated">01 / REMEMBER</span><span class="phase-edit lab-animated">02 / OWN THE EDIT</span><span class="phase-restore lab-animated">03 / RECALL</span></div>
+    <div class="ownership-progress"><i class="lab-animated"></i></div>
+  </div>
+  <div class="lab-key"><UiIcon name="check" size={17}/> Your app’s newer edits always win.</div>
 </figure>}
+<style>
+.lab-diagram{padding:22px;position:relative;overflow:hidden}.lab-diagram .map-heading{margin-bottom:16px;font-size:9px;letter-spacing:.06em}.lab-index{font:11px var(--mono);color:var(--accent-text,var(--accent));border:1px solid var(--line);padding:5px}.lab-art{display:block;width:100%;height:auto;overflow:visible}.lab-surface{fill:var(--surface);stroke:var(--line)}.lab-line{fill:none;stroke:var(--line);stroke-width:1.5}.lab-word{font:600 24px var(--mono);fill:var(--ink);letter-spacing:-1px}.lab-tiny{font:9px var(--mono);fill:var(--faint)}.lab-label{font:600 10px var(--mono);fill:var(--ink);letter-spacing:.5px}.lab-button{fill:color-mix(in srgb,#f4457a 14%,var(--surface));stroke:#f4457a}.lab-core{fill:color-mix(in srgb,#63bfc8 12%,var(--surface));stroke:#63bfc8}.lab-corners{fill:none;stroke:#63bfc8;stroke-width:2}.lab-scan{fill:#63bfc819;stroke:#63bfc8;stroke-width:1;animation:lab-scan 5s ease-in-out infinite}.lab-packet{fill:none;stroke:#63bfc8;stroke-width:3;stroke-linecap:round;stroke-dasharray:12 200;animation:lab-packet 2.5s linear infinite}.output-packet{stroke:#b1a1e8;animation-delay:-1.25s}.lab-key{display:flex;align-items:center;justify-content:center;gap:9px;border-top:1px solid var(--line);padding-top:15px;margin-top:16px;font:9px/1.7 var(--mono);color:var(--muted)}.lab-key span{display:flex;align-items:center;gap:6px}.lab-key .ui-icon{color:var(--accent-text,var(--accent))}.lab-key.map-exchange{justify-content:space-between}.signal-dot{width:6px;height:6px;background:#63bfc8;border-radius:50%}
+.frame-machine{position:relative;aspect-ratio:360/270}.frame-circuit{position:absolute;inset:0;width:100%;height:100%}.frame-tracer{fill:none;stroke:#f4457a;stroke-width:3;stroke-dasharray:9 91;animation:frame-trace 6s linear infinite}.frame-heart{position:absolute;inset:30% 15%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px}.frame-heart b{font:500 42px/1 var(--mono);letter-spacing:-3px;color:var(--ink)}.frame-heart span{font:9px var(--mono);color:var(--muted);letter-spacing:.07em}.frame-heart code{font:8px var(--mono);color:var(--faint)}.frame-steps{list-style:none;padding:0;margin:0}.frame-step{position:absolute;width:40%;padding:10px;background:var(--surface);border:1px solid var(--line);border-radius:4px;display:grid;grid-template-columns:auto 1fr;column-gap:8px;animation:frame-step 6s steps(1) infinite}.frame-step small{grid-row:1/3;font:10px var(--mono);color:#63bfc8}.frame-step strong{font:9px var(--mono);letter-spacing:.03em}.frame-step span{font:9px/1.6 var(--mono);color:var(--muted)}.step-0{top:0;left:0}.step-1{top:0;right:0;animation-delay:-4.5s}.step-2{bottom:0;right:0;animation-delay:-3s}.step-3{bottom:0;left:0;animation-delay:-1.5s}
+.ownership-demo{background:var(--surface);border:1px solid var(--line);border-radius:5px;overflow:hidden}.node-address{display:flex;align-items:center;gap:8px;padding:12px;border-bottom:1px solid var(--line);font:9px var(--mono);color:var(--muted)}.node-address>span{margin-left:auto;font-size:8px;color:var(--accent-text,var(--accent))}.owned-word{position:relative;height:112px;display:grid;place-items:center}.owned-word>span{position:absolute;font:500 clamp(18px,2vw,27px) var(--mono);letter-spacing:-1px;color:var(--ink)}.owned-word em{font-style:normal;color:var(--accent-text,var(--accent));animation:none!important}.original-word{animation:original-word 6s steps(1) infinite}.changed-word{animation:changed-word 6s steps(1) infinite;opacity:0}.ownership-ledger{margin:0 16px 20px;display:grid;grid-template-columns:auto 1fr;gap:9px 16px;font:9px var(--mono)}.ownership-ledger>span{color:var(--faint);font-size:8px}.ownership-ledger code{color:var(--muted)}.ownership-phases{padding:12px 16px;display:flex;justify-content:space-between;gap:8px;border-top:1px solid var(--line);font:8px var(--mono);color:var(--faint)}.ownership-phases>span{animation:phase 6s steps(1) infinite}.phase-edit{animation-delay:-4s!important}.phase-restore{animation-delay:-2s!important}.ownership-progress{height:3px;background:var(--line)}.ownership-progress i{display:block;width:100%;height:100%;background:#63bfc8;transform-origin:left;animation:ledger-progress 6s linear infinite}
+.lab-animated{animation-play-state:paused!important}.lab-diagram[data-motion="true"] .lab-animated{animation-play-state:running!important}
+@keyframes lab-scan{0%,15%,100%{transform:translateX(0);opacity:.8}40%,65%{transform:translateX(218px) scaleX(.65);opacity:1}85%{opacity:.25}}
+@keyframes lab-packet{to{stroke-dashoffset:-212}}
+@keyframes frame-trace{to{stroke-dashoffset:-100}}
+@keyframes frame-step{0%,24%{border-color:#63bfc8;box-shadow:0 3px 0 #63bfc8}25%,100%{border-color:var(--line);box-shadow:none}}
+@keyframes original-word{0%,66%,100%{opacity:1}33%{opacity:0}}
+@keyframes changed-word{0%,66%,100%{opacity:0}33%{opacity:1}}
+@keyframes phase{0%,32%{color:var(--ink)}33%,100%{color:var(--faint)}}
+@keyframes ledger-progress{0%{transform:scaleX(0)}100%{transform:scaleX(1)}}
+@media(max-width:760px){.owned-word>span{font-size:25px}.lab-diagram{padding:18px}.lab-key{font-size:8px}}
+@media(prefers-reduced-motion:reduce){.lab-animated{animation:none!important}.changed-word{opacity:0}.original-word{opacity:1}.ownership-progress i{transform:scaleX(1)}}
+</style>
