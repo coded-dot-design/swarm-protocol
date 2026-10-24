@@ -1,0 +1,12 @@
+---
+import { Code } from 'astro:components';
+import UiIcon from './UiIcon.astro';
+import { codeThemes } from '../code-themes';
+const { game } = Astro.props;
+const source = game.importLine + '\n\n' + game.code;
+---
+<div class="code-example" data-virus-ignore data-swarm-ignore>
+  <div class="code-heading"><span class="code-file"><UiIcon name="code" size={18}/>{game.id}.js</span><span class="code-language">JS / ESM</span><button data-copy aria-label={`Copy ${game.name} integration code`}><UiIcon name="copy" class="copy-icon" size={17}/><UiIcon name="check" class="copied-icon" size={17}/><span data-copy-label aria-live="polite">Copy code</span></button></div>
+  <Code code={source} lang="javascript" themes={codeThemes} defaultColor={false} wrap={false} />
+  <div class="code-foot"><span class="led"></span> Choose your elements. Start playing.</div>
+</div>

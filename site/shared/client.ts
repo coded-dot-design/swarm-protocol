@@ -20,7 +20,7 @@ function applyTheme(preference: string) {
     .querySelector('meta[name="theme-color"]')
     ?.setAttribute(
       "content",
-      html.dataset.theme === "dark" ? "#101212" : "#f5f6f2",
+      html.dataset.theme === "dark" ? "#100a1b" : "#f6f7f8",
     );
   themeButtons.forEach((button) =>
     button.setAttribute(
@@ -94,10 +94,7 @@ for (const button of document.querySelectorAll<HTMLButtonElement>(
     const load = registry[key as keyof typeof registry];
     if (!load) return;
     nameLabel.textContent =
-      button.textContent
-        ?.replace("▶", "")
-        .replace(/^\s*Play /, "")
-        .trim() || id;
+      button.textContent?.replace(/^\s*Play /, "").trim() || id;
     if (version) nameLabel.textContent += ` ${version}`;
     stateLabel.textContent = "loading";
     pause.disabled = true;
@@ -176,9 +173,99 @@ for (const button of document.querySelectorAll<HTMLButtonElement>(
       button.closest(".code-example")?.querySelector("code")?.textContent || "";
     try {
       await navigator.clipboard.writeText(code);
-      button.textContent = "Copied";
-      setTimeout(() => (button.textContent = "Copy code"), 2000);
+      const label = button.querySelector("[data-copy-label]");
+      if (label) label.textContent = "Copied";
+      button.classList.add("is-copied");
+      setTimeout(() => {
+        if (label) label.textContent = "Copy code";
+        button.classList.remove("is-copied");
+      }, 2000);
     } catch {
       announce("Clipboard unavailable. Select the code to copy it.");
     }
   });
+
+// Expand navigation without squeezing the brand or hiding links on small screens.
+const header = document.querySelector<HTMLElement>(".site-header")!;
+const menu = document.querySelector<HTMLButtonElement>(".menu-toggle")!;
+const mobile = matchMedia("(max-width: 760px)");
+function closeMenu(restoreFocus = false) {
+  header.dataset.menuOpen = "false";
+  menu.setAttribute("aria-expanded", "false");
+  menu.setAttribute("aria-label", "Open menu");
+  if (restoreFocus) menu.focus();
+}
+header.dataset.navReady = "true";
+closeMenu();
+menu.addEventListener("click", () => {
+  const open = menu.getAttribute("aria-expanded") !== "true";
+  header.dataset.menuOpen = String(open);
+  menu.setAttribute("aria-expanded", String(open));
+  menu.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+});
+header
+  .querySelectorAll("nav a")
+  .forEach((link) => link.addEventListener("click", () => closeMenu()));
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && header.dataset.menuOpen === "true")
+    closeMenu(true);
+});
+document.addEventListener("pointerdown", (event) => {
+  if (mobile.matches && !header.contains(event.target as Node)) closeMenu();
+});
+mobile.addEventListener("change", () => closeMenu());
+
+// CSS owns the motion. Observe visibility once per illustration to avoid offscreen work.
+const diagrams = document.querySelectorAll<HTMLElement>(
+  ".system-map,.tick-map,.ownership-map",
+);
+const visibleDiagrams = new Set<Element>();
+function syncDiagramMotion() {
+  diagrams.forEach(
+    (diagram) =>
+      (diagram.dataset.motion = String(
+        !document.hidden &&
+          diagram.dataset.paused !== "true" &&
+          visibleDiagrams.has(diagram),
+      )),
+  );
+}
+if ("IntersectionObserver" in window) {
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) =>
+        entry.isIntersecting
+          ? visibleDiagrams.add(entry.target)
+          : visibleDiagrams.delete(entry.target),
+      );
+      syncDiagramMotion();
+    },
+    { threshold: 0.1 },
+  );
+  diagrams.forEach((diagram) => observer.observe(diagram));
+  document.addEventListener("visibilitychange", syncDiagramMotion);
+  window.addEventListener("pagehide", () => {
+    observer.disconnect();
+    visibleDiagrams.clear();
+    syncDiagramMotion();
+  });
+  window.addEventListener("pageshow", () =>
+    diagrams.forEach((diagram) => observer.observe(diagram)),
+  );
+  diagrams.forEach((diagram) =>
+    diagram
+      .querySelector<HTMLButtonElement>("[data-motion-toggle]")
+      ?.addEventListener("click", (event) => {
+        const button = event.currentTarget as HTMLButtonElement;
+        const paused = diagram.dataset.paused !== "true";
+        diagram.dataset.paused = String(paused);
+        button.setAttribute("aria-pressed", String(paused));
+        button.setAttribute(
+          "aria-label",
+          paused ? "Resume diagram animation" : "Pause diagram animation",
+        );
+        button.title = paused ? "Resume animation" : "Pause animation";
+        syncDiagramMotion();
+      }),
+  );
+}

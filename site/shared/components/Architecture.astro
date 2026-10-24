@@ -1,16 +1,33 @@
 ---
+import UiIcon from './UiIcon.astro';
+import MotionToggle from './MotionToggle.astro';
+import Character from './AbstractIcon.astro';
 const { mode = 'board' } = Astro.props;
+const steps = [
+  { icon: 'target', title: 'Measure', note: 'Refresh geometry only when due.', color: 'teal' },
+  { icon: 'chip', title: 'Simulate', note: 'Move, collide, score. Keep counts bounded.', color: 'pink' },
+  { icon: 'layers', title: 'Render', note: 'Reuse sprites. Update owned SVG and canvas.', color: 'violet' },
+  { icon: 'play', title: 'Continue', note: 'Schedule the next frame only while playing.', color: 'mint' },
+];
 ---
-{mode === 'board' ? <div class="architecture" role="img" aria-label="The host document supplies headings, paragraphs and buttons. A board adapter reads geometry and performs controlled mutations. A Shadow DOM host contains one canvas and the controls. Recall restores game-owned changes.">
-  <div class="diagram-label">HOST DOCUMENT <span>YOUR EXISTING PAGE</span></div>
-  <div class="dom-elements"><span>&lt;h1&gt;<b>letters → targets</b></span><span>&lt;p&gt;<b>copy → terrain</b></span><span>&lt;button&gt;<b>controls → factories</b></span></div>
-  <div class="connection"><span>Range geometry ↓</span><span>↑ owned mutations</span></div>
-  <div class="adapter"><span class="led"></span><b>BOARD ADAPTER</b><span>selectors · geometry cache · collision grid · mutation ledger</span></div>
-  <div class="connection"><span>simulation state ↓</span><span>↑ Recall / cleanup</span></div>
-  <div class="shadow-box"><div class="diagram-label">SHADOW ROOT <span>STYLE BOUNDARY</span></div><div class="shadow-contents"><b>Canvas / characters + effects</b><b>HUD / score + controls</b></div></div>
-  <div class="diagram-caption">Encapsulated presentation. Explicit access to the host document.</div>
-</div> : <div class="frame-diagram" role="img" aria-label="One requestAnimationFrame updates the board geometry when due, advances simulation, recycles entities and draws one canvas, then schedules the next frame only while running.">
-  <div class="diagram-label">ONE TICK <span>requestAnimationFrame</span></div>
-  <ol><li><i>01</i><div><b>Measure when due</b><span>Read cached page geometry; avoid per-projectile layout.</span></div></li><li><i>02</i><div><b>Advance the simulation</b><span>Move, collide, score. Keep entity counts bounded.</span></div></li><li><i>03</i><div><b>Recycle + render</b><span>Reuse storage. Draw characters and feedback on canvas.</span></div></li><li><i>04</i><div><b>Schedule only if playing</b><span>Pause, Recall and teardown end the active loop.</span></div></li></ol>
-  <div class="diagram-caption">Time-based motion. No timer attached to every alien.</div>
-</div>}
+{mode === 'board' ? <figure class="system-map" aria-label="The board adapter reads real page geometry and writes only owned mutations. It drives DOM-attached SVG and elements, plus a canvas and HUD. Recall restores owned changes.">
+  <figcaption class="map-heading"><UiIcon name="browser"/><span>THE PAGE, IN PLAY</span><span class="map-badge">LIVE DOM</span><MotionToggle/></figcaption>
+  <div class="map-document">
+    <div class="map-document-title"><span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span><code>your-page.html</code></div>
+    <div class="map-elements"><div><b>Aa</b><span>Headings</span></div><div><svg viewBox="0 0 48 28" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M4 5h40M4 14h31M4 23h36"/></svg><span>Real text</span></div><div><UiIcon name="cursor" size={30}/><span>Buttons</span></div></div>
+  </div>
+  <div class="map-exchange"><span><UiIcon name="arrow-down" size={18}/> Read geometry</span><span>Owned mutations <UiIcon name="arrow-up" size={18}/></span></div>
+  <div class="map-adapter"><span class="map-chip"><UiIcon name="chip" size={30}/></span><div><small>THE TRANSLATION LAYER</small><strong>Board adapter</strong></div><div class="map-capabilities"><span>Geometry cache</span><span>Collisions</span><span>Ownership ledger</span></div></div>
+  <svg class="map-branches" viewBox="0 0 400 36" fill="none" aria-hidden="true"><path d="M200 0v14H90v21m110-21h110v21M84 28l6 7 6-7m208 0 6 7 6-7" stroke="currentColor" stroke-width="1.5"/></svg>
+  <div class="map-outputs"><div class="map-output native-output"><div class="output-preview"><span class="mini-element">Button <Character kind="bug" size={25}/></span><Character kind="runner" size={34}/></div><strong>Inside your DOM</strong><span>SVG + attached elements</span><small>Scrolls with the page</small></div><div class="map-output canvas-output"><div class="output-preview mini-canvas"><Character kind="ship" size={43}/><span class="mini-score">0100</span></div><strong>Canvas + HUD</strong><span>Cached pixels + controls</span><small>Isolated UI styles</small></div></div>
+  <div class="map-recall"><UiIcon name="recall" size={19}/><span><b>Recall</b> restores game-owned changes.</span></div>
+</figure> : mode === 'frame' ? <figure class="tick-map" aria-label="One animation loop measures geometry when due, advances the simulation, recycles and renders, then schedules another frame only while running.">
+  <figcaption class="map-heading"><UiIcon name="clock"/><span>EVERY FRAME HAS A JOB</span><MotionToggle/></figcaption>
+  <div class="tick-intro"><span class="tick-orbit"><UiIcon name="recall" size={62}/><b>1</b></span><div><strong>One loop.</strong><span>requestAnimationFrame</span><small>Bounded work. Time-based motion.</small></div></div>
+  <ol class="tick-stages">{steps.map((step,i)=><li class={`tick-stage signal-${step.color}`}><span class="stage-icon"><UiIcon name={step.icon} size={25}/></span><span class="stage-number">0{i+1}</span><strong>{step.title}</strong><p>{step.note}</p><UiIcon name="arrow-right" class="stage-arrow" size={18}/></li>)}</ol>
+  <div class="map-recall"><UiIcon name="pause" size={18}/><span>Pause, hidden tabs, and Recall stop the loop.</span></div>
+</figure> : <figure class="ownership-map" aria-label="Remember the original text, apply a game-owned edit, then restore it only if the page has not made a newer change.">
+  <figcaption class="map-heading"><UiIcon name="recall"/><span>LEAVE THE PAGE AS YOU FOUND IT</span><MotionToggle/></figcaption>
+  <ol><li><span class="ownership-step">01</span><div><small>REMEMBER THE ORIGINAL</small><strong>Hello, world.</strong><span>The real text node stays in place.</span></div></li><li><span class="ownership-step"><UiIcon name="code"/></span><div><small>MAKE AN OWNED EDIT</small><strong>H<em>01</em>lo, w<em>10</em>ld.</strong><span>Track the last value the game wrote.</span></div></li><li><span class="ownership-step"><UiIcon name="check"/></span><div><small>RECALL & RESTORE</small><strong>Hello, world.</strong><span>Restore only when that value still matches.</span></div></li></ol>
+  <div class="map-recall"><UiIcon name="check" size={18}/><span>Your app’s newer edits always win.</span></div>
+</figure>}
