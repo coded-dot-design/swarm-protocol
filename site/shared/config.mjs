@@ -11,7 +11,7 @@ export default defineConfig({
   root: root + "/",
   srcDir: resolve(root, "site/src") + "/",
   outDir: resolve(root, "artifacts/site") + "/",
-  publicDir: resolve(root, "site/public") + "/",
+  publicDir: resolve(root, "site/generated/public") + "/",
   devToolbar: { enabled: false },
   site: "https://coded-dot-design.github.io",
   base: process.env.SITE_BASE ?? `/${id}`,

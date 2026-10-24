@@ -28,3 +28,18 @@ assert(html.includes("Chris Cooley"), "Creator credit missing.");
 console.log(
   `Verified ${id}: rendered page, launcher script, CSS and ${assets.length} asset paths.`,
 );
+
+const data = JSON.parse(readFileSync("site/generated/data.json", "utf8"));
+for (const game of data.games)
+  for (const archive of game.archives || []) {
+    assert(
+      existsSync(resolve(output, archive.path)),
+      `Missing archive: ${archive.path}`,
+    );
+    const manifest = JSON.parse(
+      readFileSync(resolve(output, archive.path, "../release.json"), "utf8"),
+    );
+    assert.equal(manifest.commit, archive.commit);
+    assert.equal(manifest.version, archive.version);
+  }
+console.log("Archived release entrypoints and commit manifests verified.");

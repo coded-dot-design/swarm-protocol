@@ -7,7 +7,7 @@ const kb=(n)=> (n/1000).toFixed(1);
 <section id={game.id} class:list={['game-section', `accent-${game.accent}`]} aria-labelledby={`${game.id}-title`}>
   <div class="section-heading"><span class="eyebrow"><span class="index">0{index+1}</span> {game.kind}</span><span class="version">v{game.version} / MIT</span></div>
   <div class="game-intro">
-    <div><h2 id={`${game.id}-title`}>{game.name}<span>{game.tagline}</span></h2><p class="lead">{game.description}</p><div class="actions" data-virus-ignore data-swarm-ignore><button class="button primary" data-launch={game.id}><span>▶</span> Play {game.name}</button><a class="button quiet" href={`${repo}#readme`}>Read the source <span>↗</span></a></div><p class="credit">Created by <span>Chris Cooley</span> · coded.design</p></div>
+    <div><h2 id={`${game.id}-title`}>{game.name}<span>{game.tagline}</span></h2><p class="lead">{game.description}</p><div class="actions" data-virus-ignore data-swarm-ignore><button class="button primary" data-launch={game.id}><span>▶</span> Play {game.name}</button><a class="button quiet" href={`${repo}#readme`}>Read the source <span>↗</span></a></div>{game.archives?.length > 0 && <div class="release-picker" data-virus-ignore data-swarm-ignore><label for={`${game.id}-release`}>TEST A RELEASE</label><select id={`${game.id}-release`} data-release={game.id}><option value={game.id} data-version={`v${game.version}`}>Current · v{game.version}</option>{game.archives.map(release=><option value={release.key} data-version={release.version}>{release.version} · archived</option>)}</select><p>Play uses the selected build. Notes below describe the current release.</p></div>}<p class="credit">Created by <span>Chris Cooley</span> · coded.design</p></div>
     <div class="game-display" aria-label={`${game.name} gameplay illustration`}>
       <div class="display-top"><span class="led"></span> {game.kind}<span class="display-note">DOM / ACTIVE SURFACE</span></div>
       <div class="arena-copy"><span class="arena-line">THE PAGE IS</span><span class="arena-line">THE PLAYFIELD<span class="blinking-dot">.</span></span></div>
@@ -17,6 +17,7 @@ const kb=(n)=> (n/1000).toFixed(1);
       <div class="display-bottom"><span>{game.versionNote}</span><span>↖ SHOOT / EAT / DEFEND</span></div>
     </div>
   </div>
+  {game.id === "sherman-bytes" && <aside data-sherman-wall>HARD COVER / Drive around this bunker. Shells stop here.</aside>}
   <div class="game-facts"><div><b>{kb(game.metrics.gzip)}<small> kB</small></b><span>gzip · {game.id === 'swarm-protocol' ? 'full immediate path' : 'complete game + engine'}</span></div>{game.facts.map(f=><div><b>{f.value}</b><span>{f.label}</span></div>)}</div>
   <div class="game-bottom">
     <div class="game-loop"><div class="eyebrow">THE LOOP</div><ol>{game.loop.map((step,i)=><li><span>0{i+1}</span>{step}</li>)}</ol><div class="controls" data-virus-ignore data-swarm-ignore><h3>Know your controls.</h3>{game.controls.map(control=><p>{control}</p>)}</div></div>
