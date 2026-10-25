@@ -1,5 +1,7 @@
 # Swarm Protocol
 
+> **Play it and read about it on DOM Virus:** https://coded-dot-design.github.io/dom-virus/games/swarm-protocol/ — this README holds the full technical details.
+
 ## Play and develop the Astro site
 
 Product page: https://coded-dot-design.github.io/swarm-protocol/ (available after Pages is enabled and the deployment succeeds). Created by **Chris Cooley / coded.design**.
