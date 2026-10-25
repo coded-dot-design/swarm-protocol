@@ -215,6 +215,18 @@ document.addEventListener("pointerdown", (event) => {
 });
 mobile.addEventListener("change", () => closeMenu());
 
+// Touch devices: the page is a game board, so no pinch/double-tap zoom and no text selection
+// or copy callouts (CSS handles touch-action and selection; Safari also needs its gesture events).
+if (matchMedia("(pointer: coarse)").matches) {
+  const block = (event: Event) => event.cancelable && event.preventDefault();
+  document.addEventListener("gesturestart", block, { passive: false });
+  document.addEventListener("gesturechange", block, { passive: false });
+  document.addEventListener(
+    "touchmove",
+    (event) => (event as TouchEvent).touches.length > 1 && block(event),
+    { passive: false },
+  );
+}
 // Hero mini-game: the CSS loop runs for everyone; the first tap or drag on the card loads a
 // tiny contained game (only then). Reduced-motion visitors keep the still poster.
 const hero = document.querySelector<HTMLElement>(".hero-crossover");

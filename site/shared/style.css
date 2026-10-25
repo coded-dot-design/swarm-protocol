@@ -3249,3 +3249,25 @@ html[data-theme="light"] :is(.engineering,.embed-section){background:transparent
     height: 26px;
   }
 }
+
+/* Touch devices: the demo page is a game board. No pinch or double-tap zoom, no text selection,
+   no long-press copy/lookup callouts. Form fields stay editable; code has Copy buttons. */
+@media (pointer: coarse) {
+  html {
+    touch-action: pan-x pan-y;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  body,
+  body * {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body :is(input, textarea, select, [contenteditable]:not([contenteditable="false"])) {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+  }
+}
