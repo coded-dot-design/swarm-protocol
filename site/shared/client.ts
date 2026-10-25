@@ -227,6 +227,80 @@ if (matchMedia("(pointer: coarse)").matches) {
     { passive: false },
   );
 }
+// Cartridge shelf: cartridges pop up as the shelf scrolls in. Picking one lifts it out,
+// plugs it into the console, boots the screen, then navigates; the browser's View Transition
+// morphs the console screen into the game page's display.
+const shelf = document.querySelector<HTMLElement>("[data-shelf]");
+const consoleEl = document.querySelector<HTMLElement>("[data-console]");
+if (shelf && "IntersectionObserver" in window) {
+  shelf.dataset.pop = "wait";
+  const io = new IntersectionObserver(
+    (entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        shelf.dataset.pop = "in";
+        io.disconnect();
+      }
+    },
+    { threshold: 0.15 },
+  );
+  io.observe(shelf);
+}
+shelf?.addEventListener("click", (event) => {
+  const cart = (event.target as Element).closest<HTMLAnchorElement>("a.cartridge");
+  const mouse = event as MouseEvent;
+  if (!cart || !consoleEl || mouse.metaKey || mouse.ctrlKey || mouse.shiftKey || mouse.button) return;
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches || shelf.dataset.plugging) return;
+  event.preventDefault();
+  shelf.dataset.plugging = cart.dataset.cart!;
+  cart.classList.add("plugging");
+  const slot = consoleEl.querySelector<HTMLElement>(".console-slot")!,
+    screen = consoleEl.querySelector<HTMLElement>("[data-console-screen]")!;
+  // Bring the console on screen first (phones), then fly.
+  const below = consoleEl.getBoundingClientRect().bottom > innerHeight;
+  if (below) consoleEl.scrollIntoView({ block: "end", behavior: "smooth" });
+  setTimeout(() => plug(cart, slot, screen), below ? 380 : 0);
+});
+function plug(cart: HTMLAnchorElement, slot: HTMLElement, screen: HTMLElement) {
+  if (!consoleEl) return;
+  const c = cart.getBoundingClientRect(),
+    s = slot.getBoundingClientRect();
+  const dx = s.left + s.width / 2 - (c.left + c.width / 2),
+    dy = s.top - c.bottom + c.height * 0.42;
+  const go = () => {
+    screen.style.setProperty("view-transition-name", "game-screen");
+    location.href = cart.href;
+  };
+  const flight = cart.animate(
+    [
+      { transform: "none" },
+      { transform: "translateY(-28px) scale(1.06) rotate(-3deg)", offset: 0.22 },
+      { transform: `translate(${dx}px, ${dy - c.height * 0.5}px) scale(1.02)`, offset: 0.72 },
+      { transform: `translate(${dx}px, ${dy}px) scale(1)` },
+    ],
+    { duration: 760, easing: "cubic-bezier(.3,.7,.3,1)", fill: "forwards" },
+  );
+  flight.onfinish = () => {
+    consoleEl.classList.add("booting");
+    consoleEl.querySelector(".console-name")!.textContent =
+      cart.querySelector("strong")?.textContent ?? "";
+    consoleEl.style.setProperty(
+      "--boot",
+      getComputedStyle(cart).getPropertyValue("--accent") || "#f4457a",
+    );
+    setTimeout(go, 420);
+  };
+}
+// Back/forward from the game page restores the shelf to its resting state.
+addEventListener("pageshow", () => {
+  if (!shelf) return;
+  delete shelf.dataset.plugging;
+  shelf.querySelectorAll(".cartridge").forEach((n) => {
+    n.classList.remove("plugging");
+    n.getAnimations().forEach((a) => a.cancel());
+  });
+  consoleEl?.classList.remove("booting");
+  consoleEl?.querySelector<HTMLElement>("[data-console-screen]")?.style.removeProperty("view-transition-name");
+});
 // Hero mini-game: the CSS loop runs for everyone; the first tap or drag on the card loads a
 // tiny contained game (only then). Reduced-motion visitors keep the still poster.
 const hero = document.querySelector<HTMLElement>(".hero-crossover");
