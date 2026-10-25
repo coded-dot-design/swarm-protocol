@@ -215,6 +215,20 @@ document.addEventListener("pointerdown", (event) => {
 });
 mobile.addEventListener("change", () => closeMenu());
 
+// Hero mini-game: the CSS loop runs for everyone; the first tap or drag on the card loads a
+// tiny contained game (only then). Reduced-motion visitors keep the still poster.
+const hero = document.querySelector<HTMLElement>(".hero-crossover");
+hero?.querySelector(".promo-stage")?.addEventListener(
+  "pointerdown",
+  (event) => {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches || hero.dataset.play) return;
+    hero.dataset.play = "loading";
+    void import("./hero-game").then(({ startHeroGame }) => {
+      delete hero.dataset.play;
+      startHeroGame(hero, event as PointerEvent);
+    });
+  },
+);
 // CSS owns the motion. Observe visibility once per illustration to avoid offscreen work.
 const diagrams = document.querySelectorAll<HTMLElement>(
   ".system-map,.tick-map,.ownership-map,.hero-crossover",

@@ -75,7 +75,19 @@ const tankAim = aimFrames('hx-turret-aim', tankKills, 0); // barrel faces right
 const shake = `@keyframes hx-shake{0%,100%{transform:none}${kills
   .map((k) => `${pct(k.hit)}{transform:none}${pct(k.hit + 0.03)}{transform:translate(-5px,3px) rotate(-.5deg)}${pct(k.hit + 0.06)}{transform:translate(4px,-3px) rotate(.4deg)}${pct(k.hit + 0.1)}{transform:none}`)
   .join('')}}`;
-const css = [planeAim.css, tankAim.css, recoilFrames('hx-plane-kick', planeKills, 'Y'), recoilFrames('hx-turret-kick', tankKills, 'X'), shake].join('');
+// Play mode (hero-game.ts): JS drives the shooters; the CSS loop layer steps aside.
+const playCss = `.hero-crossover[data-play="true"] :is(.foe-css,.shot,.boom){display:none}
+.hero-crossover[data-play="true"] :is(.promo-stage,.plane-in,.tank-in,.plane-aim,.plane-kick,.turret-aim,.turret-kick,.tank-rumble){animation:none!important}
+.hero-crossover[data-play="true"] .promo-stage{touch-action:pan-y;cursor:crosshair;user-select:none;-webkit-user-select:none}
+.hero-crossover .promo-stage{cursor:pointer}
+.hx-shot{stroke-width:5;stroke-linecap:square}
+.hero-crossover.hx-alarm{animation:hx-alarm .5s steps(2) infinite}
+.hero-crossover.hx-alarm .promo-status{color:#f4457a;font-weight:700}
+@keyframes hx-alarm{50%{box-shadow:0 0 0 3px #f4457a,0 0 40px #f4457a88}}
+.hero-crossover.hx-nuke .promo-stage::after{content:"";position:absolute;inset:0;z-index:5;pointer-events:none;background:#fff4ff;animation:hx-nuke 1.4s ease-out forwards}
+@keyframes hx-nuke{0%{opacity:0}8%{opacity:.95}100%{opacity:0}}
+@media(prefers-reduced-motion:reduce){.hero-crossover.hx-alarm,.hero-crossover.hx-nuke .promo-stage::after{animation:none}}`;
+const css = [playCss, planeAim.css, tankAim.css, recoilFrames('hx-plane-kick', planeKills, 'Y'), recoilFrames('hx-turret-kick', tankKills, 'X'), shake].join('');
 // Ten pixel shards per blast.
 const shards = Array.from({ length: 10 }, (_, i) => {
   const a = (i / 10) * Math.PI * 2 + (i % 2) * 0.3, d = 48 + (i % 3) * 16;
@@ -92,12 +104,12 @@ const loopDelay = (t) => `animation-delay:${(INTRO + t).toFixed(2)}s`;
       {foes.map((f) => {
         const k = kills.find((k) => k.foe === f.id);
         return (
-          <g transform={`translate(${f.x} ${f.y})`}>
+          <g transform={`translate(${f.x} ${f.y})`} class="foe-css" data-size={f.size} data-color={f.color || '#06c4ff'}>
             <circle class="promo-motion spawn-ring" r={f.size * 0.45} stroke={f.color || '#06c4ff'} stroke-width="3" style={`animation-delay:${f.spawn}s`}/>
             <g class="promo-motion spawn" style={`animation-delay:${f.spawn}s`}>
               <g class={k ? 'promo-motion die' : undefined} style={k ? loopDelay(k.hit) : undefined}>
                 <g class={f.idle ? `promo-motion idle-${f.idle}` : undefined}>
-                  <g transform={`translate(${-f.size / 2} ${-f.size / 2})`}>
+                  <g class="foe-art" transform={`translate(${-f.size / 2} ${-f.size / 2})`}>
                     {f.art === 'skull' ? (
                       <svg class="promo-character foe-skull" width={f.size} height={f.size} viewBox="0 0 64 64" shape-rendering="crispEdges"><path fill-rule="evenodd" d={SKULL} fill={f.color}/></svg>
                     ) : f.art === 'alien' || f.art === 'bug' ? (
@@ -161,7 +173,7 @@ const loopDelay = (t) => `animation-delay:${(INTRO + t).toFixed(2)}s`;
         </g>
       ))}
     </svg>
-    <div class="promo-status"><span class="led"></span> SAME PAGE. DIFFERENT RULES.</div>
+    <div class="promo-status"><span class="led"></span> SAME PAGE. DIFFERENT RULES. TAP TO PLAY</div>
   </div>
 </div>
 <style is:inline set:html={css}></style>
