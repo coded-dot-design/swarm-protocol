@@ -2,51 +2,30 @@
 
 > **Play it and read about it on DOM Virus:** https://coded-dot-design.github.io/dom-virus/games/swarm-protocol/ — this README holds the full technical details.
 
-## Play and develop the Astro site
-
-Product page: https://coded-dot-design.github.io/swarm-protocol/ (available after Pages is enabled and the deployment succeeds). Created by **Chris Cooley / coded.design**.
-
-Use Node **24** (`nvm use`), then run from this repository, where `package.json` lives:
-
-```sh
-npm ci
-npm run dev
-```
-
-Open the exact local URL Astro prints, including the `/swarm-protocol/` base path. `npm ci` uses the committed lockfile. `npm run dev:playground` keeps the original Vite regression playground available. The product site loads built game distributions; after editing game source, run `npm run build` and restart `npm run dev`.
-
-```sh
-npm run check
-npm run site:build
-npm run site:preview
-```
-
-`site:build` writes static output to `artifacts/site` and checks the launch script, styles and Pages asset paths. Pages builds run on every push to `main`; PR checks also build the product site. One-time setup: **Settings → Pages → Build and deployment → Source: GitHub Actions**. No custom domain or paid hosting is required for this public repository. If the deploy job ran before enabling Pages, rerun that failed job afterward.
-
-The page defaults to your system color scheme, with persistent light/dark overrides. Game launches are explicit and lazy-loaded. Recall destroys the active controller and restores eligible game-owned edits. Menu controls, code examples and the launcher are excluded from game targets.
-
-
-
 A hidden, opt-in game that runs across a real webpage. Little agents eat selected letters into `0` and `1`, grow stronger, and hunt marked buttons. Squash them before the buttons lose their color.
 
 Install the versioned npm package or use the **self-hosted drop-in ZIP**. Both serve the built game with your own website assets. Visitors do not load the game from GitHub, npm, or a separate game server.
 
-**v1.1.0** adds points-funded **Jump / Jump + Zap** to offscreen attack alerts. Bugs arrive in your viewport near the pointer; small bugs stay near local food and buttons, while grown hunters keep their mission and bite letters in their path. Scrolling can outrun the swarm. Mobile keeps its steady CSS fill and lighter effects; desktop retains its hover boil. Activation remains **↑ ↑ ↓ ↓ ← → ← → B A Enter**.
+Bugs arrive in your viewport near the pointer; small bugs stay near local food and buttons, while grown hunters keep their mission and bite letters in their path. Scrolling can outrun the swarm. Mobile keeps a steady CSS fill and lighter effects; desktop keeps its hover boil. Activation is **↑ ↑ ↓ ↓ ← → ← → B A Enter**. Created by **Chris Cooley / coded.design**.
+
+## Where the game lives
+
+This repository is the game package and the self-hosted drop-in. The game page lives on the DOM Virus hub at https://coded-dot-design.github.io/dom-virus/games/swarm-protocol/. This repository's Pages workflow only publishes a redirect to that page; there is no per-game site to build. The hub reads `site/game.json` (page copy) from here and builds the tagged package.
 
 ## Local playground
 
-Test on a standalone fictional webpage before updating your company site. From this repository, with Node 22.12+ (or Node 24):
+Test on a standalone fictional webpage before updating your own site. From this repository, with Node 24 (see `.nvmrc`):
 
 ```bash
 npm ci
-npm run dev
+npm run dev:playground
 ```
 
 Open **http://127.0.0.1:5173**. Start, pause, and reset the real game; test distant attacks, letters only, nested scrolling, system light/dark mode, and ordinary page interactions. Source edits reload directly. The playground and Vite are development-only and are excluded from the game package and drop-in ZIP. See **[playground setup and testing](playground/README.md)** for phone testing, updates, build preview, and adding future games.
 
 ## Install the drop-in ZIP in Astro
 
-Download `swarm-protocol-drop-in-1.1.0.zip` from the `v1.1.0` release, then extract it. Choose the built drop-in asset; GitHub's automatically generated source archives contain the development project.
+Download `swarm-protocol-drop-in-1.2.3.zip` from the `v1.2.3` release, then extract it. v1.2.3 is the newest version with published release assets; later versions are tags only for now. Choose the built drop-in asset; GitHub's automatically generated source archives contain the development project.
 
 1. Copy `public/swarm-protocol/` into your Astro project's `public/` folder.
 2. Copy `components/SwarmDropIn.astro` into your project's `src/components/` folder.
@@ -76,7 +55,7 @@ Mark your existing elements:
 </footer>
 ```
 
-Keep the CTA's current URL and handlers. Select static presentation text and lead-opening buttons outside forms/dialogs. You can configure exact CSS selectors instead of adding attributes; edit `public/swarm-protocol/1.1.0/install.js`.
+Keep the CTA's current URL and handlers. Select static presentation text and lead-opening buttons outside forms/dialogs. You can configure exact CSS selectors instead of adding attributes; edit `public/swarm-protocol/1.2.3/install.js`.
 
 Run your site's usual `npm run dev`, or `npm run build` followed by `npm run preview`. No commit, deployment, package install, or React integration is needed for this test.
 
@@ -105,19 +84,19 @@ Kill scores keep the exact color of the squashed bug in both system themes. A da
 For an integration managed by your site's build, install the versioned npm package asset:
 
 ```sh
-npm install https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.1.0/chriscooley-swarm-protocol-1.1.0.tgz
+npm install https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.2.3/chriscooley-swarm-protocol-1.2.3.tgz
 ```
 
 Use the included `integration/SwarmProtocol.astro` template and the deferred package entry, following [the npm/Astro guide](./docs/API.md#astro). Keep one installer and preserve existing selector/storage configuration when migrating from the drop-in. Commit the package manifest and lockfile. The game is served by your website after building; GitHub is only a package source during installation. npm registry publication is not required.
 
 ## Stay on a tested version
 
-Each published release has its own tag, ZIP, and static asset folder. A site using `/swarm-protocol/1.1.0/install.js` keeps using that version as this repository evolves.
+Each published release has its own tag, ZIP, and static asset folder. A site using `/swarm-protocol/1.2.3/install.js` keeps using that version as this repository evolves.
 
 The exact-version download pattern is:
 
 ```text
-https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.1.0/swarm-protocol-drop-in-1.1.0.zip
+https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.2.3/swarm-protocol-drop-in-1.2.3.zip
 ```
 
 That URL becomes available when the release is published. Download once and copy the files into your site; it is not a browser script URL. Avoid a `latest` download URL in automation that must stay pinned.
@@ -136,7 +115,7 @@ The release includes a separate self-contained DevTools test script. It can temp
 
 ## Develop and build a release locally
 
-To build from source, use Node 22, matching CI, and Python 3 for the standard-library ZIP builder. Neither is an extra game dependency for a site using the prebuilt drop-in. Run from this repository:
+To build from source, use Node 24 (see `.nvmrc`) and Python 3 for the standard-library ZIP builder. Neither is an extra game dependency for a site using the prebuilt drop-in. Run from this repository:
 
 ```bash
 npm ci

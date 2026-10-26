@@ -4,13 +4,13 @@ A standalone fictional webpage for testing DOM games away from a production or c
 
 ## Run
 
-Use Node **22.12 or newer** on the Node 22 line, or a newer supported Node release such as Node 24.
+Use Node **24** (see `.nvmrc`).
 
 ```bash
 git clone https://github.com/coded-dot-design/swarm-protocol.git
 cd swarm-protocol
 npm ci
-npm run dev
+npm run dev:playground
 ```
 
 Open **http://127.0.0.1:5173**. Select **Start game**. Vite reloads the page when game JavaScript changes; a reload starts with a restored page and a fresh game installation. The original keyboard sequence and mobile footer activation also work. The playground uses a separate local best-score key.
@@ -20,10 +20,10 @@ To pick up repository updates, stop the server and run:
 ```bash
 git pull
 npm ci
-npm run dev
+npm run dev:playground
 ```
 
-For a phone on the same trusted local network, run `npm run dev -- --host 0.0.0.0` and open the printed network URL on the phone. The default server only listens on your own computer.
+For a phone on the same trusted local network, run `npm run dev:playground -- --host 0.0.0.0` and open the printed network URL on the phone. The default server only listens on your own computer.
 
 ## Useful checks
 

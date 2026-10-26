@@ -46,10 +46,6 @@ state is in [HANDOFF.md](HANDOFF.md). Move items to `CHANGELOG.md` when they shi
 
 ### Docs and content cleanup
 
-- `README.md` opens with "Play and develop the Astro site" (`npm run dev`, `site:build`,
-  `site:preview`); those scripts no longer exist (use `npm run dev:playground`).
-  `playground/README.md` also says `npm run dev`.
-- `CHANGELOG.md` has no entry for 1.3.1 (the top entry is 1.3.0).
 - Shared files copied by `sync:games` have no provenance record; add an `ORIGIN.json` like the
   engine games and Battlefield.
 

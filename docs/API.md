@@ -11,14 +11,14 @@ Original game and integration code: **MIT, copyright 2026 Chris Cooley**. The em
 For an npm-managed Astro integration, install the pinned package asset from the GitHub release:
 
 ```sh
-npm install https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.1.0/chriscooley-swarm-protocol-1.1.0.tgz
+npm install https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.2.3/chriscooley-swarm-protocol-1.2.3.tgz
 ```
 
 This records the versioned URL in your package manifest and lockfile. Commit both so CI can install the same package. GitHub is contacted during dependency installation; the deployed game is bundled and served by your own website. Pushing to GitHub does not change an installed version automatically. npm registry publication is still deferred; the package name remains `@chriscooley/swarm-protocol`.
 
 See [Astro](#astro) below for the included component. When migrating from the drop-in, replace `SwarmDropIn` with `SwarmProtocol` in your shared layout, carry over selector/storage configuration, and remove the old installer include. Once no code references them, remove the old `SwarmDropIn.astro` and copied `public/swarm-protocol/` files. Preserve the existing `data-swarm-*` page attributes and CTA handlers. If upgrading from a local `file:vendor/...tgz` dependency, the URL install replaces that dependency; remove its unused vendor tarball after confirming the manifest and lockfile use the URL.
 
-The [self-hosted drop-in ZIP](./DROP-IN.md) remains available for sites that prefer copied static assets. You can also install a downloaded package file directly with `npm install ./chriscooley-swarm-protocol-1.1.0.tgz`.
+The [self-hosted drop-in ZIP](./DROP-IN.md) remains available for sites that prefer copied static assets. You can also install a downloaded package file directly with `npm install ./chriscooley-swarm-protocol-1.2.3.tgz`.
 
 To create a tarball from the source repository:
 

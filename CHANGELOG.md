@@ -1,8 +1,20 @@
 # Changelog
 
+## 1.3.1
+
+- On phones and other coarse-pointer devices, page text selection and touch callouts are off while a round runs, so tapping letters does not start a selection. Form fields and editable content stay selectable. Pausing, ending the round or Recall restores normal selection. Uses the shared DOM Virus selection lock.
+
 ## 1.3.0
 
 Adopt the shared scoreboard action icons and keep pause, sound and close accessible when minimized. Preserve existing sounds, palette, engine state and behavior.
+
+## 1.2.6
+
+- Make first bites visible: a bitten button's fill fades from its own color to mint, then amber below 75% and coral below 35% health. The HUD uses the same stages.
+
+## 1.2.5
+
+- Restore the original coral, lilac, violet, cyan and mint palette.
 
 ## 1.2.4
 
@@ -24,7 +36,8 @@ Adopt the shared scoreboard action icons and keep pause, sound and close accessi
 ## 1.2.0
 
 - Strict TypeScript runtime migration; emitted gameplay parity against 1.1.0. Native colored bit highlights preserve text layout and Recall. Abstract site previews.
-## Website update — 2026-10-23
+
+## Website update (no package release)
 
 - Add the Astro product/test page, system/light/dark themes, real game descriptions, measured package sizes, architecture diagrams, and creator attribution.
 - Add a versioned shared site kit and CI-gated GitHub Pages builds. Commit the Node 24 toolchain and lockfile.

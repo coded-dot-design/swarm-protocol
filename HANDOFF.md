@@ -121,8 +121,7 @@ into `/games/swarm-protocol/`. "TEST A RELEASE" offers `v1.0.13`.
 - Move focus away from an alert that is about to disappear; guard double activation of paid
   rescues and revalidate before charging.
 - One Swarm installation per page. Shadow DOM is UI encapsulation, not a security sandbox.
-- `README.md` still starts with the retired Astro site (`npm run dev`, `site:build`); use
-  `npm run dev:playground`. `CHANGELOG.md` has no 1.3.1 entry.
+- The local playground is `npm run dev:playground`; there is no per-game site to run.
 
 ## Keeping this file current
 
