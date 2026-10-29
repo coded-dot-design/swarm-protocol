@@ -63,12 +63,13 @@
     "playground:preview": "vite preview --config playground/vite.config.mjs",
     "build": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test tests/*.test.mjs",
-    "check": "npm run typecheck && npm run build && npm test",
+    "test": "node --expose-gc --import tsx --test --test-concurrency=1 tests/*.test.mjs",
+    "check": "npm run typecheck && npm run build && npm test && node scripts/vendor-check.mjs",
     "prepack": "npm run check",
     "size": "node scripts/size.mjs",
     "release:build": "node scripts/build-release.mjs",
-    "dev:playground": "vite --config playground/vite.config.mjs"
+    "dev:playground": "vite --config playground/vite.config.mjs",
+    "sync": "node scripts/sync.mjs"
   },
   "keywords": [
     "game",

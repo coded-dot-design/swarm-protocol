@@ -1,0 +1,128 @@
+{
+  "note": "Generated snapshot. Edit coded-dot-design/fizlet, then run node scripts/sync.mjs.",
+  "repository": "https://github.com/coded-dot-design/fizlet",
+  "version": "0.14.0",
+  "commit": "295504f571ab6a18fc87dc200bc970d632fbfa4a",
+  "files": [
+    {
+      "path": "arcade.ts",
+      "sha256": "f373e8a9973557bae64d2d6633ecb2baa240cd7a9881284b8aa077e920565cdf"
+    },
+    {
+      "path": "board-page.ts",
+      "sha256": "ed8af7e7cb8df5d1807fd9bced7eec17756eb6ba0220858b175631952a4f6489"
+    },
+    {
+      "path": "camera.ts",
+      "sha256": "6da4f75b1f2a4f7fb5956db2fb795e8dec212663965442d4820a9101b6cefedb"
+    },
+    {
+      "path": "collide.ts",
+      "sha256": "464659a2ea07c36976ac18965b872dfcc53dd9effe1e614e8d1357db52856282"
+    },
+    {
+      "path": "debug.ts",
+      "sha256": "7f5dc8adafbb0b8bedac7cf5102496144eef4926f97446098097bf7dbea1d5d2"
+    },
+    {
+      "path": "embed.ts",
+      "sha256": "9c06b988a05d31a1a2688bd1336922e3e68e14a909a80184e671746df5fefffd"
+    },
+    {
+      "path": "fx.ts",
+      "sha256": "06fc2232479bfd987e61317ff700243a28ab33f5f484d9bfba9a1e04d9667b2a"
+    },
+    {
+      "path": "grid.ts",
+      "sha256": "15f62a2b0f877acb802211a9278db280983f8e43c73eafb2e7c9706bc6b7752e"
+    },
+    {
+      "path": "hud.ts",
+      "sha256": "8ca771519d46e94d253f34fdab761d45b72d91767f00e16a40ef68e7e2ec1a5d"
+    },
+    {
+      "path": "index.ts",
+      "sha256": "ce583813a38ce1f1dd787fba1dd4077734b1e932789ed4ba2b4c3d736230899c"
+    },
+    {
+      "path": "input.ts",
+      "sha256": "71d9160d439f7e3affea22e9aeff6ab685217c7e79971e018597839524798c46"
+    },
+    {
+      "path": "kernel/engine.ts",
+      "sha256": "4b3c34195769c2dca52cb88cadf9d25869082246fe0b0b74800d7bc818766fe6"
+    },
+    {
+      "path": "kernel/index.ts",
+      "sha256": "35bd584659e5b83e9e68cc6615c25c20090f237f6b06c96d8d3c6f95e6e251e3"
+    },
+    {
+      "path": "kernel/ledger.ts",
+      "sha256": "ba7918bc2531cc0d68953e90f59dffdaefb080bdaf6ef12d902c4b813c57233e"
+    },
+    {
+      "path": "kernel/need.ts",
+      "sha256": "dd7626c7bba10daf4ae0a0aecbd929d1ff9903e6f5be0c3470e51595bb7ee740"
+    },
+    {
+      "path": "kernel/pool.ts",
+      "sha256": "d5201f9d7db9362717614a8cfb1bc519dabecbe981a0cac94740d98cf0998627"
+    },
+    {
+      "path": "kernel/random.ts",
+      "sha256": "fe38d96f0634ee0c067f6a2bea4a03417915bde70016a6928a2d383449a1c284"
+    },
+    {
+      "path": "kernel/ring.ts",
+      "sha256": "c2a2c57bf69651ab703ca88c4d2dc65f92a1f7f126caad17f2d7d43211b02449"
+    },
+    {
+      "path": "match.ts",
+      "sha256": "9f0b77706ea07144117a0e62a47e1d32bca5150f17beb289ee73d08e2c897ce6"
+    },
+    {
+      "path": "pad.ts",
+      "sha256": "f79145cd1ecfd820ba81cfa328f62129ab0ba51a94c68536e4487e52d6e6db3f"
+    },
+    {
+      "path": "perf.ts",
+      "sha256": "1c92e0aaf1689606b798cad2f9c01e71fbc0a11f69273f2c89f40e38e9e81c14"
+    },
+    {
+      "path": "presence-check.ts",
+      "sha256": "827d5e825ca69a52848bb00540fe488af1a67d239f1c3df57060f0f7e97c7e16"
+    },
+    {
+      "path": "presence.ts",
+      "sha256": "6eb036e44ccbbe4d2719939ec492618ce5c83446e4672766c041134be356d027"
+    },
+    {
+      "path": "rules.ts",
+      "sha256": "a07897ce035b0b67f96df64b7def3c500cbdd34e0b1f75b1ad2ce6017d9de960"
+    },
+    {
+      "path": "slot.ts",
+      "sha256": "129f92d7de96c7123ce61096523dac174f3dec5f13a397eacb1ba740cd653248"
+    },
+    {
+      "path": "sound.ts",
+      "sha256": "f8dd883369af276bc8f9a7fbd0596049408f3829ab517b53cf3f1816ae9ad801"
+    },
+    {
+      "path": "sprite.ts",
+      "sha256": "b669c3719eb8cae38dc7eecd5b00662d2d24bbcccbccd70b0dfe325b555a6d4a"
+    },
+    {
+      "path": "ui/board-ui.css",
+      "sha256": "7dfb4fd0972ca94b31a390d70018de50bccfef7e5f03de991ff3f78eaeefc079"
+    },
+    {
+      "path": "ui/board-ui.ts",
+      "sha256": "98c91ffa55ee61c1e4d6f095d69bb667df0c6205cf0ca4bd822865981f2c1fa0"
+    },
+    {
+      "path": "ui/tokens.json",
+      "sha256": "a08d378c9f68986eedcc03c1da64691367718794eeb456043717fc4e76592e68"
+    }
+  ]
+}
