@@ -1,6 +1,6 @@
 # Swarm Protocol
 
-> **Play it and read about it on DOM Virus:** https://coded-dot-design.github.io/dom-virus/games/swarm-protocol/ — this README holds the full technical details.
+> **Play it and read about it on DOM Virus:** https://domvirus.com/games/swarm-protocol/ — this README holds the full technical details.
 
 A hidden, opt-in game that runs across a real webpage. Little agents eat selected letters into `0` and `1`, grow stronger, and hunt marked buttons. Squash them before the buttons lose their color.
 
@@ -10,7 +10,7 @@ Bugs arrive in your viewport near the pointer; small bugs stay near local food a
 
 ## Where the game lives
 
-This repository is the game package and the self-hosted drop-in. The game page lives on the DOM Virus hub at https://coded-dot-design.github.io/dom-virus/games/swarm-protocol/. This repository's Pages workflow only publishes a redirect to that page; there is no per-game site to build. The hub reads `site/game.json` (page copy) from here and builds the tagged package.
+This repository is the game package and the self-hosted drop-in. The game page lives on the DOM Virus hub at https://domvirus.com/games/swarm-protocol/. This repository's Pages workflow only publishes a redirect to that page; there is no per-game site to build. The hub reads `site/game.json` (page copy) from here and builds the tagged package.
 
 ## Local playground
 

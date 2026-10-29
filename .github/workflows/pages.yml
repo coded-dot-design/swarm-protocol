@@ -22,11 +22,11 @@ jobs:
             <head>
               <meta charset="utf-8" />
               <title>Moved to DOM Virus</title>
-              <link rel="canonical" href="https://coded-dot-design.github.io/dom-virus/games/swarm-protocol/" />
-              <meta http-equiv="refresh" content="0; url=https://coded-dot-design.github.io/dom-virus/games/swarm-protocol/" />
+              <link rel="canonical" href="https://domvirus.com/games/swarm-protocol/" />
+              <meta http-equiv="refresh" content="0; url=https://domvirus.com/games/swarm-protocol/" />
             </head>
             <body>
-              <p>This game now lives on <a href="https://coded-dot-design.github.io/dom-virus/games/swarm-protocol/">DOM Virus</a>.</p>
+              <p>This game now lives on <a href="https://domvirus.com/games/swarm-protocol/">DOM Virus</a>.</p>
             </body>
           </html>
           HTML
