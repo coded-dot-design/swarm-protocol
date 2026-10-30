@@ -111,13 +111,21 @@ test('host edits win during liquid painting, depletion and cleanup', () => {
 });
 
 for (const dark of [false, true]) {
-  for (const [index, color] of ['#ff6b6b', '#ff168f', '#a855ff'].entries()) {
+  for (const [index, color] of ['#ff6b6b', '#d984ff', '#8573ee'].entries()) {
     test(`${dark ? 'dark' : 'light'} score retains the killed tier ${index + 1} bug color across theme changes`, () => {
-      const p = fixture(createDomDefender, { noText: true, noTargets: true, dark, feedback: true });
-      p.call('start'); p.tick(.15);
-      const bug = [...p.live.values()][0];
-      Object.assign(bug, { color, tier: index + 1, hp: 1 });
-      p.shoot(bug); p.tick(1 / 60);
+      // Bugs grow by eating the page's letters (a tier every 6); shoot one of the tier wanted.
+      const p = fixture(createDomDefender, { noTargets: true, dark, feedback: true });
+      p.call('start');
+      let bug;
+      for (let i = 0; i < 3600 && !bug; i++) { p.tick(1 / 60); bug = [...p.draws.values()].find(b => b.tier === index + 1 && b.x > 30 && b.y > 30 && b.x < 770 && b.y < 570); }
+      assert.ok(bug, `a tier ${index + 1} bug`);
+      for (let shot = 0; shot < 12 && !p.events.some(e => e.type === 'kill'); shot++) {
+        const now = p.draws.get(bug.id);
+        if (now) p.shoot(now);
+        p.tick(1 / 60);
+      }
+      const kill = p.events.find(e => e.type === 'kill');
+      assert.equal(kill.tier, index + 1);
       const score = () => p.feedback.find(f => f.kind === 'text' && f.text.startsWith('+'));
       assert.equal(score().color, color);
       assert.equal(score().alpha, 1);

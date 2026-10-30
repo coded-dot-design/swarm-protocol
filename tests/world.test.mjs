@@ -143,3 +143,58 @@ test("same seed, same inputs: the same round (multiplayer-ready)", () => {
   assert.deepEqual(trace(), a);
   assert.ok(a.some((v, i) => i % 4 === 3 && v > 0), "letters were eaten");
 });
+
+test("a grown bug keeps its off-screen button while small bugs switch to one that comes into view", () => {
+  // Both buttons are in the round from the start; the near one is hidden at first.
+  const { w, run, buttons, place } = round({ board: letters({ rows: 0 }), buttons: [[450, 2400, 120, 40], [450, 300, 120, 40]] });
+  const T = w.targets;
+  T.rendered[1] = T.visible[1] = 0;
+  run(5, () => { T.rendered[1] = T.visible[1] = 0; });
+  let big = -1;
+  for (let j = 0; j < w.bugs.count && big < 0; j++) if (w.bugs.attached[j] && w.bugs.target[j] === 0) big = j;
+  assert.ok(big >= 0, "a bug latched on the off-screen button");
+  const id = w.bugs.id[big];
+  w.bugs.tier[big] = 3;
+  w.bugs.hp[big] = 3;
+  place(); // the near button shows
+  run(0.2);
+  const j = [...w.bugs.id.subarray(0, w.bugs.count)].indexOf(id);
+  assert.equal(w.bugs.target[j], 0, "the grown bug keeps its mission");
+  assert.equal(w.bugs.pursuit[j], W.ATTACK);
+  let small = 0;
+  for (let k = 0; k < w.bugs.count; k++) if (w.bugs.tier[k] === 1 && w.bugs.target[k] === 1) small++;
+  assert.ok(small > 0, "small bugs take the visible button");
+  void buttons;
+});
+
+test("a grown bug bites a letter it touches, keeps its 3 HP, and never chases a far one", () => {
+  const { w, events, run } = round({ buttons: [[450, 500, 120, 40]] });
+  run(0.2);
+  assert.ok(w.bugs.count > 0);
+  const B = w.bugs;
+  B.tier[0] = 3; B.hp[0] = 3; B.eaten[0] = 12;
+  w.food[0] = -1; // let go of the far letter it picked as a small bug
+  // Hold it beside the first letter (centre 104, 127) until it reserves one.
+  run(0.6, () => { if (w.food[0] < 0) (B.x[0] = 97), (B.y[0] = 127); });
+  const bite = events.find((x) => x.type === "bite" && w.pay[x.a * 8] === B.id[0]);
+  assert.ok(bite, "it bit the letter it touched");
+  assert.equal(w.pay[bite.a * 8 + 2], 13);
+  assert.equal(w.pay[bite.a * 8 + 3], 3);
+  assert.equal(B.hp[0], 3);
+  assert.equal(B.tier[0], 3);
+  B.x[0] = 700; B.y[0] = 390;
+  run(0.1);
+  assert.equal(w.food[0], -1, "no chase across the page");
+});
+
+test("while the letters' geometry is stale (a scroll or resize), no bug reserves a letter", () => {
+  const { w, run } = round({ buttons: [] });
+  w.ctl[W.STALE] = 1;
+  run(1.5);
+  for (let j = 0; j < w.bugs.count; j++) assert.equal(w.food[j], -1);
+  w.ctl[W.STALE] = 0;
+  run(1);
+  let reserving = 0;
+  for (let j = 0; j < w.bugs.count; j++) if (w.food[j] >= 0) reserving++;
+  assert.ok(reserving > 0, "they look again once it is fresh");
+});

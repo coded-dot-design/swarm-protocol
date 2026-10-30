@@ -20,7 +20,8 @@ export interface Board {
 export const MAX_BUGS = 48, MAX_TARGETS = 32, MAX_UI = 16, MAX_SURFACES = 16;
 const WAVE_SECONDS = 18, CHEW_SECONDS = 0.24, LETTERS_PER_TIER = 6;
 /** Controls and view (the game writes them in the read phase). */
-export const VW = 0, VH = 1, PX = 2, PY = 3, PON = 4, COARSE = 5, CALM = 6;
+/** STALE: the letters' geometry is catching up after a scroll or resize (no new reservations). */
+export const VW = 0, VH = 1, PX = 2, PY = 3, PON = 4, COARSE = 5, CALM = 6, STALE = 7;
 /** World state slots. */
 export const TIME = 0, STATUS = 1, SCORE = 2, WAVE = 3, KILLS = 4, COMBO = 5, COMBO_AT = 6, REMAINING = 7, SPAWN_IN = 8, NEXT_WAVE_IN = 9;
 export const ZAP_CLEARED = 10, JUMPS = 11, ZAPS = 12, RESCUE_UNTIL = 13, OVER = 14, SEQ = 15, LOCAL_FOOD = 16, SCANS = 17, FOOD_SCAN_IN = 18, PAY_AT = 19;
@@ -152,7 +153,7 @@ export function createWorld(e: Engine, board: Board, ctl: Float64Array = new Flo
    *  contact, and never while latched on or chasing an off-screen button). */
   function chooseFood(j: number) {
     const t = target[j]!;
-    if (tier[j]! >= 3 && (attached[j] || (t >= 0 && !tvis[t]))) return -1;
+    if (ctl[STALE] || (tier[j]! >= 3 && (attached[j] || (t >= 0 && !tvis[t])))) return -1;
     if (tier[j]! < 3 && hasLast[j]) {
       const g = nearest(lastX[j]!, lastY[j]!, 30, j, 105);
       if (g >= 0) return g;
@@ -193,7 +194,7 @@ export function createWorld(e: Engine, board: Board, ctl: Float64Array = new Flo
     }
     nick(j);
     const k = slot();
-    pay[k * 8] = id[j]!; pay[k * 8 + 1] = digit; pay[k * 8 + 2] = eaten[j]!; pay[k * 8 + 3] = tier[j]!; pay[k * 8 + 4] = g;
+    pay[k * 8] = id[j]!; pay[k * 8 + 1] = digit; pay[k * 8 + 2] = eaten[j]!; pay[k * 8 + 3] = tier[j]!; pay[k * 8 + 4] = g; pay[k * 8 + 5] = bx[j]!; pay[k * 8 + 6] = by[j]!;
     ev("bite", k, digit, x, y, bx[j]! - x);
   }
   /** A bug on a [data-swarm-surface] nicks it (at most 12 times). */
@@ -594,14 +595,14 @@ export function createWorld(e: Engine, board: Board, ctl: Float64Array = new Flo
     ctl,
     pay,
     targets: { tx, ty, tw, th, rendered: trend, visible: tvis, connected: tconn, enrolled: tenr, health, bites, hitUntil, liquidUntil, liquidBite, get count() { return n[TN]!; } },
-    bugs: { id, x: bx, y: by, angle: ang, phase, size, tier, hp, flash, age, target, siphon, attached, chewing, chewX, chewY, eaten, get count() { return n[BN]!; } },
+    bugs: { id, x: bx, y: by, angle: ang, phase, size, tier, hp, flash, age, target, siphon, attached, chewing, chewX, chewY, eaten, pursuit, scatterUntil, get count() { return n[BN]!; } },
     ui: { rects: ui, set(count: number) { n[UN] = Math.min(MAX_UI, count); } },
     surfaces: { rects: surf, visible: svis, damage: sdmg, set(count: number) { n[SN] = Math.min(MAX_SURFACES, count); } },
     /** Glyphs a bug reserved this frame (the game checks what covers them in the read phase). */
     food,
-    /** Mark glyph g covered by something else (read phase): bugs leave it. */
-    cover(g: number) {
-      if (g >= 0 && g < glyphCap) covered[g] = 1;
+    /** Mark glyph g covered by something else, or uncovered again (read phase): bugs leave a covered one. */
+    cover(g: number, on = true) {
+      if (g >= 0 && g < glyphCap) covered[g] = on ? 1 : 0;
     },
     /** The pointer squashed bug `bugId` (the game's handler decided it was hit). */
     squash(bugId: number) {
