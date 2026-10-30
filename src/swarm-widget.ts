@@ -3,6 +3,7 @@ import { healthColor } from './target-health.js';
 import type { SwarmSnapshot, SwarmEvent, SwarmCoreController, SwarmController, SwarmGameOptions } from '../integration/swarm-types.js';
 
 import { createDomDefender } from './dom-defender.js';
+import { announcer } from './announce.js';
 
 /*! @license Bug icon derived from Lucide, ISC License. See THIRD_PARTY_NOTICES.md. */
 const bugIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 2 1.88 1.88M14.12 3.88 16 2M9 7.13v-1a3.003 3.003 0 1 1 6 0v1M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6M12 20v-9M6.53 9C4.6 8.8 3 7.1 3 5M6 13H2M3 21c0-2.1 1.7-3.9 3.8-4M20.97 5c0 2.1-1.6 3.8-3.5 4M22 13h-4M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg>`;
@@ -29,15 +30,15 @@ export function mountSwarmGame(host: HTMLElement, options: SwarmGameOptions = {}
   if (!host || !host.isConnected) throw new Error('Swarm Protocol needs a connected host element.');
   host.setAttribute('data-swarm-ui', '');
   const root = host.shadowRoot || host.attachShadow({ mode: 'open' });
-  root.innerHTML = `<style>${styles}${controlStyles}.panel.compact .intro,.panel.compact #active,.panel.compact .pauseview,.panel.compact .result{display:none}.top .led{display:none}</style>
+  root.innerHTML = `<style>${styles}${controlStyles}.panel.compact .intro,.panel.compact #active,.panel.compact .pauseview,.panel.compact .result{display:none}.top .led{display:none}.aimkey{position:absolute;width:1px;height:1px;padding:0;border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}.aimkey:focus{position:static;width:auto;height:auto;clip-path:none;white-space:normal;display:block;margin:0 12px 10px;padding:7px 10px;border:1px solid #06c4ff;border-radius:8px;background:#121119;color:#f7f9fb;font:11px/1.4 ui-monospace,monospace;text-align:left}</style>
     <button class="launcher" id="launcher" aria-label="Open Swarm Protocol game" hidden>${icons.target}<span class="label">Swarm Protocol</span></button>
     <section class="panel" id="panel" aria-label="Swarm Protocol game">
       <header class="top game-header"><span class="led" id="led"></span><span class="brand game-title">SWARM PROTOCOL</span><div class="game-actions"><button class="icon" id="sound" title="Mute sound" aria-label="Mute game sound" aria-pressed="true">${icons.sound}</button><button class="icon" id="pause" title="Pause game" aria-label="Pause game">${icons.pause}</button><button class="icon" id="minimize" title="Minimize scoreboard" aria-label="Minimize scoreboard" aria-expanded="true">${icons.minimize}</button><button class="icon" id="close" title="Close and restore page" aria-label="Close game and restore page">${icons.close}</button></div></header>
       <div class="intro" id="intro"><div class="introhead"><span class="mascot">${bugIcon}</span><div><div class="eyebrow">A LITTLE CONTAINMENT FAILURE</div><h2>The lab has a leak.</h2></div></div><p>They bite letters one at a time. At 6 letters they grow; at 12 they hunt buttons, biting letters in their path. Squash them first.</p><div class="rules"><span class="rulebug">${bugIcon}1 hit</span><span class="rulebug">${bugIcon}2 hits</span><span class="rulebug">${bugIcon}3 hits</span></div><button class="primary" id="start">Release the swarm ${icons.arrow}</button><div class="smallnote">Fast kills pay. Alerts let you spend points to jump or zap.</div><div class="exitnote">Press <kbd>Esc</kbd> to completely exit.</div></div>
-      <div id="active" hidden><div class="game"><div class="scoreline"><div><div class="scorelabel">SCORE</div><div class="score" id="score">000000</div></div><div class="wave">WAVE<strong id="wave">01</strong></div></div><div class="stats"><span><b id="kills">0</b> squashed</span><span><b id="alive">0</b> active</span><b class="combo" id="combo">×1</b></div><div class="pressure" id="pressure"><span id="pursuit">Contain the swarm</span><span class="clock" id="waveclock">Next wave 18s</span></div><div class="integrityhead"><span>BUTTON INTEGRITY</span><strong id="integrity">100%</strong></div><div class="meter"><span id="bar"></span></div><div class="targets" id="targets"></div></div><div class="feed" id="feed">Kill them before they feed.</div></div>
+      <div id="active" hidden><div class="game"><div class="scoreline"><div><div class="scorelabel">SCORE</div><div class="score" id="score">000000</div></div><div class="wave">WAVE<strong id="wave">01</strong></div></div><div class="stats"><span><b id="kills">0</b> squashed</span><span><b id="alive">0</b> active</span><b class="combo" id="combo">×1</b></div><div class="pressure" id="pressure"><span id="pursuit">Contain the swarm</span><span class="clock" id="waveclock">Next wave 18s</span></div><div class="integrityhead"><span>BUTTON INTEGRITY</span><strong id="integrity">100%</strong></div><div class="meter"><span id="bar"></span></div><div class="targets" id="targets"></div></div><button type="button" class="aimkey" id="aim">Keyboard aim: arrow keys pick a bug, Enter or Space squashes it</button><div class="feed" id="feed">Kill them before they feed.</div></div>
       <div class="pauseview" id="paused" hidden><div class="eyebrow">TIMEOUT</div><h2>Swarm on standby.</h2><p>The bugs can wait. Your score and the page are exactly where you left them.</p><button class="primary" id="resume">Resume game ${icons.play}</button><button class="secondary" id="quit">Quit & restore page</button></div>
       <div class="result" id="result" hidden><div class="eyebrow">CONTAINMENT LOST</div><h2>The bugs won this round.</h2><div class="newbest" id="record">FINAL SCORE</div><div class="total" id="total">0</div><div class="resultgrid"><div><span>WAVE</span><b id="finalwave">1</b></div><div><span>SQUASHED</span><b id="finalkills">0</b></div><div><span>PERSONAL BEST</span><b id="best">0</b></div></div><button class="primary" id="restart">Reboot & play again ${icons.arrow}</button><button class="secondary" id="restore">Restore the page</button></div>
-    </section><div class="livehint" id="hint" hidden><span class="desktoptip">CLICK TO SQUASH · ESC TO EXIT</span><span class="mobiletip">TAP TO SQUASH</span></div><div class="statusbanner" id="banner" hidden aria-live="polite"></div><div id="announce" role="status" aria-live="polite" style="position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)"></div>`;
+    </section><div class="livehint" id="hint" hidden><span class="desktoptip">CLICK TO SQUASH · ESC TO EXIT</span><span class="mobiletip">TAP TO SQUASH</span></div><div class="statusbanner" id="banner" hidden></div>`;
   const elements = new Map<string, HTMLButtonElement>();
   const $ = (id: string) => { if(!elements.has(id))elements.set(id,root.getElementById(id) as HTMLButtonElement);return elements.get(id)!; };
   const setText = (id: string,value: string | number) => { const el=$(id),text=String(value);if(el.textContent!==text)el.textContent=text; };
@@ -59,8 +60,10 @@ export function mountSwarmGame(host: HTMLElement, options: SwarmGameOptions = {}
   const disposers: (()=>void)[] = [];
   const on = (id: string, callback: (event: MouseEvent) => void) => { const el=$(id); el.addEventListener('click', callback); disposers.push(()=>el.removeEventListener('click',callback)); };
   const show = (id: string, value: boolean) => { const el=$(id);if(el.hidden===value)el.hidden=!value; };
-  const announce = (text: string) => { $('announce').textContent=text; };
-  function banner(text: string) { clearTimeout(bannerTimer); $('banner').textContent=text; show('banner',!closed&&!minimized); bannerTimer=setTimeout(()=>show('banner',false),2100); announce(text); }
+  // The game's one polite live region (score, integrity, wave, status, alerts): change-only, rate-limited.
+  const voice = announcer({ doc });
+  let saidScore = 0, saidHealth = 100, opener: HTMLElement | null = null;
+  function banner(text: string) { clearTimeout(bannerTimer); $('banner').textContent=text; show('banner',!closed&&!minimized); bannerTimer=setTimeout(()=>show('banner',false),2100); }
   function feed(text: string, mood='', priority=1) {
     const now=win.performance?.now?.() ?? Date.now();
     if(now<feedHoldUntil && priority<feedPriority)return false;
@@ -201,6 +204,7 @@ export function mountSwarmGame(host: HTMLElement, options: SwarmGameOptions = {}
   function render(s: SwarmSnapshot) {
     if(destroyed) return;
     latestState=s;
+    const hadFocus=root.activeElement as HTMLElement | null;
     const restoreResultFocus=minimized && s.status==='gameover' && root.activeElement===$('minimize');
     if(minimized && s.status==='gameover'){minimized=false;closed=false;}
     const playing=['running','intermission'].includes(s.status), canMinimize=playing||s.status==='paused';
@@ -228,7 +232,16 @@ export function mountSwarmGame(host: HTMLElement, options: SwarmGameOptions = {}
     if(key!==previousTargetMarkup){ $('targets').replaceChildren(...targets.map(t=>{const span=doc.createElement('span'),dot=doc.createElement('i');dot.style.background=healthColor(t.health);span.classList.toggle('offscreen',!t.visible);span.append(dot,doc.createTextNode(t.label+' '+t.health+'%'+(t.visible?'':' · offscreen')));return span;}));previousTargetMarkup=key; }
     if(s.status==='intermission') { setText('feed','Wave cleared · next wave in '+Math.max(1,Math.ceil(s.nextWaveIn||1))+'s');$('feed').className='feed good'; }
     if(s.status==='gameover') { setText('total',(s.score||0).toLocaleString());setText('finalwave',s.wave||1);setText('finalkills',s.kills||0);setText('best',(s.best||0).toLocaleString());setText('record',s.score>lastBest?'NEW PERSONAL BEST':'FINAL SCORE'); }
-    if(s.status!==lastStatus){if(s.status==='paused') announce('Game paused.');if(s.status==='gameover') announce('Game over. Your score is '+s.score+'.'); lastStatus=s.status;}
+    if(playing&&s.score!==saidScore){saidScore=s.score;voice.say('score','Score '+s.score);}
+    if(playing&&Math.ceil(health/10)!==Math.ceil(saidHealth/10)){saidHealth=health;voice.say('lives','Buttons at '+health+'% integrity');}
+    if(s.status!==lastStatus){
+      if(s.status==='paused') voice.say('status','Game paused');
+      if(lastStatus==='paused'&&playing) voice.say('status','Game resumed');
+      if(s.status==='gameover'){voice.say('status','Game over. Final score '+s.score);voice.flush();}
+      // A view that held focus was hidden: move focus to the new view's main control.
+      if(hadFocus&&!closed&&(hadFocus.closest?.('[hidden]')||(hadFocus as HTMLButtonElement).disabled))$(s.status==='gameover'?'restart':s.status==='paused'?'resume':playing?'aim':'start').focus({preventScroll:true});
+      lastStatus=s.status;
+    }
     if(restoreResultFocus)$('restart').focus({preventScroll:true});
     options.onState?.(s);
   }
@@ -257,10 +270,11 @@ export function mountSwarmGame(host: HTMLElement, options: SwarmGameOptions = {}
       tone('wave-start');
       const timed=e.reason==='timer';
       banner('WAVE '+String(e.wave||latestState?.wave||1).padStart(2,'0')+'  /  '+(timed?(e.count?'REINFORCEMENTS INBOUND':'PRESSURE RISING'):'CONTAIN THE SWARM'));
+      voice.say('wave','Wave '+(e.wave||latestState?.wave||1)+', '+(timed?(e.count?'reinforcements inbound':'pressure rising'):'contain the swarm'));
       feed(timed?(e.count?'+'+e.count+' incoming · survivors stay active':'Swarm at capacity · keep clearing'):'Squash them before they finish feeding.',timed?'hot':'',2);
     }
-    if(e.type==='wave-clear'){tone('wave-clear');feed(e.bonus?'Wave contained · bonus secured':'Wave contained · zap clear','good',3);}
-    if(e.type==='rescue'){tone(e.action==='zap'?'kill':'hit');feed(e.action==='zap'?`−${e.cost} · ${e.killed} zapped · +${e.points}`:`−${e.cost} · jumped to base`,'good',4);announce(e.action==='zap'?`Jumped to base. ${e.killed} bugs zapped for ${e.cost} points.`:`Jumped to base for ${e.cost} points.`);}
+    if(e.type==='wave-clear'){tone('wave-clear');voice.say('wave','Wave '+(latestState?.wave||1)+' contained');feed(e.bonus?'Wave contained · bonus secured':'Wave contained · zap clear','good',3);}
+    if(e.type==='rescue'){tone(e.action==='zap'?'kill':'hit');feed(e.action==='zap'?`−${e.cost} · ${e.killed} zapped · +${e.points}`:`−${e.cost} · jumped to base`,'good',4);voice.say('rescue',e.action==='zap'?`Jumped to base. ${e.killed} bugs zapped for ${e.cost} points`:`Jumped to base for ${e.cost} points`);}
     if(e.type==='gameover'){tone('gameover');show('banner',false);}
     options.onEvent?.(e);
   }
@@ -275,25 +289,37 @@ export function mountSwarmGame(host: HTMLElement, options: SwarmGameOptions = {}
   doc.addEventListener('visibilitychange',visibilityAudio);
   disposers.push(()=>win.removeEventListener('pointerdown',deferredAudioGesture,true),()=>win.removeEventListener('keydown',deferredAudioGesture,true),()=>doc.removeEventListener('visibilitychange',visibilityAudio));
   let engine: SwarmCoreController;
-  try { engine=createDomDefender({...options,onState:render,onEvent:event}); }
+  try { engine=createDomDefender({...options,onState:render,onEvent:event,announcer:voice}); }
   catch(error) { destroy(); throw error; }
-  const start=(e?: Event)=>{silence(true);cueTimes.clear();warnedTargets.clear();feedPriority=0;feedHoldUntil=0;lastBiteFeedAt=-Infinity;sessionStarted=true;unlockAudio(e);escaped=false;minimized=false;closed=false;lastBest=engine.getSnapshot().best||0;engine.start();render(engine.getSnapshot());};
+  const start=(e?: Event)=>{remember();saidScore=0;saidHealth=100;silence(true);cueTimes.clear();warnedTargets.clear();feedPriority=0;feedHoldUntil=0;lastBiteFeedAt=-Infinity;sessionStarted=true;unlockAudio(e);escaped=false;minimized=false;closed=false;lastBest=engine.getSnapshot().best||0;engine.start();render(engine.getSnapshot());};
   const pause=()=>{silence(true);engine.pause();};
   const resume=(e?: Event)=>{if(engine.getSnapshot().status==='paused')unlockAudio(e);engine.resume();};
   const stop=()=>{silence(true);sessionStarted=false;clearTimeout(bannerTimer);clearTimeout(feedTimer);show('banner',false);minimized=false;closed=true;engine.stop();render(engine.getSnapshot());};
-  const open=()=>{if(destroyed)return;const wasMinimized=minimized;escaped=false;minimized=false;closed=false;render(engine.getSnapshot());if(destroyed)return;if(engine.getSnapshot().status==='idle')$('start').focus();else if(wasMinimized)$('minimize').focus({preventScroll:true});};
+  const open=()=>{if(destroyed)return;remember();const wasMinimized=minimized;escaped=false;minimized=false;closed=false;render(engine.getSnapshot());if(destroyed)return;if(engine.getSnapshot().status==='idle')$('start').focus();else if(wasMinimized)$('minimize').focus({preventScroll:true});};
   // Folding the HUD is presentation-only: waves, bugs, score and audio continue.
   const minimize=()=>{if(destroyed||closed||minimized||!['running','intermission','paused'].includes(engine.getSnapshot().status))return;minimized=true;clearTimeout(bannerTimer);show('banner',false);render(engine.getSnapshot());if(!destroyed&&minimized)$('minimize').focus({preventScroll:true});};
-  const closeByPlayer=()=>{stop();options.onClose?.();};
+  const closeByPlayer=()=>{const inside=!!root.activeElement;stop();options.onClose?.();if(inside)giveBackFocus();};
+  // Where focus was outside the game when it opened, so closing can return it there.
+  function remember(){let a=doc.activeElement as HTMLElement | null;while(a?.shadowRoot?.activeElement)a=a.shadowRoot.activeElement as HTMLElement;if(a&&a!==doc.body&&!root.contains(a))opener=a;}
+  function giveBackFocus(){if(destroyed)return;(root.activeElement as HTMLElement | null)?.blur?.();if(!$('launcher').hidden)$('launcher').focus({preventScroll:true});else if(opener?.isConnected&&(!doc.activeElement||doc.activeElement===doc.body))opener.focus({preventScroll:true});}
   // Capture before the core's legacy pause shortcut. Keep Escape available to
   // the page too, so an open native dialog can close in the same keypress.
-  const exitOnEscape=(e: KeyboardEvent)=>{if(destroyed||e.key!=='Escape'||e.repeat||e.isComposing)return;escaped=true;stop();announce('');};
+  const exitOnEscape=(e: KeyboardEvent)=>{if(destroyed||e.key!=='Escape'||e.repeat||e.isComposing)return;const inside=!!root.activeElement;escaped=true;stop();if(inside)giveBackFocus();};
   doc.addEventListener('keydown',exitOnEscape,true);
   disposers.push(()=>doc.removeEventListener('keydown',exitOnEscape,true));
   on('launcher',open);
+  // Keyboard aim: arrows pick a bug in view, Enter / Space squash it (one press, one squash).
+  const aimKey=(e: KeyboardEvent)=>{
+    const k=e.key,dx=k==='ArrowLeft'?-1:k==='ArrowRight'?1:0,dy=k==='ArrowUp'?-1:k==='ArrowDown'?1:0;
+    if(dx||dy){e.preventDefault();engine.aim(dx,dy);}
+    else if(k==='Enter'||k===' '){e.preventDefault();if(!e.repeat)engine.squashAimed();}
+  };
+  const aimOn=()=>engine.aim(),aimOff=()=>engine.clearAim();
+  $('aim').addEventListener('keydown',aimKey);$('aim').addEventListener('focus',aimOn);$('aim').addEventListener('blur',aimOff);
+  disposers.push(()=>{$('aim').removeEventListener('keydown',aimKey);$('aim').removeEventListener('focus',aimOn);$('aim').removeEventListener('blur',aimOff);});
   on('close',closeByPlayer);on('start',start);on('restart',start);on('restore',closeByPlayer);on('quit',closeByPlayer);on('pause',e=>engine.getSnapshot().status==='paused'?resume(e):pause());on('resume',resume);on('minimize',()=>minimized?open():minimize());
   on('sound',e=>{sound=!sound;silence(!sound);try{win.localStorage.setItem(soundKey,sound?'on':'off');}catch(_){}soundButton();if(sound){unlockAudio(e);tone('preview');}});
-  function destroy(){if(destroyed)return;destroyed=true;minimized=false;silence(true);clearTimeout(bannerTimer);clearTimeout(feedTimer);engine?.destroy();disposers.forEach(fn=>fn());try{masterGain?.disconnect();}catch(_){}if(audioContext)audioContext.close().catch(()=>{});root.replaceChildren();for(const name of hostFlags.keys())host.removeAttribute(name);hostFlags.clear();}
+  function destroy(){if(destroyed)return;destroyed=true;minimized=false;silence(true);clearTimeout(bannerTimer);clearTimeout(feedTimer);engine?.destroy();disposers.forEach(fn=>fn());voice.destroy();try{masterGain?.disconnect();}catch(_){}if(audioContext)audioContext.close().catch(()=>{});root.replaceChildren();for(const name of hostFlags.keys())host.removeAttribute(name);hostFlags.clear();}
   // A consumer can throw in the first onState call, before receiving a handle.
   // Release the already-created engine/listeners, then preserve that exception.
   try { soundButton(); render(engine.getSnapshot()); }

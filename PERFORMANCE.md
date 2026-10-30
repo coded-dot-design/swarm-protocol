@@ -21,13 +21,15 @@ The same deterministic 43-second workload (48 bugs, letters only):
 
 Measured in Chromium (`tests/browser.mjs`, 1280 × 800, the test page): script work per animation frame averages 0.6 ms (max 4 to 7.5 ms) with a wave on screen, and 0.22 ms (max 0.70 ms) with 48 bugs. These are one machine's numbers, not a device benchmark.
 
-| Loaded JavaScript (gzip) | 1.3.1 | 1.4.0 | Ceiling (`npm run size`) |
-| --- | ---: | ---: | ---: |
-| Initial deferred scheduler | 1,400 | 1,400 | 1,450 |
-| Additional bootstrap after load/delay/idle | 4,071 | 4,071 | 4,150 |
-| Additional game on first open/start | 30,304 | 39,132 | 39,700 |
-| Complete deferred path | 35,775 | 44,603 | 45,200 |
-| Immediate root plus game | 34,646 | 43,474 | 44,100 |
+| Loaded JavaScript (gzip) | 1.3.1 | 1.4.0 | Unreleased (E14) | Ceiling (`npm run size`) |
+| --- | ---: | ---: | ---: | ---: |
+| Initial deferred scheduler | 1,400 | 1,400 | 1,400 | 1,450 |
+| Additional bootstrap after load/delay/idle | 4,071 | 4,071 | 4,119 | 4,150 |
+| Additional game on first open/start | 30,304 | 39,132 | 40,446 | 41,014 |
+| Complete deferred path | 35,775 | 44,603 | 45,965 | 46,560 |
+| Immediate root plus game | 34,646 | 43,474 | 44,836 | 45,461 |
+
+E14 accessible play (keyboard aim, focus handling, the one polite live region in `src/announce.ts`) lives in the game chunk, loaded on first open; the bootstrap grows 48 B (the launcher takes focus after the keyboard sequence and gets it back on close). The game ceilings rose by exactly the measured delta.
 
 The game grows by the Fizlet code it now carries: the kernel 3,422 B and board-page 4,095 B (with its grid), gzip on their own. Subtracting them leaves about 31.6 KB, 1.3 KB more than 1.3.1 (an estimate: gzip sizes don't add exactly).
 

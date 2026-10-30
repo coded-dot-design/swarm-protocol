@@ -194,7 +194,12 @@ export function installSwarm(options: SwarmInstallOptions = {}): SwarmInstallati
   function unlock() { resetTrigger(); reveal(); }
   function closedByPlayer() {
     widgetShown = false;
-    if (visible && !destroyed) reveal();
+    if (visible && !destroyed) {
+      reveal();
+      // Focus was in the closed game: give it to the launcher that opened it.
+      const active = doc.activeElement;
+      if (!active || active === doc.body || active === widgetHost) pillButton?.focus?.({ preventScroll: true });
+    }
   }
   function loadWidget() {
     if (widget) return Promise.resolve(widget);
@@ -342,6 +347,8 @@ export function installSwarm(options: SwarmInstallOptions = {}): SwarmInstallati
       if (progress === SEQUENCE.length) {
         resetSequence();
         unlock();
+        // Typed from the keyboard: the revealed launcher takes focus (Enter opens it).
+        pillButton?.focus?.({ preventScroll: true });
       }
     } else {
       progress = key === SEQUENCE[0] ? 1 : 0;

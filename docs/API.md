@@ -243,7 +243,7 @@ The handle has `unlock()`, `open()`, `start()`, `minimize()`, `pause()`, `resume
 
 Host `onState` and `onEvent` callbacks run in their normal order. If one throws, `installSwarm` disables that hook for the installation and reports the failure once through `onError`, so gameplay and cleanup continue. A throwing `onError` is guarded, disabled, and falls back to `console.error`. The low-level core/widget entries retain ordinary throwing callback behavior; a failed initial widget mount cleans up before rethrowing.
 
-`@chriscooley/swarm-protocol/core` exports `createDomDefender` for a custom HUD. `./widget` exports `mountSwarmGame` for direct UI mounting. Those low-level entries load the game immediately when imported. Use `./deferred` for delayed bootstrap loading or the root installer for immediate activation listeners with an on-demand game.
+`@chriscooley/swarm-protocol/core` exports `createDomDefender` for a custom HUD. `./widget` exports `mountSwarmGame` for direct UI mounting. Those low-level entries load the game immediately when imported. Use `./deferred` for delayed bootstrap loading or the root installer for immediate activation listeners with an on-demand game. A custom HUD can offer keyboard play with the core controller's `aim(dx, dy)` (pick the nearest bug in view in an arrow's direction; `aim()` keeps or picks the nearest), `squashAimed()` (squash it exactly as a press would) and `clearAim()`.
 
 ## Gameplay and input
 

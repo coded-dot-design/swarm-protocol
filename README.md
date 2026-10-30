@@ -71,6 +71,23 @@ See **[the complete drop-in guide](docs/DROP-IN.md)** for mobile testing, config
 | Target launcher | Reopen the scoreboard. |
 | Escape | End the round, restore the page, and fully hide/relock the game. |
 
+### Keys
+
+The whole game plays from the keyboard. Focus is always visible, nothing traps it, and it moves to the next sensible control when a view opens or closes.
+
+| Key | Where | Does |
+| --- | --- | --- |
+| `↑ ↑ ↓ ↓ ← → ← → B A Enter` | Page content | Reveal the launcher. |
+| `Tab` / `Shift+Tab` | Anywhere | Move between the launcher, the scoreboard's buttons (sound, pause / resume, minimize, Recall), the view's buttons and edge alerts. |
+| `Enter` or `Space` | A button | Open the game, release the swarm, pause / resume, restart, Jump / Jump + Zap, close. |
+| `←` `→` `↑` `↓` | **Keyboard aim** (focused when a round starts) | Pick the nearest bug in view in that direction; a cyan ring marks it. |
+| `Enter` or `Space` | **Keyboard aim** | Squash the ringed bug, exactly as a click on it would (one press, one squash). The ring moves to the nearest bug when it dies. |
+| `Esc` | Anywhere | End the round, restore the page and fully hide / relock the game. |
+
+Keyboard aim is the first control after a round starts and stays out of sight until it has focus. Like a pointer, it can only reach bugs inside the viewport; scrolling and the rules are unchanged.
+
+Screen readers hear the score, button integrity (in 10% steps), waves, pause / resume, edge alerts and game over through one polite live region, at most once a second (game over at once).
+
 No Caps Lock or modifier chord is used. On desktop, open the launcher and select **Release the swarm**. The mobile secret opens those instructions directly. Letter eating, time-based waves, scatter behavior, multi-hit agents, sound, and the target cursor are included.
 
 When bugs attack an offscreen button, the edge alert offers the strongest action your score can afford. Below 50 points it warns you to scroll manually; from 50 points it offers **Jump**; from 200 points it offers **Jump + Zap**. Every rescue raises the jump price by 25 points and the zap price by 25 points; each zap raises its price by another 150 points. A zap clears a 140–220px radius around the destination, returning only 1 point per kill. It earns no combo multiplier or bonus for a wave it finishes. Prices reset on restart. Manual scrolling is always free.

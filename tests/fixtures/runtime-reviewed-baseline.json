@@ -1,16 +1,16 @@
 {
   "version": "1.4.0",
-  "note": "Reviewed Fizlet E3 port: the rules as one zero-allocation Fizlet system (world), the controller on the Fizlet kernel with every page change through its ledger and letters through fizlet/board-page; public API, visuals and the rules numbers preserved, engine differences listed in CHANGELOG 1.4.0. dom-defender and swarm-widget re-pinned when shared/ moved into src/: only their import paths changed (with the old paths they hash to the 1.4.0 pins).",
+  "note": "Reviewed Fizlet E3 port: the rules as one zero-allocation Fizlet system (world), the controller on the Fizlet kernel with every page change through its ledger and letters through fizlet/board-page; public API, visuals and the rules numbers preserved, engine differences listed in CHANGELOG 1.4.0. dom-defender and swarm-widget re-pinned when shared/ moved into src/: only their import paths changed (with the old paths they hash to the 1.4.0 pins). E14 accessible play re-pinned dom-defender, attack-indicators, swarm-widget and swarm-loader: keyboard aim (squashes through the same path as a press), focus handling, and the one polite live region (src/announce.ts); world (the rules) is unchanged.",
   "modules": {
     "world": "63a49c0c74effbba7ba3d9fb0c3b12659fb652857464aad7fb7781312ff2b9c7",
-    "dom-defender": "8182cf3af48a26b13217fd9b3aeddbc93b026abf115088974a4e694d5dbd62c1",
-    "attack-indicators": "82a6fd4b77f44c3476d204ef0cdad387b07c391666ec86ac1fa3074f1c157272",
+    "dom-defender": "c1534b9547af34b068f6837fda2a7bb82d30ab0608cc9bc6c2aa2b7facb02297",
+    "attack-indicators": "f54c90bea55c58fb2667eb58b752e78275abf64c8b3a7249e6bbd6d6ed0aac64",
     "feedback-colors": "80b165fc93845d474549c4e3563859466e8fb10f1f6995c48db9a3329a8f13a0",
     "target-health": "d540d5d8506bacbdc4f6e508f2af7792d3cad361ab837f8edd51ddb62354786d",
     "target-hover": "775a3f113479b7fcc37ac2f62107c17c27019f40ad6af56cba51b729dab08585",
     "target-palette": "33f0cb707bf70ebc17a3aa2ec4801835787746f1ed5355ecf080e1155bdd67b3",
-    "swarm-widget": "a63e68820ec3e8202b3eef3e9e2bdba97e0147a90afaca669a281a00e65a2846",
-    "swarm-loader": "cd1d6b76679e461242dc316dd8564dbc92cca2a533fe1888a88084a04ee795ff",
+    "swarm-widget": "63b30df564a65138772e3dd1a50b2ed305f810acb569f01f6d422d001defbd46",
+    "swarm-loader": "e48b8e2a0b891edf95a43fbbda744e2bae9a08fe875dc9970e2c9834bb185ed3",
     "swarm-deferred": "e6233af0c3e536431013bbd3bf0654fe45caad7074fc53a27e970b8bb27ec3e5"
   }
 }

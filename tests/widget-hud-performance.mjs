@@ -126,7 +126,8 @@ async function widgetSource(path) {
     .replace(/t.health>50/g, 't.health>75').replace(/t.health>0/g, 't.health>35');
   return transformSync(source, {loader: path.endsWith('.ts') ? 'ts' : 'js'}).code
     .replace(/(["'])(?:\.\.\/shared|\.)\/game-controls\.js\1/g, JSON.stringify(new URL('../src/game-controls.ts', import.meta.url).href))
-    .replace(/(["'])\.\/target-health\.js\1/g, JSON.stringify(new URL('../src/target-health.ts', import.meta.url).href));
+    .replace(/(["'])\.\/target-health\.js\1/g, JSON.stringify(new URL('../src/target-health.ts', import.meta.url).href))
+    .replace(/(["'])\.\/announce\.js\1/g, JSON.stringify(new URL('../src/announce.ts', import.meta.url).href));
 }
 
 async function run(path, label, options = {}) {
@@ -242,7 +243,7 @@ async function verifyEscapeExit(path) {
   const exited = event => {
     assert.equal(state.status, 'idle', 'Escape stops the engine');
     for (const id of ['panel', 'launcher', 'hint', 'banner']) assert.equal(ui(id).hidden, true, 'Escape hides ' + id);
-    assert.equal(ui('announce').textContent, '', 'Hidden game leaves no stale live announcement');
+    assert.ok(!ui('announce'), 'The widget keeps no live region of its own (one shared polite region)');
     assert.equal(event.defaultPrevented, false, 'Host Escape behavior remains available');
     assert.equal(event.stopped, undefined, 'Escape bubbles to host listeners');
     assert.equal(corePauses, 0, 'Widget capture stops before the legacy core pause shortcut');
@@ -403,9 +404,10 @@ async function verifyMinimize(path, showLauncher) {
 }
 
 // Compare historical HUD behavior and cache efficiency, normalizing the
-// intentional palette updates; header behavior is checked by the lifecycle suite.
+// intentional palette updates; header behavior is checked by the lifecycle suite. The keyboard
+// aim control is new, and the old #announce node moved to the shared [data-fz-announce] region.
 const historicalCheckpoints = checkpoints => JSON.parse(JSON.stringify(checkpoints).replaceAll('rgb(101, 255, 0)', 'rgb(116, 223, 161)').replaceAll('rgb(0, 229, 255)', 'rgb(6, 196, 255)').replaceAll('rgb(255, 52, 59)', 'rgb(255, 107, 107)').replaceAll('rgb(255, 234, 0)', 'rgb(255, 185, 107)')).map(checkpoint => ({ ...checkpoint,
-  state: { ...checkpoint.state, ui: Object.fromEntries(Object.entries(checkpoint.state.ui).filter(([id]) => !['minimize','pause','close','sound'].includes(id))) }
+  state: { ...checkpoint.state, ui: Object.fromEntries(Object.entries(checkpoint.state.ui).filter(([id]) => !['minimize','pause','close','sound','aim','announce'].includes(id))) }
 }));
 
 const before = await run(resolve(args.baseline), 'before');

@@ -8,6 +8,7 @@ import { feedbackColors } from './feedback-colors.js';
 import { targetSignal, liquidFill, bubbleContrast, fadeSignal } from './target-health.js';
 import { readTargetPalette, cssLayers } from './target-palette.js';
 import { guardTargetHover, hoverLock } from './target-hover.js';
+import { announcer, type Announcer } from './announce.js';
 import { createEngine, type Engine } from '../vendor/fizlet/kernel/engine.js';
 import { boardPage, type BoardPage } from '../vendor/fizlet/board-page.js';
 import * as W from './world.js';
@@ -20,7 +21,7 @@ import * as W from './world.js';
  * exactly and a newer edit by the host page wins. A React island can own this controller without
  * owning the page beneath it.
  */
-export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreController {
+export function createDomDefender(options: SwarmCoreOptions & { announcer?: Announcer } = {}): SwarmCoreController {
   const doc = options.document || document;
   const win = doc.defaultView || window;
   const selectors = {
@@ -61,7 +62,9 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
   let cursorElement: HTMLElement | null = null, lastPointer: {x:number;y:number;type:string;element:HTMLElement} | null = null, aimEffects: AimEffect[] = [];
   let releaseHover: (()=>void) | null = null;
   const listeners: (()=>void)[] = [];
-  const attackIndicators = createAttackIndicators(doc, reducedMotion, rescue);
+  // The one polite live region: the widget's announcer when it hosts this controller, else our own.
+  const announce = options.announcer || announcer({ doc });
+  const attackIndicators = createAttackIndicators(doc, reducedMotion, rescue, announce.say);
   const attachedPresentation = new AttachedPresentation(doc, setStyle);
 
   // ---------- The round: one engine, the page's letters, the rules ----------
@@ -76,6 +79,8 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
   // Per bug slot: the reserved letter last checked for cover, and when.
   const checkedId = new Int32Array(W.MAX_BUGS), checkedGlyph = new Int32Array(W.MAX_BUGS), checkedAt = new Float64Array(W.MAX_BUGS);
   let coverCursor = 0;
+  // Keyboard aim: while `aiming`, one bug in the viewport is picked (by id) and drawn with a ring.
+  let aiming = false, aimId = -1, aimX = 0, aimY = 0;
   // Drawing views of the world's bugs (stable per bug id), and the live list in arrival order.
   const views = new Map<number, Bug>();
   let bugs: Bug[] = [], viewStamp = 0;
@@ -590,6 +595,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     if (engine !== e) return;
     syncState();
     if (cursorDirty) { cursorDirty = false; syncCursor(); }
+    if (aiming && aimIndex() < 0) pickAim(0, 0);
     // Coalesce health paints; pulse drawing shares the existing canvas loop.
     const calm = coarsePointer();
     for (const target of targets) {
@@ -695,6 +701,14 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     attachedPresentation.update(targets, bugs, reducedMotion || coarsePointer());
     for (const bug of bugs) {
       if (!attachedPresentation.drawBug(bug, ratio, context => drawBug(bug, state.elapsed, context))) drawBug(bug, state.elapsed);
+    }
+    const aimed = aiming && aimId >= 0 ? views.get(aimId) : undefined;
+    if (aimed) {
+      const r = 14 * aimed.size + 6;
+      ctx.beginPath();
+      ctx.arc(aimed.x, aimed.y, r, 0, Math.PI * 2);
+      ctx.strokeStyle = colors.outline; ctx.lineWidth = 5; ctx.stroke();
+      ctx.strokeStyle = '#06c4ff'; ctx.lineWidth = 2.5; ctx.stroke();
     }
     for (const p of particles) {
       if (p.x < -80 || p.x > width + 80 || p.y < -30 || p.y > height + 30) continue;
@@ -851,6 +865,63 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     if (aimEffects.length >= MAX_AIM_EFFECTS) aimEffects.shift();
     aimEffects.push({ x, y, kind, life: total, total });
   }
+  /** A bug a pointer could press now: in the viewport, not already squashed to death this frame. */
+  function aimable(j: number) {
+    const B = world!.bugs, x = B.x[j]!, y = B.y[j]!;
+    return x >= 0 && y >= 0 && x <= width && y <= height && B.hp[j]! - (pendingSquash.get(B.id[j]!) ?? 0) > 0;
+  }
+  function aimIndex() {
+    const B = world?.bugs;
+    if (B && aimId >= 0) for (let j = 0; j < B.count; j++) if (B.id[j] === aimId) {
+      if (!aimable(j)) return -1;
+      aimX = B.x[j]!; aimY = B.y[j]!;
+      return j;
+    }
+    return -1;
+  }
+  /** The nearest aimable bug to the last aim point; with a direction, only bugs that way. */
+  function pickAim(dx: number, dy: number) {
+    if (!world) return false;
+    const B = world.bugs, current = aimIndex();
+    if (current < 0 && aimId < 0) { aimX = width / 2; aimY = height / 2; }
+    if (current >= 0 && !dx && !dy) return true;
+    let best = -1, bestD = Infinity;
+    for (let j = 0; j < B.count; j++) {
+      if (j === current || !aimable(j)) continue;
+      const ox = B.x[j]! - aimX, oy = B.y[j]! - aimY;
+      if ((dx || dy) && ox * dx + oy * dy <= 0) continue;
+      const d = Math.hypot(ox, oy) + Math.abs(ox * dy - oy * dx);
+      if (d < bestD) { bestD = d; best = j; }
+    }
+    if (best >= 0) { aimId = B.id[best]!; aimX = B.x[best]!; aimY = B.y[best]!; }
+    else if (current < 0) aimId = -1;
+    return aimId >= 0;
+  }
+  /** Keyboard aim: pick a bug (dx, dy: the arrow's direction; 0, 0 keeps or picks the nearest). */
+  function aim(dx = 0, dy = 0) {
+    if (!active() || !world) return false;
+    aiming = true;
+    syncScroll();
+    return pickAim(dx, dy);
+  }
+  function clearAim() {
+    aiming = false; aimId = -1;
+    if (state.status === 'paused') draw();
+  }
+  /** Squash the aimed bug exactly as a press on it would (the same hit, points and effects). */
+  function squashAimed() {
+    if (state.status !== 'running' || !world) return false;
+    aiming = true;
+    syncScroll();
+    refreshGeometry(true);
+    const j = aimIndex();
+    if (j < 0) { pickAim(0, 0); return false; }
+    const B = world.bugs, id = B.id[j]!, left = B.hp[j]! - (pendingSquash.get(id) ?? 0);
+    addAimEffect(B.x[j]!, B.y[j]!, left <= 1 ? 'kill' : 'hit');
+    pendingSquash.set(id, B.hp[j]! - left + 1);
+    world.squash(id);
+    return true;
+  }
   function pointerDown(event: PointerEvent) {
     // A new physical press replaces any missing compatibility click from the
     // previous press. A genuine miss must never inherit hit suppression.
@@ -897,7 +968,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     gameoverTimeout = 0;
     raf = 0;
     restorePage();
-    particles = []; suppressedClick = null; pendingRescue = false; pendingSquash.clear(); invalidated = false;
+    particles = []; suppressedClick = null; pendingRescue = false; pendingSquash.clear(); invalidated = false; aimId = -1;
     checkedId.fill(0); coverCursor = 0; jumps = zaps = remaining = nextWaveIn = 0;
     Object.assign(state, { score: 0, wave: 0, kills: 0, combo: 1, elapsed: 0 });
     scrollX = win.scrollX || 0; scrollY = win.scrollY || 0;
@@ -971,6 +1042,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     stop();
     destroyed = true;
     for (const off of listeners) off();
+    if (!options.announcer) announce.destroy();
     canvasHost?.remove();
     canvasHost = null!; canvas = null!; ctx = null!;
     attackIndicators.destroy();
@@ -995,5 +1067,5 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     if (active()) { event.preventDefault(); pause(); }
     else if (state.status === 'paused') { event.preventDefault(); resume(); }
   });
-  return { start, pause, resume, stop, destroy, getSnapshot };
+  return { start, pause, resume, stop, destroy, getSnapshot, aim, clearAim, squashAimed };
 }

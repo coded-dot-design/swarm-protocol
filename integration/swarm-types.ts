@@ -158,6 +158,13 @@ export interface SwarmCoreController {
   stop(): SwarmSnapshot;
   destroy(): void;
   getSnapshot(): SwarmSnapshot;
+  /** Keyboard aim: pick a bug in the viewport (dx, dy: an arrow's direction; 0, 0 keeps the
+   *  current bug or picks the nearest). The aimed bug is ringed while aiming. */
+  aim(dx?: number, dy?: number): boolean;
+  /** Stop keyboard aiming (hides the ring). */
+  clearAim(): void;
+  /** Squash the aimed bug exactly as a press on it would; false if no bug was aimed. */
+  squashAimed(): boolean;
 }
 
 /** React owns destruction; open/start are safe to request while it is loading. */

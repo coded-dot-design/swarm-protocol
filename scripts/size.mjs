@@ -53,14 +53,16 @@ const reports = [
 ];
 // Hard gzip ceilings per loading stage (bytes). 1.3.1 measured 1,400 / 4,071 / 30,304 / 35,775 /
 // 4,342 / 34,646; the game on Fizlet (kernel, board-page and its grid: ~7.9 KB of it) measured
-// 1,400 / 4,071 / 39,132 / 44,603 / 4,342 / 43,474 at the port.
+// 1,400 / 4,071 / 39,132 / 44,603 / 4,342 / 43,474 at the port. E14 accessible play (keyboard aim,
+// focus handling, one polite live region in src/announce.ts) measured 1,400 / 4,119 / 40,446 /
+// 45,965 / 4,390 / 44,836: the game ceilings rise by exactly that delta (+1,314 / +1,360 / +1,361).
 const ceilings = {
   'Initial deferred scheduler': 1450,
   'Additional bootstrap after load/delay/idle': 4150,
-  'Additional game on first open/start': 39700,
-  'Complete deferred path': 45200,
+  'Additional game on first open/start': 41014,
+  'Complete deferred path': 46560,
   'Immediate root bootstrap (alternative)': 4420,
-  'Immediate root plus game (alternative)': 44100,
+  'Immediate root plus game (alternative)': 45461,
 };
 for (const [label, files] of reports) {
   const bytes = total(files), cap = ceilings[label];
