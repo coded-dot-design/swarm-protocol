@@ -1,0 +1,82 @@
+name: Tag a commit
+# Manual: creates an annotated tag on a given commit and pushes it. Never moves a tag:
+# a tag that already points at the commit is left alone, one that points elsewhere fails the run
+# (extra tags are skipped with a warning instead).
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to create
+        required: true
+        default: engine-baseline
+      sha:
+        description: Full commit SHA to tag
+        required: true
+      message:
+        description: Annotated tag message
+        required: true
+        default: Engine baseline
+      extra_tags:
+        description: Space-separated tags to add on the same commit when they don't exist yet
+        required: false
+        default: phase-1
+permissions:
+  contents: write
+concurrency:
+  group: tag-commit
+  cancel-in-progress: false
+jobs:
+  tag:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Tag the commit once
+        shell: bash
+        env:
+          TAG: ${{ inputs.tag }}
+          SHA: ${{ inputs.sha }}
+          MESSAGE: ${{ inputs.message }}
+          EXTRA_TAGS: ${{ inputs.extra_tags }}
+        run: |
+          set -euo pipefail
+          git fetch origin --tags --force
+          if ! [[ "$SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::sha must be a full 40-character commit SHA: $SHA"
+            exit 1
+          fi
+          if ! git cat-file -e "$SHA^{commit}" 2>/dev/null; then
+            echo "::error::$SHA is not a commit in this repository"
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # tag_once <tag> <strict>: 0 = created or already on SHA; strict tags fail when on another commit.
+          tag_once() {
+            local tag="$1" strict="$2"
+            git check-ref-format "refs/tags/$tag"
+            if git show-ref --verify --quiet "refs/tags/$tag"; then
+              local at
+              at="$(git rev-parse "refs/tags/$tag^{commit}")"
+              if [ "$at" = "$SHA" ]; then
+                echo "$tag already points at $SHA; nothing to do."
+                return 0
+              fi
+              if [ "$strict" = 1 ]; then
+                echo "::error::$tag already points at $at, not $SHA; refusing to move it."
+                return 1
+              fi
+              echo "::warning::$tag already points at $at; left as is."
+              return 0
+            fi
+            git tag -a "$tag" "$SHA" -m "$MESSAGE"
+            git push origin "refs/tags/$tag"
+            echo "Tagged $SHA as $tag."
+          }
+
+          tag_once "$TAG" 1
+          for extra in $EXTRA_TAGS; do
+            [ "$extra" = "$TAG" ] || tag_once "$extra" 0
+          done
