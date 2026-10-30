@@ -2,7 +2,7 @@
 
 ## 1.4.0
 
-Swarm Protocol runs on **Fizlet FIZLET_VERSION** (kernel and `fizlet/board-page`, vendored in `vendor/fizlet`). The public API, the widget, loader, React and Astro integrations, every visual and the rules' numbers stay as they were.
+Swarm Protocol runs on **Fizlet 0.17.0** (kernel and `fizlet/board-page`, vendored in `vendor/fizlet`). The public API, the widget, loader, React and Astro integrations, every visual and the rules' numbers stay as they were.
 
 - **The rules are one Fizlet system** (`src/world.ts`): fixed 1/60 s steps on typed arrays, seeded per round (same seed and inputs, same round). A step never allocates (tested in its own process), never reads layout and never writes the page.
 - **The controller drives one engine per round**: read (viewport, buttons, surfaces, the host's UI, scroll, what covers a reserved letter), step, render (the world's events as Swarm events, particles, liquid paint, nicks, attached bugs, edge cues, canvas). Frames come from the window of the document Swarm runs in.

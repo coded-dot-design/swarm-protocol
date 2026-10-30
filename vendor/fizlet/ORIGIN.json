@@ -1,8 +1,8 @@
 {
   "note": "Generated snapshot. Edit coded-dot-design/fizlet, then run node scripts/sync.mjs.",
   "repository": "https://github.com/coded-dot-design/fizlet",
-  "version": "0.16.1",
-  "commit": "c89d95d39a9b2230114d0ff76de24bc45bd97604",
+  "version": "0.17.0",
+  "commit": "9d36d45c87e6e8964701a17f390900efa98c13b3",
   "files": [
     {
       "path": "arcade.ts",
@@ -15,6 +15,10 @@
     {
       "path": "camera.ts",
       "sha256": "6da4f75b1f2a4f7fb5956db2fb795e8dec212663965442d4820a9101b6cefedb"
+    },
+    {
+      "path": "coach.ts",
+      "sha256": "88de2cd2193cd294c05cfffedc6ff0d4972f50e32f3d377ab14279c8dc2ad67c"
     },
     {
       "path": "collide.ts",
@@ -86,7 +90,7 @@
     },
     {
       "path": "perf.ts",
-      "sha256": "1c92e0aaf1689606b798cad2f9c01e71fbc0a11f69273f2c89f40e38e9e81c14"
+      "sha256": "83eb2ffd66fa31a6d96c3d954240519f0c8e00e13fdba0102b2ae16a537c7bc6"
     },
     {
       "path": "presence-check.ts",
@@ -111,6 +115,10 @@
     {
       "path": "sprite.ts",
       "sha256": "b669c3719eb8cae38dc7eecd5b00662d2d24bbcccbccd70b0dfe325b555a6d4a"
+    },
+    {
+      "path": "steer.ts",
+      "sha256": "1f88f6b2ac51cf773fefed194edeb6ad38b65d5bba9c7c2c5d99a094d6633002"
     },
     {
       "path": "ui/board-ui.css",
