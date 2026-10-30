@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Hub page facts describe 1.4.0** (`site/game.json`, no package change). The 1.3.1 facts (36 Range reads a frame, a 240-glyph nearby cache, "established engine") give way to what 1.4.0 measures: at most 600 Range reads a refresh (12.5 Hz while the page changes, 2 Hz once it is still), a rules step that never allocates (`tests/world-alloc.test.mjs`), and the 43-second workload counts from `PERFORMANCE.md` (ancestry checks −90.1%, computed-style reads −91.5%; re-run on this commit: same counts). The engine line names the Fizlet kernel and board-page; `src/world.ts` joins the source paths.
 - **No `shared/` copies.** The four snapshot files move into `src/`, unchanged. Only import paths change: the build emits the same code at the same size (114,306 B across the entry and chunk files), so play doesn't change. `tests/fixtures/runtime-reviewed-baseline.json` re-pins `dom-defender` and `swarm-widget` for their new import lines.
   - `src/attachments.ts`: `fizlet/arcade` gives arcade games `attach()`, but Swarm keeps its own shell, so it keeps this.
   - `src/game-controls.ts`: these are the widget's own header icons and styles. No other game uses them.
