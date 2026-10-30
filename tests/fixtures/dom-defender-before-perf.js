@@ -20,7 +20,7 @@ export function createDomDefender(options = {}) {
   const LETTERS_PER_TIER = 6;
   const MAX_FOOD_CANDIDATES = 240;
   const segmenter = typeof Intl.Segmenter === 'function' ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
-  const bestKey = options.bestKey || 'replica-dom-defender-best-v1';
+  const bestKey = options.bestKey || 'dom-defender-best-v1';
   const tierColors = ['#ff6b6b', '#d984ff', '#8573ee'];
   const stripePalette = ['#06c4ff', '#4428e8', '#8573ee', '#74dfa1'];
   const protectedPointerSelector = '[data-swarm-ui],[data-swarm-ignore],dialog,[role="dialog"],[aria-modal="true"],form,input,textarea,select,option,[contenteditable]';
@@ -794,7 +794,7 @@ export function createDomDefender(options = {}) {
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    // Exact outline from Replica's malware-bug.svg; only the legs articulate.
+    // Exact outline of Lucide's bug icon; only the legs articulate.
     if (!bugPaths) {
       bugPaths = {
         body: new win.Path2D('m8 2 1.88 1.88 M14.12 3.88 16 2 M9 7.13v-1a3.003 3.003 0 1 1 6 0v1 M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6 M12 20v-9'),
