@@ -1,6 +1,6 @@
 import { AttachedPresentation } from './attached-presentation.js';
-import { createMobileZoomLock } from '../shared/zoom-lock.js';
-import { createMobileSelectionLock } from '../shared/selection-lock.js';
+import { createMobileZoomLock } from './zoom-lock.js';
+import { createMobileSelectionLock } from './selection-lock.js';
 import type { Rect, Target, Bug, Particle, Surface, AimEffect, GameState, PointerNode } from './runtime-types.js';
 import type { SwarmEvent, SwarmStatus, SwarmCoreController, SwarmCoreOptions } from '../integration/swarm-types.js';
 import { createAttackIndicators, getAttackEdges, attackEdge, rescueOffer } from './attack-indicators.js';

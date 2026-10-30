@@ -125,7 +125,7 @@ async function widgetSource(path) {
     .replace(/health>55/g, 'health>75').replace(/health>25/g, 'health>35')
     .replace(/t.health>50/g, 't.health>75').replace(/t.health>0/g, 't.health>35');
   return transformSync(source, {loader: path.endsWith('.ts') ? 'ts' : 'js'}).code
-    .replace(/(["'])\.\.\/shared\/game-controls\.js\1/g, JSON.stringify(new URL('../shared/game-controls.ts', import.meta.url).href))
+    .replace(/(["'])(?:\.\.\/shared|\.)\/game-controls\.js\1/g, JSON.stringify(new URL('../src/game-controls.ts', import.meta.url).href))
     .replace(/(["'])\.\/target-health\.js\1/g, JSON.stringify(new URL('../src/target-health.ts', import.meta.url).href));
 }
 
