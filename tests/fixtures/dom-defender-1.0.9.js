@@ -851,7 +851,7 @@ export function createDomDefender(options = {}) {
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     /*! @license Bug icon derived from Lucide, ISC License. See THIRD_PARTY_NOTICES.md. */
-    // Exact outline from Replica's malware-bug.svg; only the legs articulate.
+    // Exact outline of Lucide's bug icon; only the legs articulate.
     if (!bugPaths) {
       bugPaths = {
         body: new win.Path2D('m8 2 1.88 1.88 M14.12 3.88 16 2 M9 7.13v-1a3.003 3.003 0 1 1 6 0v1 M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6 M12 20v-9'),
