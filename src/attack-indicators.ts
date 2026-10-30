@@ -53,7 +53,6 @@ const styles = `
 .bug-signal::before{content:'';position:absolute;inset:-3px;border-radius:inherit;background:#ff806d18;animation:swarm-bug-glow 2.2s ease-in-out infinite}
 .bug-signal svg{display:block;width:19px;height:19px;animation:swarm-bug-pulse 2.2s ease-in-out infinite}
 .copy{display:flex;flex-direction:column;gap:1px;min-width:0}.action{font-size:10px;font-weight:400;color:#b8bdc8}
-.announcement{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 @keyframes swarm-edge-pulse{0%,100%{opacity:.35}50%{opacity:1}}
 @keyframes swarm-bug-pulse{0%,100%{opacity:.5;transform:scale(.94)}50%{opacity:1;transform:scale(1.06)}}
 @keyframes swarm-bug-glow{0%,100%{opacity:.15}50%{opacity:1}}
@@ -65,8 +64,8 @@ const styles = `
 `;
 
 /** Lazy controls. Only the four buttons intercept input; no timers or layout reads. */
-export function createAttackIndicators(doc: Document, reducedMotion = false, onAction: (edge:number)=>void = () => {}) {
-  let host: HTMLDivElement | null = null, announcement: HTMLDivElement | null = null, current = 0, destroyed = false;
+export function createAttackIndicators(doc: Document, reducedMotion = false, onAction: (edge:number)=>void = () => {}, say: (key: string, text: string) => void = () => {}) {
+  let host: HTMLDivElement | null = null, current = 0, destroyed = false;
   const nodes: {node:HTMLDivElement;message:HTMLButtonElement;action:HTMLSpanElement;activate:()=>void}[] = [];
   let previousOffer: ReturnType<typeof rescueOffer> | null = null;
   function mount() {
@@ -107,12 +106,6 @@ export function createAttackIndicators(doc: Document, reducedMotion = false, onA
       root.append(node);
       nodes.push({ node, message, action, activate });
     }
-    announcement = doc.createElement('div');
-    announcement.setAttribute('class', 'announcement');
-    announcement.setAttribute('role', 'status');
-    announcement.setAttribute('aria-live', 'polite');
-    announcement.setAttribute('aria-atomic', 'true');
-    root.append(announcement);
     doc.body.appendChild(host);
   }
   return {
@@ -137,13 +130,14 @@ export function createAttackIndicators(doc: Document, reducedMotion = false, onA
         if (visible) directions.push(edge.direction);
       });
       host.setAttribute('data-swarm-directions', EDGES.filter(edge => edges & edge.bit).map(edge => edge.name).join(' '));
-      if (directionChanged) announcement!.textContent = edges ? `Other sections under attack ${directions.join(' and ')}. Use the alert to jump when you have enough points, or scroll to squash.` : '';
+      // Through the game's one polite live region (rate-limited there).
+      if (directionChanged && edges) say('alert', `Other sections under attack ${directions.join(' and ')}. Use the alert to jump when you have enough points, or scroll to squash`);
     },
     destroy() {
       destroyed = true;
       for (const { message, activate } of nodes) message.removeEventListener('click', activate);
       host?.remove();
-      host = announcement = null;
+      host = null;
       nodes.length = 0;
     },
   };

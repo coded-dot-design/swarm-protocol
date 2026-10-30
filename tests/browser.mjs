@@ -23,10 +23,10 @@ await new Promise((ok) => server.listen(0, "127.0.0.1", ok));
 const url = `http://127.0.0.1:${server.address().port}/`;
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 const snapshot = (page) => page.evaluate(() => document.documentElement.outerHTML);
-/** The page without Swarm's own hosts (its canvas overlay and edge cues stay until destroy). */
+/** The page without Swarm's own hosts (its canvas overlay, edge cues and live region stay until destroy). */
 const pageOnly = (page) =>
   page.evaluate(() => {
-    const own = [...document.querySelectorAll("[data-swarm-overlay],[data-swarm-attack-cues]")].map((el) => [el, el.parentNode, el.nextSibling]);
+    const own = [...document.querySelectorAll("[data-swarm-overlay],[data-swarm-attack-cues],[data-fz-announce]")].map((el) => [el, el.parentNode, el.nextSibling]);
     own.forEach(([el]) => el.remove());
     const html = document.documentElement.outerHTML;
     own.forEach(([el, parent, next]) => parent.insertBefore(el, next));
@@ -138,6 +138,73 @@ try {
   assert.equal(await snapshot(over), bare);
   await over.close();
 
+  where = "keyboard play and announcements";
+  // The widget played with the keyboard only: start, aim and squash, pause / resume, game over,
+  // restart, Escape. Score, integrity and game over are said through one polite live region.
+  const kb = await browser.newPage({ viewport: { width: 900, height: 700 } });
+  const kbErrors = [];
+  kb.on("pageerror", (e) => kbErrors.push(e.message));
+  await kb.goto(url);
+  await kb.evaluate(async () => {
+    document.getElementById("beta").remove();
+    for (const el of document.querySelectorAll("[data-swarm-text]")) el.removeAttribute("data-swarm-text");
+    const { mountSwarmGame } = await import("/dist/widget.js");
+    window.said = [];
+    new MutationObserver(() => {
+      const text = document.querySelector("[data-fz-announce]")?.textContent.trim();
+      if (text && text !== window.said.at(-1)) window.said.push(text);
+    }).observe(document.body, { subtree: true, childList: true, characterData: true });
+    const host = document.createElement("div");
+    document.body.append(host);
+    window.widget = mountSwarmGame(host, { initiallyClosed: false, showLauncher: false });
+    window.widget.open();
+  });
+  const focused = () => kb.evaluate(() => { let a = document.activeElement; while (a?.shadowRoot?.activeElement) a = a.shadowRoot.activeElement; return a?.id || a?.tagName; });
+  const kbState = () => kb.evaluate(() => window.widget.getSnapshot());
+  const said = (re) => kb.waitForFunction((src) => window.said.some((t) => new RegExp(src).test(t)), re.source, { timeout: 240000 });
+  assert.equal(await focused(), "start", "opening focuses Release the swarm");
+  await kb.keyboard.press("Enter");
+  assert.equal((await kbState()).status, "running");
+  assert.equal(await focused(), "aim", "starting moves focus to the keyboard aim control");
+  const aimBox = await kb.evaluate(() => document.activeElement.shadowRoot.activeElement.getBoundingClientRect().width);
+  assert.ok(aimBox > 100, "the focused aim control is visible");
+  for (let k = 0; k < 120 && (await kbState()).kills === 0; k++) {
+    await kb.keyboard.press(k % 7 === 6 ? "ArrowRight" : "Enter");
+    await kb.waitForTimeout(60);
+  }
+  assert.ok((await kbState()).kills > 0, "Enter squashes the aimed bug");
+  await said(/Score [1-9]/);
+  // Back to the header's pause control with Shift+Tab: pause, then resume, from the keyboard.
+  for (let k = 0; k < 6 && (await focused()) !== "pause"; k++) await kb.keyboard.press("Shift+Tab");
+  assert.equal(await focused(), "pause");
+  await kb.keyboard.press("Enter");
+  assert.equal((await kbState()).status, "paused");
+  await said(/Game paused/);
+  await kb.keyboard.press("Enter");
+  assert.equal((await kbState()).status, "running");
+  await said(/Game resumed/);
+  await kb.waitForFunction(() => window.widget.getSnapshot().status === "gameover", null, { timeout: 240000 });
+  await said(/Buttons at \d+% integrity/);
+  await said(/Game over\. Final score \d+/);
+  assert.equal(await focused(), "restart", "game over focuses Reboot & play again");
+  const regions = await kb.evaluate(() => {
+    let n = 0;
+    const walk = (root) => { for (const el of root.querySelectorAll("*")) { if (el.matches("[aria-live],[role=status],[role=alert]")) n++; if (el.shadowRoot) walk(el.shadowRoot); } };
+    walk(document);
+    return n;
+  });
+  assert.equal(regions, 1, "exactly one live region");
+  await kb.keyboard.press("Enter");
+  assert.equal((await kbState()).status, "running");
+  assert.equal(await focused(), "aim");
+  await kb.keyboard.press("Escape");
+  assert.equal((await kbState()).status, "idle", "Escape ends the round");
+  assert.notEqual(await focused(), "aim", "and focus leaves the hidden game");
+  await kb.evaluate(() => window.widget.destroy());
+  assert.equal(await kb.evaluate(() => document.querySelectorAll("[data-fz-announce]").length), 0, "destroy removes the region");
+  assert.deepEqual(kbErrors, []);
+  await kb.close();
+
   where = "iframe document";
   // The controller runs in the document it is given: the letters, buttons and Recall of the frame.
   const host = await browser.newPage({ viewport: { width: 1000, height: 800 } });
@@ -163,7 +230,7 @@ try {
   assert.equal(await frameDoc(), framed, "Recall restores the frame's page exactly");
   assert.equal(await snapshot(host), outer, "and the outer page was never touched");
   await host.close();
-  console.log("Swarm Protocol browser: letters to bits, buttons drained, a covered paragraph kept, fields, pause, Recall exact, shooting, frame time, game over (page back), iframe document passed.");
+  console.log("Swarm Protocol browser: letters to bits, buttons drained, a covered paragraph kept, fields, pause, Recall exact, shooting, frame time, game over (page back), keyboard play and announcements, iframe document passed.");
 } catch (err) {
   console.error(`browser test failed at: ${where}`);
   // On CI, also as an annotation (readable from the checks API without the log).

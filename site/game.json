@@ -11,8 +11,10 @@
   "versionNote": "The original DOM experiment.",
   "controls": [
     "Click / tap — squash a bug",
+    "Keyboard aim (focused when a round starts): ← → ↑ ↓ pick a bug · Enter / Space squash it",
+    "Tab / Shift+Tab — move between controls · Enter / Space — press one",
     "Scroll — outrun the swarm",
-    "Edge alerts — paid Jump or Jump + Zap",
+    "Edge alerts — paid Jump or Jump + Zap (Tab to them, Enter)",
     "Esc — Recall and restore the page",
     "Scoreboard: sound · pause / resume · minimize · Recall"
   ],

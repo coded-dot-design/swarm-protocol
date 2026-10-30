@@ -52,23 +52,26 @@ function documentFixture() {
 }
 
 test('cues mount only for a threat, retain stable DOM, clear directions, and clean up permanently', () => {
-  const doc=documentFixture(), cues=createAttackIndicators(doc);
+  // Direction changes are said through the game's one polite region (the `say` callback).
+  const said=[], doc=documentFixture(), cues=createAttackIndicators(doc,false,undefined,(key,text)=>said.push([key,text]));
+  const live={get textContent(){return said.at(-1)?.[1]??'';}};
   cues.update(0); assert.equal(doc.body.children.length,0);
   cues.update(2);
   assert.equal(doc.body.children.length,1);
-  const host=doc.body.children[0], root=host.shadowRoot, edgeNodes=root.children.slice(1,5), live=root.children.at(-1);
+  const host=doc.body.children[0], root=host.shadowRoot, edgeNodes=root.children.slice(1,5);
   assert.equal(host.getAttribute('data-swarm-ui'),undefined,'Full-screen cues must not block the game hit area');
   assert.equal(host.getAttribute('data-swarm-directions'),'bottom');
   assert.deepEqual(edgeNodes.map(node=>node.hidden),[true,false,true,true]);
-  assert.match(live.textContent,/below.*scroll to squash/);
+  assert.match(live.textContent,/below.*scroll to squash/); assert.equal(said.at(-1)[0],'alert');
   const writes=doc.writes;
   for(let frame=0;frame<120;frame++)cues.update(2);
   assert.equal(doc.writes,writes,'Unchanged frames must not rewrite cue attributes');
   cues.update(9);
   assert.deepEqual(edgeNodes.map(node=>node.hidden),[false,true,true,false]);
   assert.match(live.textContent,/above and to the right/);
+  const count=said.length;
   cues.update(0);
-  assert.equal(host.hidden,true); assert.equal(live.textContent,'');
+  assert.equal(host.hidden,true); assert.equal(said.length,count,'clearing says nothing');
   cues.update(1);assert.equal(host.hidden,false);assert.equal(doc.body.children[0],host);
   cues.destroy();cues.destroy();cues.update(2);
   assert.equal(doc.body.children.length,0);
@@ -82,7 +85,7 @@ test('cues honor reduced motion and only control buttons intercept input', () =>
   assert.match(css,/prefers-reduced-motion:reduce/);
   assert.match(css,/:host\(\[data-reduced-motion\]\) .edge::before\{animation:none/);
   assert.match(css,/\*\{box-sizing:border-box;pointer-events:none!important\}/);
-  assert.equal(host.shadowRoot.children.at(-1).getAttribute('aria-live'),'polite');
+  assert.ok(host.shadowRoot.children.every(node=>node.getAttribute?.('aria-live')==null),'no live region of its own');
   cues.destroy();
 });
 
