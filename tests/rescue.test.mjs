@@ -84,7 +84,7 @@ test('zap is radius-bound, returns one point each, and cannot farm a clear bonus
     const after=snap(p), event=p.events.find(e=>e.type==='rescue');
     assert.equal(event.action,'zap');assert.equal(event.killed,before.alive);assert.equal(after.score,before.score-200+before.alive);
     assert.equal(after.alive,0);assert.equal(after.kills,before.kills+before.alive);assert.equal(after.combo,1);
-    assert.equal(after.rescue.zapCost,375);assert.equal(after.rescue.mode,after.score>=375?'zap':after.score>=75?'jump':'locked');
+    assert.equal(after.rescue.zapCost,375);assert.equal(after.rescue.jumpCost,75);
     assert.equal(p.events.filter(e=>e.type==='kill').length,normalKills,'No normal kill multiplier/audio burst');
     assert.equal(after.status,'intermission');assert.equal(p.events.find(e=>e.type==='wave-clear').bonus,0);
     assert.ok(p.arcs.some(a=>a[2]>(reduced?100:10)));p.call('pause');const snapshot=snap(p);p.tick(1);assert.deepEqual(snap(p),snapshot);
@@ -117,12 +117,17 @@ test('zap leaves distant survivors and charges once; removed, paused or hidden t
 });
 
 test('rapid repeated rescues and protected alert presses cannot shoot through or charge twice',()=>{
-  const p=rescuePage();earn(p,50);attack(p);
-  const control=button(p),before=snap(p).score;
-  const press=p.pointer(control,200,200);p.fire('pointerdown',press);assert.ok(!press.prevented);
+  const p=rescuePage();earn(p,50);
+  // A moment with the cue up and a bug on screen: a press on the cue right over that bug.
+  const ready=()=>cue(p)&&!cue(p).hidden&&snap(p).status==='running'&&[...p.draws.values()].some(b=>!b.attached&&onScreen(p,b));
+  for(let i=0;i<2400&&!ready();i++)p.tick(1/60);
+  assert.ok(ready());
+  const control=button(p),before=snap(p).score,kills=snap(p).kills,bug=[...p.draws.values()].find(b=>!b.attached&&onScreen(p,b));
+  const press=p.pointer(control,bug.x,bug.y);p.fire('pointerdown',press);assert.ok(!press.prevented,'the cue press is the cue\'s');
   control.fire('click',{});
   // Even if a second edge remains visible, the shared action cooldown is authoritative.
   control.fire('click',{});p.tick(1/60);control.fire('click',{});p.tick(1/60);
+  assert.equal(snap(p).kills,kills,'no bug was shot through the cue');
   assert.equal(snap(p).score,before-50);
   assert.equal(p.events.filter(e=>e.type==='rescue').length,1);p.finish();
 });

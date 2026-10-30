@@ -17,7 +17,7 @@ export interface Board {
   readonly scans: number;
 }
 
-export const MAX_BUGS = 48, MAX_TARGETS = 32, MAX_UI = 16, MAX_SURFACES = 16;
+export const MAX_BUGS = 48, MAX_TARGETS = 64, MAX_UI = 32, MAX_SURFACES = 16;
 const WAVE_SECONDS = 18, CHEW_SECONDS = 0.24, LETTERS_PER_TIER = 6;
 /** Controls and view (the game writes them in the read phase). */
 /** STALE: the letters' geometry is catching up after a scroll or resize (no new reservations). */
@@ -62,6 +62,8 @@ export function createWorld(e: Engine, board: Board, ctl: Float64Array = new Flo
   const searchIn = new Float64Array(B), waitUntil = new Float64Array(B), chewing = new Uint8Array(B), chewLeft = new Float64Array(B), chewX = new Float64Array(B), chewY = new Float64Array(B);
   const scatterUntil = new Float64Array(B), scatterX = new Float64Array(B), scatterY = new Float64Array(B), pursuit = new Uint8Array(B), pursuitUntil = new Float64Array(B);
   const dashIn = new Float64Array(B), dashX = new Float64Array(B), dashY = new Float64Array(B), orbit = new Float64Array(B), attached = new Uint8Array(B);
+  // Where each bug's reserved letter is (its centre): a rescan renumbers letters, so it is found again here.
+  const foodX = new Float64Array(B), foodY = new Float64Array(B);
   // Glyph reservations (bug id) and glyphs the game found covered (read phase): reset on a rescan.
   const reserved = new Int32Array(glyphCap), covered = new Uint8Array(glyphCap);
   // Counts: bugs, targets, ui rects, surfaces, visible live targets, available live targets.
@@ -245,18 +247,13 @@ export function createWorld(e: Engine, board: Board, ctl: Float64Array = new Flo
     target[j] = chooseTarget(j);
     return true;
   }
+  /** Every per-bug array (removal shifts them all). */
+  const per = [id, bx, by, ang, phase, size, tier, hp, eaten, flash, speed, age, biteIn, target, siphon, food, lastX, lastY, hasLast, searchIn, waitUntil, chewing, chewLeft, chewX, chewY, scatterUntil, scatterX, scatterY, pursuit, pursuitUntil, dashIn, dashX, dashY, orbit, attached, foodX, foodY];
   /** Remove bug j, keeping the others in order (1.3.1 spliced). */
   function remove(j: number) {
     release(j);
     const last = --n[BN]!;
-    for (let k = j; k < last; k++) {
-      const m = k + 1;
-      id[k] = id[m]!; bx[k] = bx[m]!; by[k] = by[m]!; ang[k] = ang[m]!; phase[k] = phase[m]!; size[k] = size[m]!; tier[k] = tier[m]!; hp[k] = hp[m]!; eaten[k] = eaten[m]!; flash[k] = flash[m]!;
-      speed[k] = speed[m]!; age[k] = age[m]!; biteIn[k] = biteIn[m]!; target[k] = target[m]!; siphon[k] = siphon[m]!; food[k] = food[m]!; lastX[k] = lastX[m]!; lastY[k] = lastY[m]!; hasLast[k] = hasLast[m]!;
-      searchIn[k] = searchIn[m]!; waitUntil[k] = waitUntil[m]!; chewing[k] = chewing[m]!; chewLeft[k] = chewLeft[m]!; chewX[k] = chewX[m]!; chewY[k] = chewY[m]!;
-      scatterUntil[k] = scatterUntil[m]!; scatterX[k] = scatterX[m]!; scatterY[k] = scatterY[m]!; pursuit[k] = pursuit[m]!; pursuitUntil[k] = pursuitUntil[m]!;
-      dashIn[k] = dashIn[m]!; dashX[k] = dashX[m]!; dashY[k] = dashY[m]!; orbit[k] = orbit[m]!; attached[k] = attached[m]!;
-    }
+    for (let k = 0; k < per.length; k++) per[k]!.copyWithin(j, j + 1, last + 1);
   }
   function damage(t: number, j: number) {
     bites[t]!++;
@@ -308,7 +305,7 @@ export function createWorld(e: Engine, board: Board, ctl: Float64Array = new Flo
       searchIn[j]! -= dt;
       if (food[j]! < 0 && searchIn[j]! <= 0) {
         const g = chooseFood(j);
-        if (g >= 0) (food[j] = g), (reserved[g] = id[j]!);
+        if (g >= 0) (food[j] = g), (reserved[g] = id[j]!), (foodX[j] = G.x[g]! + G.w[g]! / 2), (foodY[j] = G.y[g]! + G.h[g]! / 2);
         searchIn[j] = tier[j]! >= 3 ? 0.22 : 0.14;
       }
       if (food[j]! >= 0) {
@@ -520,12 +517,19 @@ export function createWorld(e: Engine, board: Board, ctl: Float64Array = new Flo
     if (s[OVER]) return;
     s[DT] = dt;
     s[TIME]! += dt;
-    // A rescan renumbers the letters: reservations and covered marks start over.
+    // A rescan renumbers the letters (the page changed somewhere): covered marks start over, and
+    // each bug finds its letter again where it was (or lets go if it is gone).
     if (board.scans !== s[SCANS]) {
       s[SCANS] = board.scans;
       reserved.fill(0);
       covered.fill(0);
-      for (let j = 0; j < n[BN]!; j++) (food[j] = -1), (chewing[j] = 0);
+      for (let j = 0; j < n[BN]!; j++) {
+        if (food[j]! < 0) continue;
+        const g = nearest(foodX[j]!, foodY[j]!, 3, j, Infinity);
+        food[j] = g;
+        if (g >= 0) reserved[g] = id[j]!;
+        else chewing[j] = 0;
+      }
     }
     cacheTargets();
     if ((s[FOOD_SCAN_IN]! -= dt) <= 0) (s[FOOD_SCAN_IN] = 0.1), (s[LOCAL_FOOD] = surveyFood());

@@ -58,14 +58,7 @@ try {
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(url);
   const before = await snapshot(page);
-  // A layer over one paragraph (a menu, a dialog): its letters are not food.
-  await page.evaluate(() => {
-    const r = document.getElementById("cover").getBoundingClientRect(), lid = document.createElement("div");
-    lid.id = "lid";
-    lid.style.cssText = `position:absolute;left:${r.left - 4}px;top:${r.top + scrollY - 4}px;width:${r.width + 8}px;height:${r.height + 8}px;background:#eee;z-index:1`;
-    document.body.append(lid);
-  });
-  const withLid = await snapshot(page);
+  // A layer over one paragraph (#lid: a menu, a dialog): its letters are not food.
   const covered = await page.locator("#cover").textContent();
   await launch(page);
   let s = await state(page);
@@ -80,8 +73,7 @@ try {
   assert.match(bite.binary, /^[01]$/);
   assert.equal(await page.locator("#cover").textContent(), covered, "letters under a layer are not eaten");
   assert.equal(await page.locator("#alpha").getAttribute("data-swarm-infected"), "active", "a drained button is painted");
-  // A click on the page's link does not follow it while playing (the overlay passes clicks through
-  // only where no bug is); typing in the page's field stays the page's.
+  // Typing in the page's own field stays the page's.
   await page.click("#field");
   await page.keyboard.type("hi there");
   assert.equal(await page.inputValue("#field"), "hi there");
@@ -99,11 +91,9 @@ try {
   // Recall: stop gives every letter, style and attribute back (the overlay host stays until destroy).
   await page.evaluate(() => window.game.stop());
   await page.fill("#field", "");
-  assert.equal(await pageOnly(page), withLid, "Recall restores the page exactly");
+  assert.equal(await pageOnly(page), before, "Recall restores the page exactly");
   await page.evaluate(() => window.game.destroy());
-  assert.equal(await snapshot(page), withLid, "destroy removes the overlay too");
-  await page.evaluate(() => document.getElementById("lid").remove());
-  assert.equal(await snapshot(page), before);
+  assert.equal(await snapshot(page), before, "destroy removes the overlay too");
 
   where = "shooting";
   await launch(page, { track: true });
@@ -173,7 +163,7 @@ try {
   assert.equal(await frameDoc(), framed, "Recall restores the frame's page exactly");
   assert.equal(await snapshot(host), outer, "and the outer page was never touched");
   await host.close();
-  console.log("Swarm Protocol browser: letters to bits, buttons drained, a covered paragraph kept, links and fields, pause, Recall exact, shooting, frame time, game over (page back), iframe document passed.");
+  console.log("Swarm Protocol browser: letters to bits, buttons drained, a covered paragraph kept, fields, pause, Recall exact, shooting, frame time, game over (page back), iframe document passed.");
 } catch (err) {
   console.error(`browser test failed at: ${where}`);
   // On CI, also as an annotation (readable from the checks API without the log).

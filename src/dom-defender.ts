@@ -65,11 +65,11 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
   const attachedPresentation = new AttachedPresentation(doc, setStyle);
 
   // ---------- The round: one engine, the page's letters, the rules ----------
-  let engine: Engine | null = null, board: BoardPage | null = null, world: W.World | null = null;
+  let engine: Engine | null = null, board: Pick<BoardPage, 'glyphs' | 'scans' | 'reads' | 'nearAt' | 'consume' | 'char' | 'parent' | 'refresh'> | null = null, world: W.World | null = null;
   const ctl = new Float64Array(8);
   // Letters' geometry after a scroll or resize: stale until a board refresh reads them all (under
   // its cap) at least 0.1 s later, or 0.5 s at most. A rescue waits for the world's next step.
-  let staleUntil = 0, pendingRescue = false;
+  let staleUntil = 0, pendingRescue = false, invalidated = false, cursorDirty = false;
   // Presses this frame per bug id: the world squashes in its next step, so a second press on a bug
   // already squashed to death this frame misses (as a press on a gone bug did before).
   const pendingSquash = new Map<number, number>();
@@ -77,34 +77,41 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
   const checkedId = new Int32Array(W.MAX_BUGS), checkedGlyph = new Int32Array(W.MAX_BUGS), checkedAt = new Float64Array(W.MAX_BUGS);
   let coverCursor = 0;
   // Drawing views of the world's bugs (stable per bug id), and the live list in arrival order.
-  const views = new Map<number, Bug>(), spareViews: Bug[] = [];
+  const views = new Map<number, Bug>();
   let bugs: Bug[] = [], viewStamp = 0;
   const pursuitNames = [null, 'attack', 'dash', 'exit', 'transit'] as const;
+  /** A board with no letters (browsers without Intl.Segmenter). */
+  const none = new Float32Array(0);
+  const noLetters = { glyphs: { count: 0, x: none, y: none, w: none, h: none, spent: new Uint8Array(0) }, scans: 0, reads: 0, nearAt: () => 0, consume: () => false, char: () => '', parent: () => null, refresh() {} } as const;
 
   function on<K extends keyof DocumentEventMap>(target: EventTarget, name: K, callback: (event: DocumentEventMap[K])=>void, settings?: boolean | AddEventListenerOptions) {
     target.addEventListener(name, callback as EventListener, settings);
     listeners.push(() => target.removeEventListener(name, callback as EventListener, settings));
   }
-  function emit(type: SwarmEvent["type"], data: Record<string,unknown> = {}) {
-    options.onEvent?.({ type, ...data } as SwarmEvent);
+  /** A host callback that throws is reported, and the round goes on (it runs inside a frame). */
+  function call<T>(callback: ((value: T) => void) | undefined, value: T) {
+    try { callback?.(value); } catch (error) { if (win.reportError) win.reportError(error); else console.error(error); }
   }
+  function emit(type: SwarmEvent["type"], data: Record<string,unknown> = {}) {
+    call(options.onEvent, { type, ...data } as SwarmEvent);
+  }
+  // The round's numbers the snapshot shows (kept after the round's engine is gone, as 1.3.1 did).
+  let jumps = 0, zaps = 0, remaining = 0, nextWaveIn = 0;
   function getRescueOffer() {
-    const s = world?.s;
-    return rescueOffer(s ? s[W.SCORE]! : 0, s ? s[W.JUMPS]! : 0, s ? s[W.ZAPS]! : 0);
+    return rescueOffer(state.score, jumps, zaps);
   }
   function getSnapshot() {
     const enrolled = targets.filter(t => t.enrolled && t.rendered && t.element.isConnected);
     const health = enrolled.length ? enrolled.reduce((sum, t) => sum + t.health, 0) / enrolled.length : 100;
-    const s = world?.s;
     return {
       ...state,
-      rescue: { ...getRescueOffer(), jumps: s ? s[W.JUMPS]! : 0, zaps: s ? s[W.ZAPS]! : 0 },
+      rescue: { ...getRescueOffer(), jumps, zaps },
       alive: bugs.length,
       offscreenBugs: bugs.filter(b => b.x < 0 || b.y < 0 || b.x > width || b.y > height).length,
       frenzy: state.status !== 'idle' && state.status !== 'gameover' && !targets.some(t => t.rendered && t.visible && t.health > 0),
-      remaining: s ? s[W.REMAINING]! : 0,
+      remaining,
       integrity: Math.round(health),
-      nextWaveIn: s ? Math.max(0, s[W.NEXT_WAVE_IN]!) : 0,
+      nextWaveIn: Math.max(0, nextWaveIn),
       targets: enrolled.map(t => ({ id: t.id, label: t.label, health: Math.round(t.health), visible: t.visible })),
     };
   }
@@ -112,7 +119,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     const now = win.performance.now();
     if (force || now - lastState >= 100) {
       lastState = now;
-      options.onState?.(getSnapshot());
+      call(options.onState, getSnapshot());
     }
   }
   function status(value: SwarmStatus) {
@@ -224,7 +231,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
       world.ui.set(uiRects.length);
       ctl[W.VW] = width; ctl[W.VH] = height;
     }
-    syncCursor();
+    cursorDirty = true;
   }
   function ensureCanvas() {
     if (canvas) return;
@@ -355,7 +362,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
       if (target.rendered && (!coarsePointer() || target.health <= 0)) paintTarget(target);
     }
     // Paused rounds keep their phase/health but still allow native interaction.
-    if (state.status === 'paused' && !doc.hidden) { refreshGeometry(); draw(); }
+    if (state.status === 'paused' && !doc.hidden) { syncScroll(); refreshGeometry(); syncViews(); draw(); }
   }
   function animateTargetHit(target: Target) {
     if (coarsePointer()) {
@@ -388,10 +395,14 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     for (const effect of aimEffects) { effect.x -= dx; effect.y -= dy; }
   }
   function invalidateFoodGeometry() {
-    syncScroll();
     geometryDirty = true;
+    invalidated = true;
+  }
+  /** Read: a scroll or resize since the last frame. Every bug lets go of its letter and looks again
+   *  once the letters are measured again. */
+  function applyInvalidate() {
+    invalidated = false;
     if (!world) return;
-    // Every bug lets go of its letter and looks again once the letters are measured again.
     world.invalidate();
     ctl[W.STALE] = 1;
     staleUntil = state.elapsed + .5;
@@ -401,6 +412,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
   function read() {
     if (targets.some(target => target.interactionUntil > state.elapsed)) geometryDirty = true;
     syncScroll();
+    if (invalidated) applyInvalidate();
     refreshGeometry();
     ctl[W.COARSE] = coarsePointer() ? 1 : 0;
     ctl[W.CALM] = reducedMotion ? 1 : 0;
@@ -411,24 +423,30 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     checkCover();
   }
   /** A reserved letter must still be the text's own at its centre (not under a dialog, a menu or
-   *  another layer): one elementFromPoint each, a few bugs a frame, each letter again after 0.16 s. */
+   *  another layer): one elementFromPoint each. A letter being chewed is checked every frame (its
+   *  bite lands at the end of the chew); other reserved letters a few a frame, each again after 0.16 s. */
   function checkCover() {
     if (!world || !board || !doc.elementFromPoint) return;
-    const B = world.bugs, G = board.glyphs, n = B.count;
+    const B = world.bugs, n = B.count;
+    for (let j = 0; j < n; j++) if (B.chewing[j]) coverAt(j);
     for (let k = 0, checks = 0; k < n && checks < COVER_CHECKS; k++) {
       const j = (coverCursor + k) % n, g = world.food[j]!;
-      if (g < 0 || g >= G.count) continue;
-      if (checkedId[j] === B.id[j] && checkedGlyph[j] === g && state.elapsed - checkedAt[j]! < .16) continue;
+      if (B.chewing[j] || g < 0 || (checkedId[j] === B.id[j] && checkedGlyph[j] === g && state.elapsed - checkedAt[j]! < .16)) continue;
+      coverAt(j);
       checks++;
-      checkedId[j] = B.id[j]!; checkedGlyph[j] = g; checkedAt[j] = state.elapsed;
-      const parent = board.parent(g);
-      if (!parent || !(G.w[g]! > 0)) continue;
-      const hit = doc.elementFromPoint(G.x[g]! + G.w[g]! / 2, G.y[g]! + G.h[g]! / 2);
-      const area = parent.closest(selectors.text);
-      const own = !!hit && (hit === parent || parent.contains(hit) || (hit !== doc.body && !!area?.contains(hit) && hit.contains(parent)));
-      world.cover(g, !own);
     }
     if (n) coverCursor = (coverCursor + COVER_CHECKS) % n;
+  }
+  function coverAt(j: number) {
+    const B = world!.bugs, G = board!.glyphs, g = world!.food[j]!;
+    if (g < 0 || g >= G.count) return;
+    checkedId[j] = B.id[j]!; checkedGlyph[j] = g; checkedAt[j] = state.elapsed;
+    const parent = board!.parent(g);
+    if (!parent || !(G.w[g]! > 0)) return;
+    const hit = doc.elementFromPoint(G.x[g]! + G.w[g]! / 2, G.y[g]! + G.h[g]! / 2);
+    const area = parent.closest(selectors.text);
+    const own = !!hit && (hit === parent || parent.contains(hit) || (hit !== doc.body && !!area?.contains(hit) && hit.contains(parent)));
+    world!.cover(g, !own);
   }
 
   // ---------- Render: the world's events, then the page and the canvas ----------
@@ -440,10 +458,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     for (let j = 0; j < n; j++) {
       const id = B.id[j]!;
       let v = views.get(id);
-      if (!v) {
-        v = spareViews.pop() || ({} as Bug);
-        views.set(id, v);
-      }
+      if (!v) views.set(id, (v = {} as Bug));
       const t = B.target[j]!, tier = B.tier[j]!;
       v.id = id; v.x = B.x[j]!; v.y = B.y[j]!; v.angle = B.angle[j]!; v.size = B.size[j]!; v.tier = tier; v.hp = B.hp[j]!;
       v.color = tierColors[tier - 1]!; v.age = B.age[j]!; v.phase = B.phase[j]!; v.lettersEaten = v.feeds = B.eaten[j]!;
@@ -452,11 +467,12 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
       v.pursuit = pursuitNames[B.pursuit[j]!] ?? null; v.scatterUntil = B.scatterUntil[j]!; v.stamp = stamp;
       bugs.push(v);
     }
-    for (const [id, v] of views) if (v.stamp !== stamp) { views.delete(id); spareViews.push(v); }
+    for (const [id, v] of views) if (v.stamp !== stamp) views.delete(id);
   }
   function syncState() {
     const s = world!.s;
     state.score = s[W.SCORE]!; state.wave = s[W.WAVE]!; state.kills = s[W.KILLS]!; state.combo = s[W.COMBO]!; state.elapsed = s[W.TIME]!;
+    jumps = s[W.JUMPS]!; zaps = s[W.ZAPS]!; remaining = s[W.REMAINING]!; nextWaveIn = s[W.NEXT_WAVE_IN]!;
     const T = world!.targets;
     targets.forEach((target, t) => {
       target.health = T.health[t]!; target.bites = T.bites[t]!; target.hitUntil = T.hitUntil[t]!;
@@ -561,16 +577,19 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
           break;
         }
       }
-      if (state.status === 'gameover') break;
+      // A host callback may have stopped, restarted or destroyed the round.
+      if (state.status === 'gameover' || engine !== e) break;
     }
   }
   function render() {
     if (!world || !engine) return;
-    const dt = engine.timing[0]!;
+    const e = engine, dt = e.timing[0]!;
     syncState();
     syncViews();
     drainEvents();
+    if (engine !== e) return;
     syncState();
+    if (cursorDirty) { cursorDirty = false; syncCursor(); }
     // Coalesce health paints; pulse drawing shares the existing canvas loop.
     const calm = coarsePointer();
     for (const target of targets) {
@@ -774,6 +793,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     // One native instant scroll handles both page and nested containers, even on
     // sites with CSS smooth scrolling. No extra animation loop or scroll lock.
     target.element.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'center' });
+    syncScroll();
     invalidateFoodGeometry();
     refreshGeometry(true);
     if (!target.visible) { updateAttackIndicators(); return; }
@@ -802,6 +822,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     const element = cursorElement;
     cursorElement = null;
     engine?.ledger.unstyle(element, 'cursor');
+    if (element.getAttribute('style') === '') element.removeAttribute('style');
   }
   function setCursor(element: HTMLElement | null, path: PointerNode[] = [element!]) {
     if (state.status !== 'running' || !engine || doc.hidden || lastPointer?.type !== 'mouse' || !element?.style || !element.isConnected || protectedPointer(path)) {
@@ -876,7 +897,8 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     gameoverTimeout = 0;
     raf = 0;
     restorePage();
-    particles = []; suppressedClick = null; pendingRescue = false; pendingSquash.clear();
+    particles = []; suppressedClick = null; pendingRescue = false; pendingSquash.clear(); invalidated = false;
+    checkedId.fill(0); coverCursor = 0; jumps = zaps = remaining = nextWaveIn = 0;
     Object.assign(state, { score: 0, wave: 0, kills: 0, combo: 1, elapsed: 0 });
     scrollX = win.scrollX || 0; scrollY = win.scrollY || 0;
     pausedForVisibility = false;
@@ -884,10 +906,11 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     canvas.style.display = 'block';
     // The round: its own engine (seeded per round), the page's letters, the rules.
     engine = createEngine({ step: 1 / 60, maxSteps: 3, seed: 1 + Math.floor(Math.random() * 0x7ffffffe), events: 256, pause: { hidden: false, offscreen: false, editable: false } });
-    board = boardPage(engine, {
+    // Letters need Intl.Segmenter (graphemes); without it, the round is buttons only.
+    board = typeof Intl.Segmenter === 'function' ? boardPage(engine, {
       root: doc.body, text: selectors.text, targets: selectors.target, maxTargets: 0, letters: true, reads: READS, color: '#d984ff',
       exclude: '[data-swarm-ui],[data-swarm-ignore],[data-swarm-target],[data-swarm-overlay]',
-    });
+    }) : noLetters;
     world = W.createWorld(engine, board, ctl);
     engine.add({ read, render, step: () => { pendingRescue = false; if (pendingSquash.size) pendingSquash.clear(); } });
     ctl.fill(0);
@@ -934,7 +957,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     if (gameoverTimeout) win.clearTimeout(gameoverTimeout);
     gameoverTimeout = 0;
     raf = 0;
-    particles = []; suppressedClick = null; pendingRescue = false;
+    particles = []; suppressedClick = null; pendingRescue = false; remaining = nextWaveIn = 0;
     restorePage();
     targets = []; surfaces = [];
     if (ctx) ctx.clearRect(0, 0, width, height);

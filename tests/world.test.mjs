@@ -98,8 +98,10 @@ test("rescue: Jump costs 50 then 75; Zap 200 (+150 a zap, +25 a jump) clears aro
   w.offer(o);
   assert.deepEqual([...o], [75, 225, 2]);
   run(3);
-  for (let j = 0; j < w.bugs.count; j++) (w.bugs.x[j] = 500), (w.bugs.y[j] = 500);
+  // Every tier in the blast dies and pays one point (no combo, speed or tier bonus).
+  for (let j = 0; j < w.bugs.count; j++) (w.bugs.x[j] = 500), (w.bugs.y[j] = 500), (w.bugs.tier[j] = (j % 3) + 1), (w.bugs.hp[j] = (j % 3) + 1);
   const before = w.bugs.count;
+  assert.ok(before >= 3);
   w.rescue(0, 2, 510, 520, 160);
   run(1 / 60);
   assert.equal(w.bugs.count, 0);
@@ -119,15 +121,22 @@ test("a button scrolled off screen is still attacked: dash, exit, transit, then 
   assert.ok(count(events, "damage") > 0, "and bite it");
 });
 
-test("a rescan drops every reservation (glyph indices renumber)", () => {
+test("a rescan (the page changed elsewhere) keeps each bug on its letter, found again where it was", () => {
   const { w, board, run } = round({ buttons: [] });
   run(2);
-  let reserving = 0;
-  for (let j = 0; j < w.bugs.count; j++) if (w.food[j] >= 0) reserving++;
-  assert.ok(reserving > 0);
+  const held = [];
+  for (let j = 0; j < w.bugs.count; j++) if (w.food[j] >= 0 && !w.bugs.chewing[j]) held.push([w.bugs.id[j], w.food[j]]);
+  assert.ok(held.length > 0);
+  // The letter of the first one goes away in the same change.
+  board.glyphs.spent[held[0][1]] = 1;
   board.rescan();
-  run(1 / 120);
-  for (let j = 0; j < w.bugs.count; j++) assert.ok(w.food[j] < 0 || w.food[j] >= 0); // re-chosen after the reset
+  run(1 / 60);
+  const now = new Map();
+  for (let j = 0; j < w.bugs.count; j++) now.set(w.bugs.id[j], w.food[j]);
+  assert.notEqual(now.get(held[0][0]), held[0][1], "a bug whose letter is gone lets go of it");
+  let kept = 0;
+  for (const [id, g] of held.slice(1)) if (now.get(id) === g) kept++;
+  assert.ok(kept >= held.length - 2, `${kept} of ${held.length - 1} bugs kept their letter`);
 });
 
 test("same seed, same inputs: the same round (multiplayer-ready)", () => {
