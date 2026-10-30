@@ -1,4 +1,4 @@
-import { controlIcons, controlStyles } from "../shared/game-controls.js";
+import { controlIcons, controlStyles } from "./game-controls.js";
 import { healthColor } from './target-health.js';
 import type { SwarmSnapshot, SwarmEvent, SwarmCoreController, SwarmController, SwarmGameOptions } from '../integration/swarm-types.js';
 

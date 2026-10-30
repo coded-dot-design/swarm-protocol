@@ -1,4 +1,4 @@
-import { ElementAttachments } from "../shared/attachments.js";
+import { ElementAttachments } from "./attachments.js";
 import type { Target, Bug } from "./runtime-types.js";
 import { targetSignal } from "./target-health.js";
 

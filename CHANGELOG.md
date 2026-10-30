@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **No `shared/` copies.** The four snapshot files move into `src/`, unchanged. Only import paths change: the build emits the same code at the same size (114,306 B across the entry and chunk files), so play doesn't change. `tests/fixtures/runtime-reviewed-baseline.json` re-pins `dom-defender` and `swarm-widget` for their new import lines.
+  - `src/attachments.ts`: `fizlet/arcade` gives arcade games `attach()`, but Swarm keeps its own shell, so it keeps this.
+  - `src/game-controls.ts`: these are the widget's own header icons and styles. No other game uses them.
+  - `src/zoom-lock.ts`: this is the mobile pinch and double-tap lock. It stays until `fizlet/touch` (`lockTouch`, in progress) ships. Then Swarm swaps to it.
+  - `src/selection-lock.ts`: no Fizlet brick does this yet. Swarm, DOM Battlefield and the DOM VIRUS core all use it, so a brick is proposed. The file stays here until that brick ships.
+
 ## 1.4.0
 
 Swarm Protocol runs on **Fizlet 0.17.0** (kernel and `fizlet/board-page`, vendored in `vendor/fizlet`). The public API, the widget, loader, React and Astro integrations, every visual and the rules' numbers stay as they were.
