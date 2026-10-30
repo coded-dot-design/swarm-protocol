@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createMobileZoomLock} from '../shared/zoom-lock.ts';
+import {createMobileZoomLock} from '../src/zoom-lock.ts';
 function fixture(computed='auto',mobile=true){
  const values=new Map();const style={getPropertyValue:k=>values.get(k)?.[0]||'',getPropertyPriority:k=>values.get(k)?.[1]||'',setProperty:(k,v,p='')=>values.set(k,[v,p]),removeProperty:k=>values.delete(k)};
  const doc=new EventTarget();doc.documentElement={style,hasAttribute:()=>false,getAttribute:()=>values.size?'touch-action:value':'',removeAttribute(){}};
