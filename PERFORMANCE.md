@@ -1,6 +1,35 @@
 # Performance and behavior preservation
 
-Version 1.1.0 changes spawning, pursuit, and rescue gameplay deliberately. Its performance work preserves those new rules. The numbers below distinguish operation counts from transfer sizes; they are not hardware FPS measurements. Earlier sections describe their archived releases.
+Version 1.4.0 moves the game onto the Fizlet kernel and keeps its rules; the CHANGELOG lists where the engine behaves differently (first section). Version 1.1.0 changes spawning, pursuit, and rescue gameplay deliberately. Its performance work preserves those new rules. The numbers below distinguish operation counts from transfer sizes; they are not hardware FPS measurements. Earlier sections describe their archived releases.
+
+## Version 1.4.0 on the Fizlet kernel
+
+The rules (`src/world.ts`) run as one Fizlet system in fixed 1/60 s steps on typed arrays: a step never allocates (a zero-allocation test runs it in its own process), never reads layout and never writes the page. Letters are measured by `fizlet/board-page` in the read phase (a grid index, at most 600 Range reads per refresh, 12.5 Hz while the page changes and 2 Hz once it is still), so the step finds food with `nearAt` instead of measuring. What covers a reserved letter is checked in the read phase with one `elementFromPoint` per letter (a letter being chewed every frame). Every page change goes through the engine's ledger.
+
+The same deterministic 43-second workload (48 bugs, letters only):
+
+| Operation | 1.3.1 | 1.4.0 | Change |
+| --- | ---: | ---: | ---: |
+| Letter bites | 672 | 699 | same rules, a different random stream |
+| DOM ancestry checks (`closest`) | 125,787 | 12,426 | −90.1% |
+| Euclidean distance calls (`Math.hypot`) | 59,778 | 0 | none in the step |
+| Computed-style reads | 10,838 | 925 | −91.5% |
+| Glyph Range measurements | 9,794 | 217,971 | +22× (board-page re-measures what is on screen) |
+| Peak Range measurements per frame | 30 | 600 | the board's per-refresh cap |
+| Reusable Range instances | 1 | 1 | unchanged |
+| Pending animation frames | 1 | 1 | unchanged |
+
+Measured in Chromium (`tests/browser.mjs`, 1280 × 800, the test page): script work per animation frame averages 0.6 ms (max 4 to 7.5 ms) with a wave on screen, and 0.22 ms (max 0.70 ms) with 48 bugs. These are one machine's numbers, not a device benchmark.
+
+| Loaded JavaScript (gzip) | 1.3.1 | 1.4.0 | Ceiling (`npm run size`) |
+| --- | ---: | ---: | ---: |
+| Initial deferred scheduler | 1,400 | 1,400 | 1,450 |
+| Additional bootstrap after load/delay/idle | 4,071 | 4,071 | 4,150 |
+| Additional game on first open/start | 30,304 | 39,132 | 39,700 |
+| Complete deferred path | 35,775 | 44,603 | 45,200 |
+| Immediate root plus game | 34,646 | 43,474 | 44,100 |
+
+The game grows by the Fizlet code it now carries: the kernel 3,422 B and board-page 4,095 B (with its grid), gzip on their own. Subtracting them leaves about 31.6 KB, 1.3 KB more than 1.3.1 (an estimate: gzip sizes don't add exactly).
 
 ## Version 1.1.0 navigation and rescue audit
 

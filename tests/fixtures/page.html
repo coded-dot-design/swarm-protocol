@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Swarm Protocol test page</title>
+<style>
+body { margin: 0; font: 18px/1.5 system-ui, sans-serif; background: #fff; color: #151515; }
+main { max-width: 760px; margin: 0 auto; padding: 24px; }
+button { font: inherit; padding: 10px 18px; border: 0; border-radius: 8px; background: #8573ee; color: #fff; }
+.shelf { position: relative; }
+#lid { position: absolute; inset: -4px; background: #eee; }
+aside { position: fixed; right: 16px; bottom: 16px; width: 200px; height: 120px; background: #222; color: #fff; }
+</style>
+</head>
+<body>
+<main>
+  <h1 data-swarm-text>Swarm Protocol test page</h1>
+  <p data-swarm-text>Bugs eat these letters and turn them into bits. Every letter comes back when the round ends.</p>
+  <p><button id="alpha" data-swarm-target>Get started</button> <button id="beta" data-swarm-target>Read more</button></p>
+  <p data-swarm-text>A <a id="link" href="#away">link stays the page's</a> and so does <input id="field" value=""> a field.</p>
+  <div class="shelf"><p data-swarm-text id="cover">Covered words under a layer are never eaten by any bug at all.</p><div id="lid"></div></div>
+  <article data-swarm-surface><p data-swarm-text>The surface gets nicked when a bug feeds on it.</p></article>
+</main>
+<aside data-swarm-ui>Host UI</aside>
+</body>
+</html>

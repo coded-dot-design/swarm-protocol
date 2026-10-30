@@ -11,7 +11,8 @@ test('48-bug feeding stays within layout, selection, and animation-loop budgets'
   const {metrics}=p.finish();
   assert.equal(metrics.maxRaf,1);
   assert.equal(metrics.rangeCreated,1,'Reuse a Range through the round');
-  assert.ok(metrics.maxRangePerFrame<=36);
+  // Letters are measured by fizlet/board-page in the read phase: at most 600 Range reads a refresh.
+  assert.ok(metrics.maxRangePerFrame<=600,`${metrics.maxRangePerFrame} Range reads in one frame`);
   // Generous ceilings catch accidental per-candidate ancestry/distance scans.
   assert.ok(metrics.closest<200000,`${metrics.closest} ancestry checks`);
   assert.ok(metrics.hypot<150000,`${metrics.hypot} distance calls`);

@@ -1,24 +1,24 @@
 import { AttachedPresentation } from './attached-presentation.js';
 import { createMobileZoomLock } from '../shared/zoom-lock.js';
 import { createMobileSelectionLock } from '../shared/selection-lock.js';
-import { createBitHighlights } from './bit-highlights.js';
-import type { Point, Rect, Palette, Background, Target, TextArea, TextRecord, Glyph, Bug, Particle, Surface, StyleRecord, CursorRecord, AimEffect, GameState, PointerNode } from './runtime-types.js';
-import type { SwarmEvent, SwarmStatus } from '../integration/swarm-types.js';
-import type {
-  SwarmCoreController,
-  SwarmCoreOptions,
-} from '../integration/swarm-types.js';
-
+import type { Rect, Target, Bug, Particle, Surface, AimEffect, GameState, PointerNode } from './runtime-types.js';
+import type { SwarmEvent, SwarmStatus, SwarmCoreController, SwarmCoreOptions } from '../integration/swarm-types.js';
 import { createAttackIndicators, getAttackEdges, attackEdge, rescueOffer } from './attack-indicators.js';
 import { feedbackColors } from './feedback-colors.js';
 import { targetSignal, liquidFill, bubbleContrast, fadeSignal } from './target-health.js';
 import { readTargetPalette, cssLayers } from './target-palette.js';
 import { guardTargetHover, hoverLock } from './target-hover.js';
+import { createEngine, type Engine } from '../vendor/fizlet/kernel/engine.js';
+import { boardPage, type BoardPage } from '../vendor/fizlet/board-page.js';
+import * as W from './world.js';
 
 /**
- * DOM Defender — a dependency-free, opt-in overlay.
- * All page mutations are recorded and reversed by stop(), restart or destroy().
- * A React island can own this controller without owning the page beneath it.
+ * DOM Defender — a dependency-free, opt-in overlay, on the Fizlet kernel.
+ * One engine per round: read (geometry, scroll, what covers a bug's letter), step (the rules in
+ * `world.ts`), render (canvas, liquid paint, cues). Every page change goes through the engine's
+ * ledger (letters through fizlet/board-page), so stop(), restart or destroy() restore the page
+ * exactly and a newer edit by the host page wins. A React island can own this controller without
+ * owning the page beneath it.
  */
 export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreController {
   const doc = options.document || document;
@@ -29,14 +29,11 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     surface: options.surfaceSelector || '[data-swarm-surface]',
     ui: '[data-swarm-ui]',
   };
-  const MAX_BUGS = 48;
   const MAX_PARTICLES = 120;
   const MAX_AIM_EFFECTS = 8;
-  const WAVE_SECONDS = 18;
-  const CHEW_SECONDS = .24;
-  const LETTERS_PER_TIER = 6;
-  const MAX_FOOD_CANDIDATES = 240;
-  const segmenter = typeof Intl.Segmenter === 'function' ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
+  // Range reads per board refresh (12.5 Hz while the page moves, 2 Hz once it is still), and
+  // reserved letters checked for what covers them per frame.
+  const READS = 600, COVER_CHECKS = 12;
   const bestKey = options.bestKey || 'swarm-protocol-best-v1';
   const tierColors = ['#ff6b6b', '#d984ff', '#8573ee'];
   const protectedPointerSelector = '[data-swarm-attack-cues],[data-swarm-ui],[data-swarm-ignore],dialog,[role="dialog"],[aria-modal="true"],form,input,textarea,select,option,[contenteditable]';
@@ -53,37 +50,55 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
   try { best = Math.max(0, Number(win.localStorage.getItem(bestKey)) || 0); } catch {}
   const selectionLock = createMobileSelectionLock(doc);
   const zoomLock = createMobileZoomLock(doc, options.lockZoom !== false);
-  const bitHighlights = createBitHighlights(doc);
   const state: GameState = { status: 'idle', score: 0, best, wave: 0, kills: 0, combo: 1, elapsed: 0 };
   let canvas: HTMLCanvasElement = null!, canvasHost: HTMLDivElement = null!, ctx: CanvasRenderingContext2D = null!, raf = 0, lastNow = 0, lastState = 0;
   let width = win.innerWidth, height = win.innerHeight, ratio = 1;
-  let bugs: Bug[] = [], particles: Particle[] = [], targets: Target[] = [], textAreas: TextArea[] = [], surfaces: Surface[] = [], uiRects: Rect[] = [];
-  let remaining = 0, spawnIn = 0, nextWaveIn = 0, comboTime = -Infinity;
+  let particles: Particle[] = [], targets: Target[] = [], surfaces: Surface[] = [], uiRects: Rect[] = [];
   let pausedFrom: SwarmStatus = 'running', pausedForVisibility = false, destroyed = false;
-  let geometryDirty = true, geometryAt = 0, roundId = 0, suppressedClick: {x:number;y:number;until:number} | null = null;
+  let geometryDirty = true, geometryAt = 0, suppressedClick: {x:number;y:number;until:number} | null = null;
   let gameoverTimeout = 0;
-  let jumps = 0, zaps = 0, rescueUntil = 0, zapCleared = false;
   let scrollX = win.scrollX || 0, scrollY = win.scrollY || 0;
-  let visibleTargets: Target[] = [], availableTargets: Target[] = [], localFood = false, foodSurveyed = 0;
-  let cachedOffer: ReturnType<typeof rescueOffer> | null = null, offerScore = -1, offerJumps = -1, offerZaps = -1;
-  let foodQueue: Glyph[] = [], foodCandidates: Glyph[] = [], foodCursor = 0, foodScanIn = 0, foodRevision = 0, foodBudget = 0;
-  let glyphRange: Range | null = null;
-  let cursorRecord: CursorRecord | null = null, lastPointer: (Point & {type:string;element:HTMLElement}) | null = null, aimEffects: AimEffect[] = [];
-  const styleLedger = new Map<HTMLElement,Map<string,StyleRecord>>();
+  let cursorElement: HTMLElement | null = null, lastPointer: {x:number;y:number;type:string;element:HTMLElement} | null = null, aimEffects: AimEffect[] = [];
   let releaseHover: (()=>void) | null = null;
-  const originalStyleAttributes = new Map<HTMLElement,boolean>();
-  const textLedger = new Map<Node,TextRecord>();
-  const attributeLedger = new Map<Element,Map<string,{original:string|null;latest:string|null}>>();
   const listeners: (()=>void)[] = [];
   const attackIndicators = createAttackIndicators(doc, reducedMotion, rescue);
   const attachedPresentation = new AttachedPresentation(doc, setStyle);
+
+  // ---------- The round: one engine, the page's letters, the rules ----------
+  let engine: Engine | null = null, board: Pick<BoardPage, 'glyphs' | 'scans' | 'reads' | 'nearAt' | 'consume' | 'char' | 'parent' | 'refresh'> | null = null, world: W.World | null = null;
+  const ctl = new Float64Array(8);
+  // Letters' geometry after a scroll or resize: stale until a board refresh reads them all (under
+  // its cap) at least 0.1 s later, or 0.5 s at most. A rescue waits for the world's next step.
+  let staleUntil = 0, pendingRescue = false, invalidated = false, cursorDirty = false;
+  // Presses this frame per bug id: the world squashes in its next step, so a second press on a bug
+  // already squashed to death this frame misses (as a press on a gone bug did before).
+  const pendingSquash = new Map<number, number>();
+  // Per bug slot: the reserved letter last checked for cover, and when.
+  const checkedId = new Int32Array(W.MAX_BUGS), checkedGlyph = new Int32Array(W.MAX_BUGS), checkedAt = new Float64Array(W.MAX_BUGS);
+  let coverCursor = 0;
+  // Drawing views of the world's bugs (stable per bug id), and the live list in arrival order.
+  const views = new Map<number, Bug>();
+  let bugs: Bug[] = [], viewStamp = 0;
+  const pursuitNames = [null, 'attack', 'dash', 'exit', 'transit'] as const;
+  /** A board with no letters (browsers without Intl.Segmenter). */
+  const none = new Float32Array(0);
+  const noLetters = { glyphs: { count: 0, x: none, y: none, w: none, h: none, spent: new Uint8Array(0) }, scans: 0, reads: 0, nearAt: () => 0, consume: () => false, char: () => '', parent: () => null, refresh() {} } as const;
 
   function on<K extends keyof DocumentEventMap>(target: EventTarget, name: K, callback: (event: DocumentEventMap[K])=>void, settings?: boolean | AddEventListenerOptions) {
     target.addEventListener(name, callback as EventListener, settings);
     listeners.push(() => target.removeEventListener(name, callback as EventListener, settings));
   }
+  /** A host callback that throws is reported, and the round goes on (it runs inside a frame). */
+  function call<T>(callback: ((value: T) => void) | undefined, value: T) {
+    try { callback?.(value); } catch (error) { if (win.reportError) win.reportError(error); else console.error(error); }
+  }
   function emit(type: SwarmEvent["type"], data: Record<string,unknown> = {}) {
-    options.onEvent?.({ type, ...data } as SwarmEvent);
+    call(options.onEvent, { type, ...data } as SwarmEvent);
+  }
+  // The round's numbers the snapshot shows (kept after the round's engine is gone, as 1.3.1 did).
+  let jumps = 0, zaps = 0, remaining = 0, nextWaveIn = 0;
+  function getRescueOffer() {
+    return rescueOffer(state.score, jumps, zaps);
   }
   function getSnapshot() {
     const enrolled = targets.filter(t => t.enrolled && t.rendered && t.element.isConnected);
@@ -104,7 +119,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     const now = win.performance.now();
     if (force || now - lastState >= 100) {
       lastState = now;
-      options.onState?.(getSnapshot());
+      call(options.onState, getSnapshot());
     }
   }
   function status(value: SwarmStatus) {
@@ -122,83 +137,35 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     emit('status', { status: value });
     notify(true);
   }
-  function setStyle(element: HTMLElement, property: string, value: string, desiredPriority = '') {
-    if (!styleLedger.has(element)) {
-      styleLedger.set(element, new Map());
-      originalStyleAttributes.set(element, cursorRecord?.element === element ? cursorRecord.hadStyle : element.hasAttribute('style'));
-    }
-    const properties = styleLedger.get(element)!;
-    if (!properties.has(property)) properties.set(property, {
-      original: element.style.getPropertyValue(property),
-      priority: element.style.getPropertyPriority(property),
-      latest: null, latestPriority: null, abandoned: false,
-    });
-    const record = properties.get(property)!;
-    const current = element.style.getPropertyValue(property), priority = element.style.getPropertyPriority(property);
-    // Once the host edits this property, its newer value owns the rest of the
-    // round. Do not overwrite it on a later footprint or restore the old value.
-    if (record.abandoned || (record.latest !== null && (current !== record.latest || priority !== record.latestPriority))) { record.abandoned = true; return; }
-    if (record.requested === value && current === record.latest && priority === record.latestPriority && priority === desiredPriority) return;
-    element.style.setProperty(property, value, desiredPriority);
-    record.latest = element.style.getPropertyValue(property);
-    record.latestPriority = element.style.getPropertyPriority(property);
-    record.requested = value;
+  /** Page styles go through the round's ledger: change-only, restored exactly, host edits win. */
+  function setStyle(element: HTMLElement, property: string, value: string, priority = '') {
+    engine?.ledger.style(element, property, value, priority);
   }
   function setAttribute(element: Element, name: string, value: string) {
-    if (!attributeLedger.has(element)) attributeLedger.set(element, new Map());
-    const attributes = attributeLedger.get(element)!;
-    if (!attributes.has(name)) attributes.set(name, { original: element.getAttribute(name), latest: null });
-    if (attributes.get(name)!.latest === value && element.getAttribute(name) === value) return;
-    element.setAttribute(name, value);
-    attributes.get(name)!.latest = value;
+    engine?.ledger.attr(element as HTMLElement, name, value);
   }
+  function restoreProperties(element: HTMLElement, names: string[]) {
+    if (engine) for (const name of names) engine.ledger.unstyle(element, name);
+  }
+  /** Recall: every page change of the round goes back (the engine's ledger), overlays go. */
   function restorePage() {
     attachedPresentation.clear();
     zoomLock.setActive(false);
     selectionLock.setActive(false);
-    bitHighlights.destroy();
     releaseHover?.();
     releaseHover = null;
-    restoreCursor();
+    cursorElement = null;
     aimEffects = [];
-    glyphRange?.detach?.();
-    glyphRange = null;
-    for (const [node, record] of textLedger) {
-      // Preserve a newer value supplied by React, a CMS, or another script.
-      if (!record.abandoned && node.nodeValue === record.latest) node.nodeValue = record.original;
-    }
-    for (const [element, properties] of styleLedger) {
-      for (const [name, record] of properties) {
-        if (record.abandoned || element.style.getPropertyValue(name) !== record.latest || element.style.getPropertyPriority(name) !== record.latestPriority) continue;
-        if (record.original) element.style.setProperty(name, record.original, record.priority);
-        else element.style.removeProperty(name);
-      }
-      if (!originalStyleAttributes.get(element) && !element.getAttribute('style')) element.removeAttribute('style');
-    }
-    for (const [element, attributes] of attributeLedger) {
-      for (const [name, record] of attributes) {
-        if (element.getAttribute(name) !== record.latest) continue;
-        if (record.original === null) element.removeAttribute(name);
-        else element.setAttribute(name, record.original);
-      }
-    }
-    styleLedger.clear();
-    originalStyleAttributes.clear();
-    textLedger.clear();
-    foodQueue = []; foodCandidates = [];
-    attributeLedger.clear();
+    engine?.destroy();
+    engine = null; board = null; world = null;
+    views.clear();
+    bugs = [];
   }
   function rectVisible(r: Rect) {
     return r.width > 0 && r.height > 0 && r.right > 0 && r.bottom > 0 && r.left < width && r.top < height;
   }
-  function contains(r: Rect, x:number, y:number, margin = 0) {
-    return x >= r.left - margin && x <= r.right + margin && y >= r.top - margin && y <= r.bottom + margin;
-  }
-  function forbiddenText(node: Node) {
-    return node.parentElement?.closest('a,button,input,textarea,select,script,style,noscript,pre,code,[contenteditable],[data-swarm-ui],[data-swarm-ignore],[data-swarm-target],[aria-live]');
-  }
   function discoverPage() {
-    targets = [...doc.querySelectorAll<HTMLElement>(selectors.target)].filter(element => !element.closest('[data-swarm-ignore]')).map((element, index) => ({
+    targets = [...doc.querySelectorAll<HTMLElement>(selectors.target)].filter(element => !element.closest('[data-swarm-ignore]')).slice(0, W.MAX_TARGETS).map((element, index) => ({
       element,
       id: element.id || `swarm-target-${index + 1}`,
       label: element.getAttribute('data-swarm-label') || element.getAttribute('aria-label') || element.textContent.trim().slice(0, 48) || `Target ${index + 1}`,
@@ -207,43 +174,11 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
       hovered: false, bubbleTime: 0, bubbleHeat: 0,
       hitUntil: 0, liquidUntil: 0, liquidBite: .5, liquidActive: false, moving: false, paintDirty: true, lastPaint: -Infinity, signalColor: '', colorFrom: '', colorAt: 0, colorActive: false,
     }));
-    const seenNodes = new Set();
-    textAreas = [...doc.querySelectorAll(selectors.text)].filter(el => !el.closest(selectors.ui)).map(element => {
-      const nodes = [];
-      const walker = doc.createTreeWalker(element, 4);
-      let node;
-      while ((node = walker.nextNode())) {
-        if (/\p{L}/u.test(node.nodeValue || '') && !seenNodes.has(node) && !forbiddenText(node)) {
-          nodes.push(node);
-          seenNodes.add(node);
-        }
-      }
-      const area: TextArea = { element, nodes, rect: null, visible: false, revision: 0, records: [] };
-      for (const node of nodes) {
-        const original = node.nodeValue || '';
-        const chars = segmenter ? [...segmenter.segment(original)].map(part => part.segment) : Array.from(original);
-        const record: TextRecord = { node, original, latest: original, chars, offsets: [], glyphs: [], owner: area, abandoned: false };
-        updateTextOffsets(record);
-        let slot = 0;
-        record.glyphs = chars.flatMap((letter, index) => /\p{L}/u.test(letter) ? [{ record, index, slot: slot++, letter, eaten: false, reservedBy: 0, rect: null, revision: -1, areaRevision: -1, measuredAt: -Infinity }] : []);
-        textLedger.set(node, record);
-        area.records.push(record);
-      }
-      return area;
-    });
-    // Interleave small runs from each node so the first page block cannot take
-    // the entire bounded glyph cache. Reservations are kept on the glyphs.
-    const records = textAreas.flatMap(area => area.records);
-    foodQueue = [];
-    for (let offset = 0; records.some(record => offset < record.glyphs.length); offset += 8) {
-      for (const record of records) foodQueue.push(...record.glyphs.slice(offset, offset + 8));
-    }
-    foodCandidates = []; foodCursor = 0; foodScanIn = 0; foodRevision++; foodSurveyed = 0; localFood = false;
-    surfaces = [...doc.querySelectorAll<HTMLElement>(selectors.surface)].filter(el => !el.closest(`${selectors.ui},[data-swarm-ignore]`)).slice(0, 16)
+    surfaces = [...doc.querySelectorAll<HTMLElement>(selectors.surface)].filter(el => !el.closest(`${selectors.ui},[data-swarm-ignore]`)).slice(0, W.MAX_SURFACES)
       .map(element => ({ element, rect: null!, visible: false, damage: 0 }));
     geometryDirty = true;
-    refreshGeometry(true);
   }
+  /** Read: viewport, buttons, surfaces and the host's UI, into the world (low rate unless dirty). */
   function refreshGeometry(force = false) {
     const now = win.performance.now();
     // A low-rate refresh also catches layout shifts and a changing widget size.
@@ -263,34 +198,40 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
         ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
       }
     }
-    for (const group of [targets, textAreas, surfaces]) for (const item of group) {
-      const previousRect = item.rect;
-      item.visible = item.element.isConnected && !(item.element as HTMLElement).hidden;
+    const T = world?.targets;
+    targets.forEach((item, t) => {
+      const previous = item.rect;
       item.rect = item.element.getBoundingClientRect();
+      const style = win.getComputedStyle?.(item.element);
+      const display = style?.getPropertyValue('display'), visibility = style?.getPropertyValue('visibility');
+      item.rendered = item.element.isConnected && !item.element.hidden && item.rect.width > 0 && item.rect.height > 0 && display !== 'none' && visibility !== 'hidden' && visibility !== 'collapse';
+      item.visible = item.rendered && rectVisible(item.rect);
+      if (item.rendered) item.enrolled = true;
+      if (!T) return;
       // Attached bugs belong to their button, including inside nested scrollers.
-      if ('enrolled' in item && previousRect) for (const bug of bugs) {
-        if (bug.attached && bug.target === item) {
-          bug.x += item.rect.left - previousRect.left;
-          bug.y += item.rect.top - previousRect.top;
-        }
-      }
-      if ('records' in item && previousRect && (['left', 'top', 'width', 'height'] as const).some(key => previousRect[key] !== item.rect![key])) item.revision++;
-      if ('enrolled' in item) {
-        const style = win.getComputedStyle?.(item.element);
-        const display = style?.getPropertyValue('display');
-        const visibility = style?.getPropertyValue('visibility');
-        item.rendered = item.visible && item.rect.width > 0 && item.rect.height > 0 && display !== 'none' && visibility !== 'hidden' && visibility !== 'collapse';
-        item.visible = item.rendered && rectVisible(item.rect);
-        if (item.rendered) item.enrolled = true;
-      } else {
-        const style = win.getComputedStyle?.(item.element);
-        item.visible = item.visible && rectVisible(item.rect) && style?.getPropertyValue('display') !== 'none' && style?.getPropertyValue('visibility') !== 'hidden' && style?.getPropertyValue('visibility') !== 'collapse';
-      }
-    }
+      if (previous) world!.follow(t, item.rect.left - previous.left, item.rect.top - previous.top);
+      T.tx[t] = item.rect.left; T.ty[t] = item.rect.top; T.tw[t] = item.rect.width; T.th[t] = item.rect.height;
+      T.rendered[t] = item.rendered ? 1 : 0; T.visible[t] = item.visible ? 1 : 0;
+      T.connected[t] = item.element.isConnected ? 1 : 0; T.enrolled[t] = item.enrolled ? 1 : 0;
+    });
+    surfaces.forEach((item, i) => {
+      item.rect = item.element.getBoundingClientRect();
+      const style = win.getComputedStyle?.(item.element);
+      item.visible = item.element.isConnected && !item.element.hidden && rectVisible(item.rect) && style?.getPropertyValue('display') !== 'none' && style?.getPropertyValue('visibility') !== 'hidden' && style?.getPropertyValue('visibility') !== 'collapse';
+      if (!world) return;
+      const r = world.surfaces.rects;
+      r[i * 4] = item.rect.left; r[i * 4 + 1] = item.rect.top; r[i * 4 + 2] = item.rect.right; r[i * 4 + 3] = item.rect.bottom;
+      world.surfaces.visible[i] = item.visible ? 1 : 0;
+    });
+    world?.surfaces.set(surfaces.length);
     uiRects = [...doc.querySelectorAll<HTMLElement>(selectors.ui)]
-      .filter(el => !el.hidden).map(el => el.getBoundingClientRect()).filter(rectVisible);
-    cacheTargets();
-    syncCursor();
+      .filter(el => !el.hidden).map(el => el.getBoundingClientRect()).filter(rectVisible).slice(0, W.MAX_UI);
+    if (world) {
+      uiRects.forEach((r, i) => { const u = world!.ui.rects; u[i * 4] = r.left; u[i * 4 + 1] = r.top; u[i * 4 + 2] = r.right; u[i * 4 + 3] = r.bottom; });
+      world.ui.set(uiRects.length);
+      ctl[W.VW] = width; ctl[W.VH] = height;
+    }
+    cursorDirty = true;
   }
   function ensureCanvas() {
     if (canvas) return;
@@ -312,62 +253,6 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
       canvasHost.remove(); canvasHost = null!; canvas = null!;
       throw new Error('DOM Defender requires a 2D canvas context.');
     }
-  }
-  function cacheTargets() {
-    availableTargets.length = visibleTargets.length = 0;
-    for (const target of targets) if (target.rendered && target.element.isConnected && target.health > 0) {
-      availableTargets.push(target);
-      if (target.visible) visibleTargets.push(target);
-    }
-  }
-  function chooseTarget(bug: Bug) {
-    const choices = bug.tier < 3 && visibleTargets.length ? visibleTargets : availableTargets;
-    if (!choices.length) return null;
-    let nearest = null, distance = Infinity;
-    for (const target of choices) {
-      if (target.health <= 0) continue;
-      const r = target.rect;
-      const cost = Math.hypot((r.left + r.right) / 2 - bug.x, (r.top + r.bottom) / 2 - bug.y) + target.health * .35;
-      if (cost < distance) { distance = cost; nearest = target; }
-    }
-    const random = choices[Math.floor(Math.random() * choices.length)];
-    return random?.health > 0 && Math.random() >= .65 ? random : nearest;
-  }
-  function spawn() {
-    if (bugs.length >= MAX_BUGS) return;
-    let x = 0, y = 0;
-    const px = lastPointer?.x ?? width / 2, py = lastPointer?.y ?? height / 2;
-    for (let attempt = 0; attempt < 12; attempt++) {
-      // Arrive on screen, near the player but never directly under their pointer.
-      const angle = rand(0, Math.PI * 2), radius = rand(90, Math.min(width, height) * .45 + 90);
-      x = clamp(px + Math.cos(angle) * radius, 22, Math.max(22, width - 22));
-      y = clamp(py + Math.sin(angle) * radius, 26, Math.max(26, height - 26));
-      if (!uiRects.some(r => contains(r, x, y, 24)) && Math.hypot(x - px, y - py) >= 60) break;
-      if (attempt === 11) return false; // Never spawn behind a full-screen host UI.
-    }
-    const bug: Bug = {
-      id: ++roundId, x, y, angle: 0, phase: rand(0, Math.PI * 2),
-      color: tierColors[0], size: rand(1.05, 1.18), tier: 1, hp: 1, feeds: 0, lettersEaten: 0, hitFlash: 0,
-      speed: (rand(110, 155) + Math.min(80, state.wave * 8)) * (coarsePointer() ? .72 : 1),
-      age: 0, biteIn: rand(.2, .8), target: null,
-      siphonUntil: 0, food: null, lastFood: null, foodSearchIn: 0, foodCheckIn: 0, foodWaitUntil: state.elapsed + .45, chewing: false, chewLeft: 0,
-      scatterUntil: 0, scatterX: 0, scatterY: 0,
-      pursuit: null, pursuitUntil: 0, dashIn: 0, dashX: 0, dashY: 0,
-      orbit: rand(0, Math.PI * 2), attached: false,
-    };
-    bug.target = chooseTarget(bug);
-    bugs.push(bug);
-    return true;
-  }
-  function startWave(reason: "start"|"timer"|"clear" = 'start') {
-    state.wave++;
-    zapCleared = false;
-    const arrivals = Math.max(0, Math.min(MAX_BUGS - bugs.length - remaining, 12 + (state.wave - 1) * 6));
-    remaining += arrivals;
-    spawnIn = .1;
-    nextWaveIn = WAVE_SECONDS;
-    status('running');
-    emit('wave-start', { wave: state.wave, count: arrivals, reason });
   }
   function updateBest() {
     if (state.score <= state.best) return;
@@ -402,21 +287,6 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     };
   }
   const targetPaintProperties = ['background-color', 'background-image', 'background-size', 'background-position', 'background-repeat', 'background-origin', 'background-clip'];
-  function restoreProperties(element: HTMLElement, names: string[], release = false) {
-    const properties = styleLedger.get(element)!;
-    if (!properties) return;
-    for (const name of names) {
-      const record = properties.get(name);
-      if (!record) continue;
-      if (!record.abandoned && element.style.getPropertyValue(name) === record.latest && element.style.getPropertyPriority(name) === record.latestPriority) {
-        if (record.original) element.style.setProperty(name, record.original, record.priority);
-        else element.style.removeProperty(name);
-      }
-      else { record.abandoned = true; continue; }
-      if (release) properties.delete(name);
-      else record.abandoned = true;
-    }
-  }
   function paintTarget(target: Target) {
     target.paintDirty = false;
     target.lastPaint = state.elapsed;
@@ -436,7 +306,7 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     }
     rememberBackground(target);
     if (target.calm) setStyle(el, '-webkit-tap-highlight-color', 'transparent', 'important');
-    else restoreProperties(el, ['-webkit-tap-highlight-color'], true);
+    else restoreProperties(el, ['-webkit-tap-highlight-color']);
     const base = target.originalBackground!;
     const signal = targetSignal(target.health, target.palette?.power);
     if (target.signalColor !== signal.color) {
@@ -485,19 +355,19 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
       target.hovered = hovered;
       target.interactionUntil = state.elapsed + .35;
       if (target.health <= 0) {
-        restoreProperties(el, ['translate', 'rotate'], true);
+        restoreProperties(el, ['translate', 'rotate']);
         target.moving = false;
       }
       geometryDirty = true;
       if (target.rendered && (!coarsePointer() || target.health <= 0)) paintTarget(target);
     }
     // Paused rounds keep their phase/health but still allow native interaction.
-    if (state.status === 'paused' && !doc.hidden) { refreshGeometry(); draw(); }
+    if (state.status === 'paused' && !doc.hidden) { syncScroll(); refreshGeometry(); syncViews(); draw(); }
   }
   function animateTargetHit(target: Target) {
     if (coarsePointer()) {
       if (target.moving) {
-        restoreProperties(target.element, ['translate', 'rotate'], true);
+        restoreProperties(target.element, ['translate', 'rotate']);
         target.moving = false;
       }
       return;
@@ -511,413 +381,245 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
       setStyle(target.element, 'rotate', `${(offset * .9).toFixed(2)}deg`);
       target.moving = true;
     } else if (target.moving) {
-      restoreProperties(target.element, ['translate', 'rotate'], true);
+      restoreProperties(target.element, ['translate', 'rotate']);
       target.moving = false;
     }
-  }
-  function damageTarget(target: Target, bug: Bug) {
-    target.bites++;
-    bug.siphonUntil = state.elapsed + .16;
-    target.health = Math.max(0, target.health - (1.15 + Math.min(state.wave - 1, 9) * .12));
-    target.hitUntil = state.elapsed + .22;
-    target.liquidUntil = state.elapsed + .65;
-    target.liquidBite = clamp((bug.x - target.rect.left) / Math.max(1, target.rect.width), 0, 1);
-    target.paintDirty = true;
-    if (target.health <= 0) paintTarget(target);
-    if (!reducedMotion && particles.length < MAX_PARTICLES - 2) {
-      particles.push({ x: clamp(bug.x + Math.cos(bug.angle) * 8 * bug.size, target.rect.left, target.rect.right), y: clamp(bug.y + Math.sin(bug.angle) * 8 * bug.size, target.rect.top, target.rect.bottom), vx: rand(-12, 12), vy: -rand(18, 30), life: .8, total: .8, color: bug.color, bubble: true, radius: rand(2.4, 4.2) });
-    }
-    emit('damage', { targetId: target.id, health: target.health });
-    const playable = targets.filter(t => t.enrolled && t.rendered && t.element.isConnected);
-    if (playable.length && playable.every(t => t.health <= 0)) {
-      updateBest();
-      status('gameover');
-      emit('gameover', getSnapshot());
-      if (state.status === 'gameover') gameoverTimeout = win.setTimeout(() => {
-        gameoverTimeout = 0;
-        if (state.status !== 'gameover' || destroyed) return;
-        restorePage();
-        bugs = []; particles = [];
-        if (ctx) ctx.clearRect(0, 0, width, height);
-        if (canvas) canvas.style.display = 'none';
-        emit('restored');
-        notify(true);
-      }, 900);
-    }
-  }
-  function updateTextOffsets(record: TextRecord) {
-    let offset = 0;
-    record.offsets = record.chars.map(char => { const start = offset; offset += char.length; return start; });
-  }
-  function currentText(record: TextRecord) {
-    if (record.abandoned || !record.node.isConnected || forbiddenText(record.node)) return false;
-    // A newer React/CMS value always wins, including during a pending chew.
-    if (record.node.nodeValue !== record.latest) { record.abandoned = true; return false; }
-    return true;
-  }
-  function edibleGlyph(glyph: Glyph) {
-    return glyph && !glyph.eaten && glyph.record.owner.visible && currentText(glyph.record);
-  }
-  function releaseFood(bug: Bug) {
-    if (bug.food?.reservedBy === bug.id) bug.food.reservedBy = 0;
-    bug.food = null;
-    bug.chewing = false;
-    bug.chewLeft = 0;
   }
   function syncScroll() {
     const x = win.scrollX || 0, y = win.scrollY || 0, dx = x - scrollX, dy = y - scrollY;
     scrollX = x; scrollY = y;
     if (!dx && !dy) return;
     // Free bugs stay in document space. Scrolling can outrun them; no edge teleport.
-    for (const bug of bugs) {
-      if (!bug.attached) { bug.x -= dx; bug.y -= dy; }
-      bug.scatterX -= dx; bug.scatterY -= dy;
-    }
+    world?.scroll(dx, dy);
     for (const p of particles) { p.x -= dx; p.y -= dy; }
     for (const effect of aimEffects) { effect.x -= dx; effect.y -= dy; }
   }
   function invalidateFoodGeometry() {
+    geometryDirty = true;
+    invalidated = true;
+  }
+  /** Read: a scroll or resize since the last frame. Every bug lets go of its letter and looks again
+   *  once the letters are measured again. */
+  function applyInvalidate() {
+    invalidated = false;
+    if (!world) return;
+    world.invalidate();
+    ctl[W.STALE] = 1;
+    staleUntil = state.elapsed + .5;
+  }
+
+  // ---------- Read: geometry, input, what covers a bug's letter ----------
+  function read() {
+    if (targets.some(target => target.interactionUntil > state.elapsed)) geometryDirty = true;
     syncScroll();
-    geometryDirty = true;
-    foodRevision++;
-    foodScanIn = 0;
-    foodCandidates = []; foodSurveyed = 0; localFood = false;
-    for (const bug of bugs) {
-      releaseFood(bug);
-      bug.foodSearchIn = 0;
-      bug.foodWaitUntil = state.elapsed + .25;
-    }
+    if (invalidated) applyInvalidate();
+    refreshGeometry();
+    ctl[W.COARSE] = coarsePointer() ? 1 : 0;
+    ctl[W.CALM] = reducedMotion ? 1 : 0;
+    ctl[W.PON] = lastPointer ? 1 : 0;
+    if (lastPointer) { ctl[W.PX] = lastPointer.x; ctl[W.PY] = lastPointer.y; }
+    // Fresh letters again: a board refresh (one runs within 0.08 s of a change) read them all.
+    if (ctl[W.STALE] && board && ((state.elapsed >= staleUntil - .4 && board.reads < READS) || state.elapsed >= staleUntil)) ctl[W.STALE] = 0;
+    checkCover();
   }
-  function measureGlyph(glyph: Glyph, force = false) {
-    const unavailable = () => { glyph.rect = null; glyph.revision = -1; return null; };
-    if (!edibleGlyph(glyph)) return unavailable();
-    const record = glyph.record, area = record.owner;
-    if (!force && glyph.revision === foodRevision && glyph.areaRevision === area.revision && state.elapsed - glyph.measuredAt < .8) return glyph.rect;
-    // Discovery plus live contact validation have a shared per-frame ceiling.
-    // A deferred measurement never counts as a bite or discards a reservation.
-    if (foodBudget <= 0) return undefined;
-    foodBudget--;
-    const parent = record.node.parentElement;
-    const style = win.getComputedStyle?.(parent!);
-    if (parent?.hidden || style?.getPropertyValue('display') === 'none' || style?.getPropertyValue('visibility') === 'hidden' || style?.getPropertyValue('visibility') === 'collapse') return unavailable();
-    if (!doc.createRange) return unavailable();
-    let r;
-    try {
-      const range = glyphRange || (glyphRange = doc.createRange());
-      const start = record.offsets[glyph.index];
-      range.setStart(record.node, start);
-      range.setEnd(record.node, start + record.chars[glyph.index].length);
-      r = range.getBoundingClientRect();
-    } catch { glyphRange = null; return unavailable(); }
-    const x = (r.left + r.right) / 2, y = (r.top + r.bottom) / 2;
-    if (!rectVisible(r) || x < 1 || x > width - 1 || y < 1 || y > height - 1 || uiRects.some(ui => contains(ui, x, y, 4))) return unavailable();
-    if (doc.elementFromPoint) {
-      const hit = doc.elementFromPoint(x, y);
-      const isOwnText = hit && (hit === parent || parent?.contains?.(hit) || (hit !== doc.body && area.element.contains?.(hit) && hit.contains?.(parent)));
-      if (!isOwnText) return unavailable();
+  /** A reserved letter must still be the text's own at its centre (not under a dialog, a menu or
+   *  another layer): one elementFromPoint each. A letter being chewed is checked every frame (its
+   *  bite lands at the end of the chew); other reserved letters a few a frame, each again after 0.16 s. */
+  function checkCover() {
+    if (!world || !board || !doc.elementFromPoint) return;
+    const B = world.bugs, n = B.count;
+    for (let j = 0; j < n; j++) if (B.chewing[j]) coverAt(j);
+    for (let k = 0, checks = 0; k < n && checks < COVER_CHECKS; k++) {
+      const j = (coverCursor + k) % n, g = world.food[j]!;
+      if (B.chewing[j] || g < 0 || (checkedId[j] === B.id[j] && checkedGlyph[j] === g && state.elapsed - checkedAt[j]! < .16)) continue;
+      coverAt(j);
+      checks++;
     }
-    glyph.rect = { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height, x, y };
-    glyph.revision = foodRevision;
-    glyph.areaRevision = area.revision;
-    glyph.measuredAt = state.elapsed;
-    return glyph.rect;
+    if (n) coverCursor = (coverCursor + COVER_CHECKS) % n;
   }
-  function scanFood(dt:number) {
-    foodBudget = 36;
-    foodScanIn -= dt;
-    if (foodScanIn > 0 || !foodQueue.length || !bugs.length) return;
-    foodScanIn = .10;
-    foodCandidates = foodCandidates.filter(glyph => edibleGlyph(glyph));
-    let measured = 0, checked = 0;
-    while (checked++ < Math.min(foodQueue.length, 96) && measured < 12) {
-      const glyph = foodQueue[foodCursor++ % foodQueue.length];
-      foodSurveyed++;
-      if (!edibleGlyph(glyph) || glyph.reservedBy) continue;
-      measured++;
-      const r = measureGlyph(glyph, true);
-      if (!r) continue;
-      if (!foodCandidates.includes(glyph)) foodCandidates.push(glyph);
-    }
-    localFood = foodCandidates.some(glyph => edibleGlyph(glyph) && glyph.rect) ||
-      (foodSurveyed < foodQueue.length && textAreas.some(area => area.visible));
-    if (foodCandidates.length > MAX_FOOD_CANDIDATES) foodCandidates.splice(0, foodCandidates.length - MAX_FOOD_CANDIDATES);
+  function coverAt(j: number) {
+    const B = world!.bugs, G = board!.glyphs, g = world!.food[j]!;
+    if (g < 0 || g >= G.count) return;
+    checkedId[j] = B.id[j]!; checkedGlyph[j] = g; checkedAt[j] = state.elapsed;
+    const parent = board!.parent(g);
+    if (!parent || !(G.w[g]! > 0)) return;
+    const hit = doc.elementFromPoint(G.x[g]! + G.w[g]! / 2, G.y[g]! + G.h[g]! / 2);
+    const area = parent.closest(selectors.text);
+    const own = !!hit && (hit === parent || parent.contains(hit) || (hit !== doc.body && !!area?.contains(hit) && hit.contains(parent)));
+    world!.cover(g, !own);
   }
-  function chooseFood(bug: Bug) {
-    if (bug.tier >= 3 && (bug.attached || (bug.target && !bug.target.visible))) return null;
-    // Continue along the same word/line before searching elsewhere. This makes
-    // each changed letter readable as the result of the crawler touching it.
-    if (bug.tier < 3 && bug.lastFood && currentText(bug.lastFood.record)) {
-      const previous = bug.lastFood;
-      const glyphs = previous.record.glyphs, nearby = [];
-      // A letter within 12 graphemes must also be within 12 letter slots.
-      for (let i = Math.max(0, previous.slot - 12), end = Math.min(glyphs.length, previous.slot + 13); i < end; i++) {
-        const glyph = glyphs[i];
-        if (Math.abs(glyph.index - previous.index) <= 12 && !glyph.reservedBy && edibleGlyph(glyph)) nearby.push(glyph);
-      }
-      nearby.sort((a, b) => Math.abs(a.index - previous.index) - Math.abs(b.index - previous.index));
-      for (let i = 0; i < Math.min(4, nearby.length); i++) {
-        const glyph = nearby[i];
-        const r = measureGlyph(glyph);
-        if (r && Math.hypot(r.x - bug.x, r.y - bug.y) < 105) return glyph;
-      }
+
+  // ---------- Render: the world's events, then the page and the canvas ----------
+  /** Views of the world's bugs for drawing, cues and the drawBug option (stable per bug). */
+  function syncViews() {
+    if (!world) return;
+    const B = world.bugs, n = B.count, stamp = ++viewStamp;
+    bugs.length = 0;
+    for (let j = 0; j < n; j++) {
+      const id = B.id[j]!;
+      let v = views.get(id);
+      if (!v) views.set(id, (v = {} as Bug));
+      const t = B.target[j]!, tier = B.tier[j]!;
+      v.id = id; v.x = B.x[j]!; v.y = B.y[j]!; v.angle = B.angle[j]!; v.size = B.size[j]!; v.tier = tier; v.hp = B.hp[j]!;
+      v.color = tierColors[tier - 1]!; v.age = B.age[j]!; v.phase = B.phase[j]!; v.lettersEaten = v.feeds = B.eaten[j]!;
+      v.hitFlash = B.flash[j]!; v.target = t >= 0 ? targets[t] ?? null : null; v.siphonUntil = B.siphon[j]!;
+      v.chewing = B.chewing[j] === 1; v.chewX = B.chewX[j]!; v.chewY = B.chewY[j]!; v.attached = B.attached[j] === 1;
+      v.pursuit = pursuitNames[B.pursuit[j]!] ?? null; v.scatterUntil = B.scatterUntil[j]!; v.stamp = stamp;
+      bugs.push(v);
     }
-    // Only five entries are ever inspected. Keep that same stable shortlist
-    // without sorting the whole cache or recomputing distances in a comparator.
-    const nearest: Glyph[] = [], distances: number[] = [];
-    for (const glyph of foodCandidates) {
-      // Shortlist cheaply; measureGlyph still validates host ownership, protected
-      // ancestry and live contact before reserving or eating any candidate.
-      const record = glyph.record;
-      if (glyph.reservedBy || glyph.eaten || !glyph.rect || !record.owner.visible || record.abandoned || !record.node.isConnected || record.node.nodeValue !== record.latest) continue;
-      const dx = glyph.rect.x - bug.x, dy = glyph.rect.y - bug.y, distance = dx * dx + dy * dy;
-      if (bug.tier >= 3 && distance > (8 * bug.size + 4) ** 2) continue;
-      let index = nearest.length;
-      while (index && distance < distances[index - 1]) index--;
-      if (index >= 5) continue;
-      for (let i = Math.min(nearest.length, 4); i > index; i--) {
-        nearest[i] = nearest[i - 1];
-        distances[i] = distances[i - 1];
-      }
-      nearest[index] = glyph;
-      distances[index] = distance;
-    }
-    for (const glyph of nearest) {
-      const r = measureGlyph(glyph);
-      if (r && (bug.tier < 3 || Math.hypot(r.x - bug.x, r.y - bug.y) <= 8 * bug.size + 4)) return glyph;
-    }
-    return null;
+    for (const [id, v] of views) if (v.stamp !== stamp) views.delete(id);
   }
-  function nickSurface(bug: Bug) {
-    const surface = surfaces.find(s => s.visible && contains(s.rect, bug.x, bug.y, 4));
-    if (!surface || surface.damage >= 12) return;
-    surface.damage++;
-    const n = Math.min(16, surface.damage * 2);
+  function syncState() {
+    const s = world!.s;
+    state.score = s[W.SCORE]!; state.wave = s[W.WAVE]!; state.kills = s[W.KILLS]!; state.combo = s[W.COMBO]!; state.elapsed = s[W.TIME]!;
+    jumps = s[W.JUMPS]!; zaps = s[W.ZAPS]!; remaining = s[W.REMAINING]!; nextWaveIn = s[W.NEXT_WAVE_IN]!;
+    const T = world!.targets;
+    targets.forEach((target, t) => {
+      target.health = T.health[t]!; target.bites = T.bites[t]!; target.hitUntil = T.hitUntil[t]!;
+      target.liquidUntil = T.liquidUntil[t]!; target.liquidBite = T.liquidBite[t]!;
+    });
+  }
+  function nickSurface(i: number, damage: number) {
+    const surface = surfaces[i];
+    if (!surface) return;
+    surface.damage = damage;
+    const n = Math.min(16, damage * 2);
     setStyle(surface.element, 'clip-path', `polygon(0 0, 100% 0, 100% 34%, calc(100% - ${n}px) 34%, calc(100% - ${n}px) 44%, 100% 44%, 100% 100%, 0 100%, 0 76%, ${Math.round(n * .7)}px 76%, ${Math.round(n * .7)}px 65%, 0 65%)`);
-    setStyle(surface.element, 'filter', `saturate(${1 - surface.damage * .025})`);
+    setStyle(surface.element, 'filter', `saturate(${1 - damage * .025})`);
   }
-  function eatGlyph(bug: Bug, glyph: Glyph, r: Rect) {
-    const record = glyph.record;
-    const binary = Math.random() < .5 ? '0' : '1';
-    record.chars[glyph.index] = binary;
-    record.latest = record.chars.join('');
-    record.node.nodeValue = record.latest;
-    glyph.eaten = true;
-    record.owner.revision++;
-    updateTextOffsets(record);
-    bitHighlights.update(record);
-    geometryDirty = true;
-    bug.lastFood = glyph;
-    releaseFood(bug);
-    bug.foodSearchIn = 0;
-    bug.foodWaitUntil = state.elapsed + .35;
-    bug.lettersEaten++;
-    bug.feeds = bug.lettersEaten;
-    const tier = Math.min(3, 1 + Math.floor(bug.lettersEaten / LETTERS_PER_TIER));
-    if (tier > bug.tier) {
-      bug.hp += tier - bug.tier;
-      bug.color = tierColors[tier - 1];
-      bug.size += .18 * (tier - bug.tier);
-      bug.tier = tier;
-      emit('evolve', { id: bug.id, tier, hp: bug.hp, x: bug.x, y: bug.y });
-    }
-    nickSurface(bug);
-    if (!reducedMotion && particles.length < MAX_PARTICLES) particles.push({ x: r.x, y: r.y, vx: (bug.x - r.x) / .25, vy: (bug.y - r.y) / .25, life: .25, total: .25, color: '#74dfa1', text: binary });
-    emit('bite', { id: bug.id, x: r.x, y: r.y, letter: glyph.letter, binary, lettersEaten: bug.lettersEaten, tier: bug.tier, full: bug.tier === 3 });
+  function gameover() {
+    updateBest();
+    status('gameover');
+    emit('gameover', getSnapshot());
+    if (state.status === 'gameover') gameoverTimeout = win.setTimeout(() => {
+      gameoverTimeout = 0;
+      if (state.status !== 'gameover' || destroyed) return;
+      restorePage();
+      particles = [];
+      if (ctx) ctx.clearRect(0, 0, width, height);
+      if (canvas) canvas.style.display = 'none';
+      emit('restored');
+      notify(true);
+    }, 900);
   }
-  function chewGlyph(bug: Bug, dt:number) {
-    if (!bug.food || !bug.chewing) return false;
-    const glyph = bug.food;
-    if (!edibleGlyph(glyph) || glyph.reservedBy !== bug.id) { releaseFood(bug); return false; }
-    const changed = glyph.revision !== foodRevision || glyph.areaRevision !== glyph.record.owner.revision;
-    if (changed || bug.chewLeft <= dt) {
-      const r = measureGlyph(glyph, true);
-      if (r === undefined) return true;
-      const mouth = 8 * bug.size;
-      if (!r || Math.hypot(r.x - (bug.x + Math.cos(bug.angle) * mouth), r.y - (bug.y + Math.sin(bug.angle) * mouth)) > 5) {
-        bug.chewing = false; bug.chewLeft = 0;
-        if (!r) releaseFood(bug);
-        return false;
+  /** What the steps did (the engine's event ring), as Swarm events, particles and paint. */
+  function drainEvents() {
+    const e = engine!, w = world!, pay = w.pay, waveReasons = ['start', 'timer', 'clear'] as const;
+    for (let i = 0; i < e.events.size; i++) {
+      const ev = e.events.at(i)!, k = ev.a * 8;
+      switch (ev.type) {
+        case 'wave-start':
+          status('running');
+          emit('wave-start', { wave: ev.a, count: ev.b, reason: waveReasons[ev.v] });
+          break;
+        case 'wave-clear':
+          for (const target of targets) if (target.health > 0 && target.rendered) paintTarget(target);
+          updateBest();
+          status('intermission');
+          emit('wave-clear', { wave: ev.a, bonus: ev.b });
+          break;
+        case 'bite': {
+          const binary = ev.b ? '1' : '0', tier = pay[k + 3]!, bx = pay[k + 5]!, by = pay[k + 6]!;
+          if (!reducedMotion && particles.length < MAX_PARTICLES) particles.push({ x: ev.x, y: ev.y, vx: (bx - ev.x) / .25, vy: (by - ev.y) / .25, life: .25, total: .25, color: '#74dfa1', text: binary });
+          emit('bite', { id: pay[k], x: ev.x, y: ev.y, letter: board!.char(pay[k + 4]!), binary, lettersEaten: pay[k + 2], tier, full: tier === 3 });
+          break;
+        }
+        case 'evolve':
+          emit('evolve', { id: pay[k], tier: pay[k + 1], hp: pay[k + 2], x: ev.x, y: ev.y });
+          break;
+        case 'nick':
+          nickSurface(ev.a, ev.b);
+          break;
+        case 'damage': {
+          const target = targets[ev.a];
+          if (!target) break;
+          target.health = ev.b;
+          target.paintDirty = true;
+          if (target.health <= 0) paintTarget(target);
+          if (!reducedMotion && particles.length < MAX_PARTICLES - 2) {
+            particles.push({ x: ev.x, y: ev.y, vx: rand(-12, 12), vy: -rand(18, 30), life: .8, total: .8, color: tierColors[ev.v - 1]!, bubble: true, radius: rand(2.4, 4.2) });
+          }
+          emit('damage', { targetId: target.id, health: target.health });
+          break;
+        }
+        case 'gameover':
+          gameover();
+          break;
+        case 'scatter': {
+          const anchor = targets[ev.b];
+          emit('scatter', { count: ev.a, x: ev.x, y: ev.y, ...(anchor ? { targetId: anchor.id } : {}) });
+          break;
+        }
+        case 'kill': {
+          const points = pay[k]!, tier = pay[k + 4]!, color = tierColors[tier - 1]!;
+          state.score = w.s[W.SCORE]!;
+          updateBest();
+          const shards = reducedMotion ? 0 : 7;
+          for (let i = 0; i < shards && particles.length < MAX_PARTICLES - 1; i++) {
+            const angle = i / shards * Math.PI * 2;
+            particles.push({ x: ev.x, y: ev.y, vx: Math.cos(angle) * rand(25, 65), vy: Math.sin(angle) * rand(25, 65), life: .42, total: .42, color, tier });
+          }
+          if (particles.length < MAX_PARTICLES) particles.push({ x: ev.x, y: ev.y - 12, vx: 0, vy: reducedMotion ? 0 : -18, life: 1.1, total: 1.1, text: `+${points}`, color, score: true });
+          emit('kill', { points, x: ev.x, y: ev.y, combo: pay[k + 1], speedBonus: pay[k + 2], tierBonus: pay[k + 3], tier, age: pay[k + 5] });
+          notify(true);
+          break;
+        }
+        case 'hit':
+          emit('hit', { id: pay[k], hp: pay[k + 2], tier: pay[k + 1], x: ev.x, y: ev.y });
+          break;
+        case 'rescue': {
+          const zap = pay[k] === 2, target = targets[pay[k + 1]!], radius = pay[k + 4]!;
+          if (zap) {
+            addAimEffect(ev.x, ev.y, 'zap');
+            aimEffects[aimEffects.length - 1]!.radius = radius;
+          }
+          emit('rescue', { action: zap ? 'zap' : 'jump', targetId: target?.id, cost: pay[k + 2], killed: pay[k + 3], points: pay[k + 3], x: ev.x, y: ev.y, radius });
+          break;
+        }
       }
-      bug.chewX = r.x; bug.chewY = r.y;
-      if (bug.chewLeft <= dt) { eatGlyph(bug, glyph, r); return true; }
-    }
-    bug.chewLeft -= dt;
-    return true;
-  }
-  function stepBug(bug: Bug, dt:number) {
-    bug.age += dt;
-    bug.hitFlash = Math.max(0, bug.hitFlash - dt);
-    const visibleLive = visibleTargets.length > 0;
-    const stayLocal = bug.tier < 3 && (visibleLive || localFood);
-    if (!bug.target?.rendered || !bug.target.element.isConnected || bug.target.health <= 0 || (bug.tier < 3 && visibleLive && !bug.target.visible)) {
-      const previous = bug.target;
-      bug.target = chooseTarget(bug);
-      if (bug.target !== previous) {
-        bug.attached = false;
-        bug.pursuit = null;
-      }
-    }
-    let tx, ty;
-    const scattering = state.elapsed < bug.scatterUntil;
-    const target = bug.target;
-    if (!scattering) {
-      if (bug.food && (!edibleGlyph(bug.food) || bug.food.reservedBy !== bug.id)) releaseFood(bug);
-      bug.foodCheckIn -= dt;
-      if (bug.food && !bug.chewing && (bug.foodCheckIn <= 0 || bug.food.areaRevision !== bug.food.record.owner.revision || bug.food.revision !== foodRevision)) {
-        const r = measureGlyph(bug.food, true);
-        if (r === null) releaseFood(bug);
-        bug.foodCheckIn = .16;
-      }
-      bug.foodSearchIn -= dt;
-      if (!bug.food && bug.foodSearchIn <= 0) {
-        const glyph = chooseFood(bug);
-        if (glyph) { bug.food = glyph; glyph.reservedBy = bug.id; bug.foodCheckIn = .16; }
-        bug.foodSearchIn = bug.tier >= 3 ? .22 : .14;
-      }
-      if (bug.food) {
-        bug.pursuit = null;
-        bug.attached = false;
-        if (chewGlyph(bug, dt)) return;
-      }
-    }
-    const foodPoint = bug.food?.rect;
-    // Briefly latch onto a visible button at the instant a real bite takes power.
-    // The bite timer keeps advancing, so this does not slow the damage cadence.
-    if (!scattering && !foodPoint && bug.attached && target?.visible && target.health > 0 && bug.siphonUntil > state.elapsed && contains(target.rect, bug.x, bug.y, 6)) {
-      bug.biteIn -= dt;
-      return;
-    }
-    let pinnedOffscreen = false;
-    const orbitPoint = () => {
-      const r = target!.rect;
-      bug.orbit += dt * 1.45;
-      return {
-        x: (r.left + r.right) / 2 + Math.cos(bug.orbit) * Math.max(5, r.width / 2 - 12),
-        y: (r.top + r.bottom) / 2 + Math.sin(bug.orbit) * Math.max(5, r.height / 2 - 8),
-      };
-    };
-    const wildPoint = () => {
-      bug.dashIn -= dt;
-      if (bug.dashIn <= 0) {
-        bug.dashX = rand(24, Math.max(25, width - 24));
-        bug.dashY = rand(40, Math.max(41, height - 40));
-        bug.dashIn = rand(.16, .32);
-      }
-      return { x: bug.dashX, y: bug.dashY };
-    };
-    if ((target?.visible || stayLocal) && bug.pursuit) {
-      // An attacker stays on its actual button when scrolling brings it back.
-      if (bug.pursuit === 'attack' && target?.visible) {
-        const point = orbitPoint();
-        bug.x = point.x; bug.y = point.y;
-      }
-      bug.pursuit = null;
-    }
-    if (scattering) {
-      tx = bug.scatterX;
-      ty = bug.scatterY;
-      bug.attached = false;
-    } else if (foodPoint) {
-      tx = foodPoint.x;
-      ty = foodPoint.y;
-      bug.attached = false;
-    } else if (bug.tier < 3 && state.elapsed < bug.foodWaitUntil) {
-      bug.attached = false;
-      const point = wildPoint(); tx = point.x; ty = point.y;
-    } else if (stayLocal && !target?.visible) {
-      bug.pursuit = null;
-      bug.attached = false;
-      const point = wildPoint(); tx = point.x; ty = point.y;
-    } else if (target && !target.visible) {
-      // Scrolling away does not suspend attacks. Visible crawlers dash around,
-      // leave toward the real CTA, then finish the short journey off canvas.
-      if (!bug.pursuit) {
-        bug.pursuit = bug.attached ? 'attack' : 'dash';
-        bug.pursuitUntil = state.elapsed + rand(.65, 1.10);
-        bug.dashIn = 0;
-      }
-      if (bug.pursuit === 'dash' && state.elapsed >= bug.pursuitUntil) bug.pursuit = 'exit';
-      if (bug.pursuit === 'exit' && (bug.x < -36 || bug.x > width + 36 || bug.y < -36 || bug.y > height + 36)) {
-        bug.pursuit = 'transit';
-        bug.pursuitUntil = state.elapsed + rand(.45, .80);
-      }
-      if (bug.pursuit === 'transit' && state.elapsed >= bug.pursuitUntil) bug.pursuit = 'attack';
-      bug.attached = false;
-      if (bug.pursuit === 'attack') {
-        const point = orbitPoint();
-        const dx = point.x - bug.x, dy = point.y - bug.y;
-        if (Math.hypot(dx, dy) > .1) bug.angle = Math.atan2(dy, dx);
-        bug.x = tx = point.x; bug.y = ty = point.y;
-        bug.attached = true;
-        pinnedOffscreen = true;
-      } else if (bug.pursuit === 'dash') {
-        const point = wildPoint(); tx = point.x; ty = point.y;
-      } else {
-        const r = target.rect;
-        tx = clamp((r.left + r.right) / 2, 24, width - 24);
-        ty = clamp((r.top + r.bottom) / 2, 24, height - 24);
-        if (r.bottom <= 0) ty = -80;
-        else if (r.top >= height) ty = height + 80;
-        if (r.right <= 0) tx = -80;
-        else if (r.left >= width) tx = width + 80;
-      }
-    } else if (!target) {
-      // Pages with no eligible CTA keep the swarm visible and reachable.
-      bug.pursuit = null;
-      bug.attached = false;
-      const point = wildPoint(); tx = point.x; ty = point.y;
-    } else if (target) {
-      const r = target.rect;
-      const point = orbitPoint(); tx = point.x; ty = point.y;
-      bug.attached = contains(r, bug.x, bug.y, 6);
-    } else {
-      tx = width * .5 + Math.cos(bug.phase + bug.age * .2) * width * .32;
-      ty = height * .5 + Math.sin(bug.phase + bug.age * .2) * height * .3;
-    }
-    // Exiting crawlers may pass behind the HUD to reach an offscreen CTA. The
-    // canvas is below the widget and pointer handling still excludes its host.
-    const passingBehindUI = pinnedOffscreen || bug.pursuit === 'exit' || bug.pursuit === 'transit';
-    for (const r of passingBehindUI ? [] : uiRects) {
-      if (!contains(r, tx, ty, 18) && !contains(r, bug.x, bug.y, 22)) continue;
-      const distances = [Math.abs(bug.x - r.left), Math.abs(bug.x - r.right), Math.abs(bug.y - r.top), Math.abs(bug.y - r.bottom)];
-      const side = distances.indexOf(Math.min(...distances));
-      if (side === 0) tx = r.left - 30;
-      else if (side === 1) tx = r.right + 30;
-      else if (side === 2) ty = r.top - 30;
-      else ty = r.bottom + 30;
-      bug.attached = false;
-    }
-    if (!pinnedOffscreen) {
-      const dx = tx - bug.x, dy = ty - bug.y, distance = Math.hypot(dx, dy);
-      const desired = Math.atan2(dy, dx);
-      let angleDelta = desired - bug.angle;
-      while (angleDelta > Math.PI) angleDelta -= Math.PI * 2;
-      while (angleDelta < -Math.PI) angleDelta += Math.PI * 2;
-      bug.angle += angleDelta * Math.min(1, dt * (scattering || (!stayLocal && !target?.visible) ? 16 : 11));
-      const travel = Math.min(distance, bug.speed * (scattering ? 1.8 : !stayLocal && !target?.visible ? 1.3 : bug.attached ? .70 : 1) * dt);
-      const sway = reducedMotion || foodPoint ? 0 : Math.sin(bug.age * 8 + bug.phase) * 9 * dt;
-      bug.x += Math.cos(bug.angle) * travel + Math.sin(bug.angle) * sway;
-      bug.y += Math.sin(bug.angle) * travel - Math.cos(bug.angle) * sway;
-      // Free crawlers return at their travel speed; never clamp scroll distance away.
-    }
-    if (!scattering && bug.food && !bug.chewing && Math.hypot(bug.food.rect!.x - bug.x, bug.food.rect!.y - bug.y) <= 8 * bug.size + 4) {
-      // Only a fresh, unobscured glyph under the crawler's mouth can begin a
-      // bite. A second live Range check occurs when the chew completes.
-      const r = measureGlyph(bug.food, true);
-      if (r && Math.hypot(r.x - bug.x, r.y - bug.y) <= 8 * bug.size + 4) {
-        bug.angle = Math.atan2(r.y - bug.y, r.x - bug.x);
-        bug.x = r.x - Math.cos(bug.angle) * 8 * bug.size;
-        bug.y = r.y - Math.sin(bug.angle) * 8 * bug.size;
-        bug.chewing = true;
-        bug.chewLeft = CHEW_SECONDS;
-        bug.chewX = r.x; bug.chewY = r.y;
-      } else if (r === null) releaseFood(bug);
-    }
-    if (bug.attached && target?.health! > 0) {
-      bug.biteIn -= dt;
-      if (bug.biteIn <= 0) { damageTarget(target!, bug); bug.biteIn = rand(.72, 1.1); }
+      // A host callback may have stopped, restarted or destroyed the round.
+      if (state.status === 'gameover' || engine !== e) break;
     }
   }
+  function render() {
+    if (!world || !engine) return;
+    const e = engine, dt = e.timing[0]!;
+    syncState();
+    syncViews();
+    drainEvents();
+    if (engine !== e) return;
+    syncState();
+    if (cursorDirty) { cursorDirty = false; syncCursor(); }
+    // Coalesce health paints; pulse drawing shares the existing canvas loop.
+    const calm = coarsePointer();
+    for (const target of targets) {
+      if (target.health > 0 && target.calm !== calm) target.paintDirty = true;
+      const bubbling = !reducedMotion && !calm && target.health > 0 && target.visible;
+      if (bubbling) {
+        target.bubbleHeat += ((target.hovered ? 1 : 0) - target.bubbleHeat) * Math.min(1, dt * 8);
+        target.bubbleTime += dt * (1 + target.bubbleHeat * 3);
+      }
+      if (target.rendered && (target.paintDirty || bubbling || target.liquidActive || target.colorActive) && state.elapsed - target.lastPaint >= 1 / 12) paintTarget(target);
+      if (target.health > 0 && !reducedMotion) target.pulsePhase = (target.pulsePhase + dt / (targetSignal(target.health, target.palette?.power).period * (calm ? 1.5 : 1))) % 1;
+      animateTargetHit(target);
+    }
+    let liveParticles = 0;
+    for (const p of particles) {
+      p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
+      if (p.life > 0) particles[liveParticles++] = p;
+    }
+    particles.length = liveParticles;
+    let liveEffects = 0;
+    for (const effect of aimEffects) {
+      effect.life -= dt;
+      if (effect.life > 0) aimEffects[liveEffects++] = effect;
+    }
+    aimEffects.length = liveEffects;
+    updateAttackIndicators();
+    draw();
+    notify();
+  }
+
   let bugPaths: {body:Path2D;shell:Path2D;legs:[number,number,Path2D][]} | undefined;
   function drawBug(bug: Bug, time:number, context = ctx) {
     const ctx = context;
@@ -1053,63 +755,14 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
       ctx.restore();
     }
   }
+
+  // ---------- The frame: Swarm's own window drives the engine (it may be another document's) ----------
   function frame(now:number) {
     raf = 0;
-    if (!active() || destroyed) return;
-    const dt = Math.min(.05, (now - lastNow) / 1000 || 0);
+    if (!active() || destroyed || !engine) return;
+    const sec = Math.min(.05, (now - lastNow) / 1000 || 0);
     lastNow = now;
-    state.elapsed += dt;
-    if (targets.some(target => target.interactionUntil > state.elapsed)) geometryDirty = true;
-    syncScroll();
-    refreshGeometry();
-    cacheTargets();
-    scanFood(dt);
-    if (state.elapsed - comboTime > 1.5) state.combo = 1;
-    if (state.status === 'intermission') {
-      nextWaveIn -= dt;
-      if (nextWaveIn <= 0) startWave('clear');
-    } else {
-      nextWaveIn -= dt;
-      if (nextWaveIn <= 0) startWave('timer');
-      spawnIn -= dt;
-      if (remaining > 0 && spawnIn <= 0) {
-        if (spawn()) remaining--;
-        spawnIn = Math.max(.10, .27 - state.wave * .014);
-      }
-      for (const bug of bugs) {
-        stepBug(bug, dt);
-        if (state.status === 'gameover') break;
-      }
-      if (!bugs.length && !remaining && state.status === 'running') clearWave();
-    }
-    // Coalesce health paints; pulse drawing shares the existing canvas loop.
-    const calm = coarsePointer();
-    for (const target of targets) {
-      if (target.health > 0 && target.calm !== calm) target.paintDirty = true;
-      const bubbling = !reducedMotion && !calm && target.health > 0 && target.visible;
-      if (bubbling) {
-        target.bubbleHeat += ((target.hovered ? 1 : 0) - target.bubbleHeat) * Math.min(1, dt * 8);
-        target.bubbleTime += dt * (1 + target.bubbleHeat * 3);
-      }
-      if (target.rendered && (target.paintDirty || bubbling || target.liquidActive || target.colorActive) && state.elapsed - target.lastPaint >= 1 / 12) paintTarget(target);
-      if (target.health > 0 && !reducedMotion) target.pulsePhase = (target.pulsePhase + dt / (targetSignal(target.health, target.palette?.power).period * (calm ? 1.5 : 1))) % 1;
-      animateTargetHit(target);
-    }
-    let liveParticles = 0;
-    for (const p of particles) {
-      p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
-      if (p.life > 0) particles[liveParticles++] = p;
-    }
-    particles.length = liveParticles;
-    let liveEffects = 0;
-    for (const effect of aimEffects) {
-      effect.life -= dt;
-      if (effect.life > 0) aimEffects[liveEffects++] = effect;
-    }
-    aimEffects.length = liveEffects;
-    updateAttackIndicators();
-    draw();
-    notify();
+    engine.advance(sec);
     if (active()) raf = win.requestAnimationFrame(frame);
   }
   function schedule() {
@@ -1118,86 +771,19 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
       raf = win.requestAnimationFrame(frame);
     }
   }
-  function clearWave() {
-    const bonus = zapCleared ? 0 : state.wave * 50;
-    state.score += bonus;
-    state.combo = 1;
-    updateBest();
-    for (const target of targets) {
-      if (target.health > 0 && target.health < 100) {
-        target.health = Math.min(100, target.health + 9);
-        paintTarget(target);
-      }
-    }
-    nextWaveIn = 3;
-    status('intermission');
-    emit('wave-clear', { wave: state.wave, bonus });
-  }
-  function scatterNeighbors(killed: Bug) {
-    const anchor = killed.target;
-    let count = 0;
-    for (const friend of bugs) {
-      if (friend === killed || Math.hypot(friend.x - killed.x, friend.y - killed.y) > 210) continue;
-      const away = Math.atan2(friend.y - killed.y, friend.x - killed.x) + rand(-.4, .4);
-      const angle = Number.isFinite(away) ? away : rand(0, Math.PI * 2);
-      friend.scatterX = clamp(friend.x + Math.cos(angle) * rand(115, 175), 22, width - 22);
-      friend.scatterY = clamp(friend.y + Math.sin(angle) * rand(100, 160), 32, height - 30);
-      if (Math.hypot(friend.scatterX - friend.x, friend.scatterY - friend.y) < 55) {
-        const inward = Math.atan2(height / 2 - friend.y, width / 2 - friend.x) + rand(-.8, .8);
-        friend.scatterX = clamp(friend.x + Math.cos(inward) * 125, 22, width - 22);
-        friend.scatterY = clamp(friend.y + Math.sin(inward) * 125, 32, height - 30);
-      }
-      friend.scatterUntil = state.elapsed + rand(1, 1.3);
-      friend.angle = Math.atan2(friend.scatterY - friend.y, friend.scatterX - friend.x);
-      friend.attached = false;
-      friend.pursuit = null;
-      releaseFood(friend);
-      friend.foodSearchIn = 0;
-      friend.orbit = angle + rand(-1.2, 1.2);
-      friend.biteIn = Math.max(friend.biteIn, .5);
-      count++;
-    }
-    if (count) emit('scatter', { count, x: killed.x, y: killed.y, ...(anchor ? { targetId: anchor.id } : {}) });
-  }
-  function kill(bug: Bug) {
-    zapCleared = false;
-    scatterNeighbors(bug);
-    releaseFood(bug);
-    bugs.splice(bugs.indexOf(bug), 1);
-    state.combo = state.elapsed - comboTime <= 1.5 ? Math.min(4, state.combo + 1) : 1;
-    comboTime = state.elapsed;
-    const speedBonus = bug.age < 3 ? 20 : bug.age < 6 ? 10 : 0;
-    const tierBonus = 10 * (bug.tier - 1);
-    const points = (10 + speedBonus + tierBonus) * state.combo;
-    state.score += points;
-    state.kills++;
-    updateBest();
-    const shards = reducedMotion ? 0 : 7;
-    for (let i = 0; i < shards && particles.length < MAX_PARTICLES - 1; i++) {
-      const angle = i / shards * Math.PI * 2;
-      particles.push({ x: bug.x, y: bug.y, vx: Math.cos(angle) * rand(25, 65), vy: Math.sin(angle) * rand(25, 65), life: .42, total: .42, color: bug.color, tier: bug.tier });
-    }
-    if (particles.length < MAX_PARTICLES) particles.push({ x: bug.x, y: bug.y - 12, vx: 0, vy: reducedMotion ? 0 : -18, life: 1.1, total: 1.1, text: `+${points}`, color: bug.color, score: true });
-    emit('kill', { points, x: bug.x, y: bug.y, combo: state.combo, speedBonus, tierBonus, tier: bug.tier, age: bug.age });
-    notify(true);
-  }
-  function getRescueOffer() {
-    if (offerScore !== state.score || offerJumps !== jumps || offerZaps !== zaps) {
-      cachedOffer = rescueOffer(state.score, jumps, zaps);
-      offerScore = state.score; offerJumps = jumps; offerZaps = zaps;
-    }
-    return cachedOffer!;
-  }
   function updateAttackIndicators() {
     attackIndicators.update(state.status === 'running' && !doc.hidden ? getAttackEdges(bugs, width, height) : 0, getRescueOffer());
   }
+  /** A rescue cue: scroll the nearest attacked button into view now; the world pays (and zaps) in
+   *  its next step. */
   function rescue(edge:number) {
-    if (destroyed || state.status !== 'running' || doc.hidden || state.elapsed < rescueUntil) return;
+    if (destroyed || !world || state.status !== 'running' || doc.hidden || state.elapsed < world.s[W.RESCUE_UNTIL]! || pendingRescue) return;
     syncScroll();
     refreshGeometry(true);
+    syncViews();
     const offer = getRescueOffer();
     if (offer.mode === 'locked') return;
-    let target = null, distance = Infinity;
+    let target: Target | null = null, distance = Infinity;
     // Resolve the nearest still-attacked base now, not the one shown last frame.
     for (const bug of bugs) if (attackEdge(bug, width, height) & edge) {
       const r = bug.target!.rect, d = Math.hypot((r.left + r.right) / 2 - width / 2, (r.top + r.bottom) / 2 - height / 2);
@@ -1207,36 +793,18 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     // One native instant scroll handles both page and nested containers, even on
     // sites with CSS smooth scrolling. No extra animation loop or scroll lock.
     target.element.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'center' });
+    syncScroll();
     invalidateFoodGeometry();
     refreshGeometry(true);
     if (!target.visible) { updateAttackIndicators(); return; }
-    const zap = offer.mode === 'zap', cost = zap ? offer.zapCost : offer.jumpCost;
-    state.score -= cost;
-    jumps++;
-    if (zap) zaps++;
-    rescueUntil = state.elapsed + .75;
+    const zap = offer.mode === 'zap';
     const r = target.rect, x = (r.left + r.right) / 2, y = (r.top + r.bottom) / 2;
     const radius = Math.min(220, Math.max(140, Math.min(width, height) * .36));
-    let killed = 0, survivors = 0;
-    if (zap) {
-      for (const bug of bugs) {
-        if (Math.hypot(bug.x - x, bug.y - y) <= radius) {
-          releaseFood(bug);
-          killed++;
-        } else bugs[survivors++] = bug;
-      }
-      bugs.length = survivors;
-      state.kills += killed;
-      state.score += killed; // One point each; no combos, speed or tier multiplier.
-      state.combo = 1; comboTime = -Infinity;
-      zapCleared = !bugs.length; // No wave-clear payout for a zap finishing the wave.
-      addAimEffect(x, y, 'zap');
-      aimEffects[aimEffects.length - 1].radius = radius;
-    }
+    world.rescue(targets.indexOf(target), zap ? 2 : 1, x, y, radius);
+    pendingRescue = true;
     // Move keyboard focus away from a cue that is about to disappear. No clicks.
     target.element.focus?.({ preventScroll: true });
-    emit('rescue', { action: zap ? 'zap' : 'jump', targetId: target.id, cost, killed, points: killed, x, y, radius: zap ? radius : 0 });
-    updateAttackIndicators();
+    attackIndicators.update(0);
     notify(true);
   }
   function protectedPointer(path: PointerNode[]) {
@@ -1250,29 +818,20 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     return (event.composedPath?.() || [event.target]) as PointerNode[];
   }
   function restoreCursor() {
-    if (!cursorRecord) return;
-    const record = cursorRecord, element = record.element;
-    cursorRecord = null;
-    if (element.style.getPropertyValue('cursor') === record.latest && element.style.getPropertyPriority('cursor') === 'important') {
-      if (record.original) element.style.setProperty('cursor', record.original, record.priority);
-      else element.style.removeProperty('cursor');
-    }
-    if (!record.hadStyle && !element.getAttribute('style')) element.removeAttribute('style');
+    if (!cursorElement) return;
+    const element = cursorElement;
+    cursorElement = null;
+    engine?.ledger.unstyle(element, 'cursor');
+    if (element.getAttribute('style') === '') element.removeAttribute('style');
   }
   function setCursor(element: HTMLElement | null, path: PointerNode[] = [element!]) {
-    if (state.status !== 'running' || doc.hidden || lastPointer?.type !== 'mouse' || !element?.style || !element.isConnected || protectedPointer(path)) {
+    if (state.status !== 'running' || !engine || doc.hidden || lastPointer?.type !== 'mouse' || !element?.style || !element.isConnected || protectedPointer(path)) {
       restoreCursor();
       return;
     }
-    if (cursorRecord?.element === element && element.style.getPropertyValue('cursor') === cursorRecord.latest && element.style.getPropertyPriority('cursor') === 'important') return;
+    if (cursorElement === element) return;
     restoreCursor();
-    const record = {
-      element, original: element.style.getPropertyValue('cursor'), priority: element.style.getPropertyPriority('cursor'),
-      hadStyle: element.hasAttribute('style'), latest: '',
-    };
-    element.style.setProperty('cursor', reticleCursor, 'important');
-    record.latest = element.style.getPropertyValue('cursor');
-    cursorRecord = record;
+    if (engine.ledger.style(element, 'cursor', reticleCursor, 'important')) cursorElement = element;
   }
   function syncCursor() {
     if (!lastPointer || state.status !== 'running' || doc.hidden || lastPointer.type !== 'mouse') { restoreCursor(); return; }
@@ -1297,31 +856,27 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     // previous press. A genuine miss must never inherit hit suppression.
     suppressedClick = null;
     trackPointer(event);
-    if (state.status !== 'running' || event.button > 0 || protectedPointer(pointerPath(event))) return;
+    if (state.status !== 'running' || !world || event.button > 0 || protectedPointer(pointerPath(event))) return;
     syncScroll();
     refreshGeometry(true);
     const radius = event.pointerType === 'touch' || coarsePointer() ? 31 : 23;
-    let hit = null, nearest = radius;
-    for (const bug of bugs) {
-      const distance = Math.hypot(bug.x - event.clientX, bug.y - event.clientY);
-      if (distance <= nearest) { nearest = distance; hit = bug; }
+    // The bugs where they are now (the world's arrays), so a press hits what it sees.
+    const B = world.bugs;
+    let hit = -1, nearest = radius;
+    for (let j = 0; j < B.count; j++) {
+      if (B.hp[j]! - (pendingSquash.get(B.id[j]!) ?? 0) <= 0) continue;
+      const distance = Math.hypot(B.x[j]! - event.clientX, B.y[j]! - event.clientY);
+      if (distance <= nearest) { nearest = distance; hit = j; }
     }
-    addAimEffect(event.clientX, event.clientY, hit ? hit.hp <= 1 ? 'kill' : 'hit' : 'miss');
-    if (!hit) return;
+    const left = hit >= 0 ? B.hp[hit]! - (pendingSquash.get(B.id[hit]!) ?? 0) : 0;
+    addAimEffect(event.clientX, event.clientY, hit >= 0 ? left <= 1 ? 'kill' : 'hit' : 'miss');
+    if (hit < 0) return;
+    pendingSquash.set(B.id[hit]!, B.hp[hit]! - left + 1);
     event.preventDefault();
     event.stopImmediatePropagation();
     suppressedClick = { x: event.clientX, y: event.clientY, until: win.performance.now() + 700 };
-    hit.hp--;
-    if (hit.hp <= 0) kill(hit);
-    else {
-      releaseFood(hit);
-      hit.foodSearchIn = .15;
-      hit.hitFlash = .15;
-      hit.x = clamp(hit.x - Math.cos(hit.angle) * 12, 8, width - 8);
-      hit.y = clamp(hit.y - Math.sin(hit.angle) * 12, 8, height - 8);
-      hit.biteIn = Math.max(hit.biteIn, .45);
-      emit('hit', { id: hit.id, hp: hit.hp, tier: hit.tier, x: hit.x, y: hit.y });
-    }
+    // The world applies it in its next step (kill, scatter and points, or a hit and a knock back).
+    world.squash(B.id[hit]!);
   }
   function clickCapture(event: MouseEvent) {
     if (!suppressedClick || event.detail === 0) return;
@@ -1342,22 +897,40 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     gameoverTimeout = 0;
     raf = 0;
     restorePage();
-    bugs = []; particles = []; remaining = 0; suppressedClick = null;
+    particles = []; suppressedClick = null; pendingRescue = false; pendingSquash.clear(); invalidated = false;
+    checkedId.fill(0); coverCursor = 0; jumps = zaps = remaining = nextWaveIn = 0;
     Object.assign(state, { score: 0, wave: 0, kills: 0, combo: 1, elapsed: 0 });
-    comboTime = -Infinity;
-    jumps = zaps = 0; rescueUntil = 0; zapCleared = false;
     scrollX = win.scrollX || 0; scrollY = win.scrollY || 0;
     pausedForVisibility = false;
     ensureCanvas();
     canvas.style.display = 'block';
+    // The round: its own engine (seeded per round), the page's letters, the rules.
+    engine = createEngine({ step: 1 / 60, maxSteps: 3, seed: 1 + Math.floor(Math.random() * 0x7ffffffe), events: 256, pause: { hidden: false, offscreen: false, editable: false } });
+    // Letters need Intl.Segmenter (graphemes); without it, the round is buttons only.
+    board = typeof Intl.Segmenter === 'function' ? boardPage(engine, {
+      root: doc.body, text: selectors.text, targets: selectors.target, maxTargets: 0, letters: true, reads: READS, color: '#d984ff',
+      exclude: '[data-swarm-ui],[data-swarm-ignore],[data-swarm-target],[data-swarm-overlay]',
+    }) : noLetters;
+    world = W.createWorld(engine, board, ctl);
+    engine.add({ read, render, step: () => { pendingRescue = false; if (pendingSquash.size) pendingSquash.clear(); } });
+    ctl.fill(0);
     discoverPage();
+    refreshGeometry(true);
+    board.refresh();
     if (targets.length) releaseHover = guardTargetHover(doc);
     for (const target of targets) {
       target.interactive = target.element.matches?.(':hover, :focus-within') || false;
       target.hovered = !coarsePointer() && (target.element.matches?.(':hover') || false);
       if (target.rendered) paintTarget(target);
     }
-    startWave('start');
+    ctl[W.PON] = lastPointer ? 1 : 0;
+    if (lastPointer) { ctl[W.PX] = lastPointer.x; ctl[W.PY] = lastPointer.y; }
+    ctl[W.COARSE] = coarsePointer() ? 1 : 0;
+    ctl[W.CALM] = reducedMotion ? 1 : 0;
+    world.reset(targets.length);
+    syncState();
+    status('running');
+    emit('wave-start', { wave: world.s[W.WAVE], count: world.s[W.REMAINING], reason: 'start' });
     schedule();
     return getSnapshot();
   }
@@ -1366,7 +939,8 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     pausedFrom = state.status;
     if (raf) win.cancelAnimationFrame(raf);
     raf = 0;
-    for (const bug of bugs) { bug.chewing = false; bug.chewLeft = 0; }
+    world?.pause();
+    syncViews();
     status('paused');
     return getSnapshot();
   }
@@ -1383,10 +957,9 @@ export function createDomDefender(options: SwarmCoreOptions = {}): SwarmCoreCont
     if (gameoverTimeout) win.clearTimeout(gameoverTimeout);
     gameoverTimeout = 0;
     raf = 0;
-    bugs = []; particles = []; remaining = 0; nextWaveIn = 0; suppressedClick = null;
+    particles = []; suppressedClick = null; pendingRescue = false; remaining = nextWaveIn = 0;
     restorePage();
-    targets = []; textAreas = []; surfaces = [];
-    availableTargets = []; visibleTargets = []; localFood = false;
+    targets = []; surfaces = [];
     if (ctx) ctx.clearRect(0, 0, width, height);
     if (canvas) canvas.style.display = 'none';
     pausedForVisibility = false;

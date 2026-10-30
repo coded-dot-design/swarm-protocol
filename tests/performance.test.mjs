@@ -38,6 +38,7 @@ test('current liquid targets preserve feeding, waves, offscreen pursuit, input a
   assert.equal(result.scenarios.length, 5);
   assert.deepEqual(result.exactScenarios, [], 'Spawning and navigation intentionally change gameplay traces');
   assert.equal(result.after.maxRaf, 1);
-  assert.ok(result.after.maxRangePerFrame <= 36);
+  // Letters are measured by fizlet/board-page in the read phase: at most 600 Range reads a refresh.
+  assert.ok(result.after.maxRangePerFrame <= 600);
   assert.ok(result.after.rangeCreated < result.before.rangeCreated);
 });

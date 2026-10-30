@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.4.0
+
+Swarm Protocol runs on **Fizlet 0.17.0** (kernel and `fizlet/board-page`, vendored in `vendor/fizlet`). The public API, the widget, loader, React and Astro integrations, every visual and the rules' numbers stay as they were.
+
+- **The rules are one Fizlet system** (`src/world.ts`): fixed 1/60 s steps on typed arrays, seeded per round (same seed and inputs, same round). A step never allocates (tested in its own process), never reads layout and never writes the page.
+- **The controller drives one engine per round**: read (viewport, buttons, surfaces, the host's UI, scroll, what covers a reserved letter), step, render (the world's events as Swarm events, particles, liquid paint, nicks, attached bugs, edge cues, canvas). Frames come from the window of the document Swarm runs in.
+- **Every page change goes through the engine's ledger**: styles, attributes, the cursor, and letters through `fizlet/board-page` (which writes into the page's own text nodes and highlights the bits in the same violet). `src/bit-highlights.ts` is gone. Recall restores the page byte for byte (Chromium test).
+- **Where the engine behaves differently** (documented, tested):
+  - Letters are measured in the read phase on a budget: at most 600 Range reads a refresh, 12.5 Hz while the page changes, 2 Hz once it is still (1.3.1: up to 36 a frame, on demand). After a scroll or resize no bug reserves a letter until the letters are measured again (at most 0.5 s).
+  - What covers a letter (a menu, a dialog) is checked with `elementFromPoint` in the read phase: a letter being chewed every frame, other reserved letters a few a frame.
+  - A squash lands in the world's next step (the kill, scatter and score events follow one frame later); a second press that frame on a bug already squashed to death misses, as before. A rescue scrolls at once and pays in the next step.
+  - When the page changes elsewhere (a rescan), each bug keeps its letter, found again where it was.
+  - At most 64 buttons and 32 host UI areas take part in a round.
+  - Without `Intl.Segmenter` (older browsers) a round runs on buttons only.
+  - A host `onEvent` / `onState` callback that throws is reported (`reportError`) and the round goes on; one may stop or destroy the round from inside a frame.
+- **Size**: hard gzip ceilings per loading stage in `npm run size` (part of `npm run check`). The game on first open is 39,132 B gzip (1.3.1: 30,304), of which the Fizlet kernel is 3,422 B and board-page 4,095 B; scheduler 1,400 B and bootstrap 4,071 B are unchanged. Frame work in Chromium averages 0.6 ms. See `PERFORMANCE.md`.
+- **Tests**: a Chromium test in CI (`npm run test:browser`); rules tests on the world; the shell's rescue tests drive real play.
+
 ## 1.3.1
 
 - On phones and other coarse-pointer devices, page text selection and touch callouts are off while a round runs, so tapping letters does not start a selection. Form fields and editable content stay selectable. Pausing, ending the round or Recall restores normal selection. Uses the shared DOM Virus selection lock.
