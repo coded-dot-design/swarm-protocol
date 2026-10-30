@@ -51,7 +51,20 @@ const reports = [
   ['Immediate root bootstrap (alternative)', bootstrap],
   ['Immediate root plus game (alternative)', complete],
 ];
+// Hard gzip ceilings per loading stage (bytes). 1.3.1 measured 1,400 / 4,071 / 30,304 / 35,775 /
+// 4,342 / 34,646; the game on Fizlet (kernel, board-page and its grid: ~7.9 KB of it) measured
+// 1,400 / 4,071 / 39,132 / 44,603 / 4,342 / 43,474 at the port.
+const ceilings = {
+  'Initial deferred scheduler': 1450,
+  'Additional bootstrap after load/delay/idle': 4150,
+  'Additional game on first open/start': 39700,
+  'Complete deferred path': 45200,
+  'Immediate root bootstrap (alternative)': 4420,
+  'Immediate root plus game (alternative)': 44100,
+};
 for (const [label, files] of reports) {
-  const bytes = total(files);
-  console.log(`${label}: ${bytes.raw} bytes; ${bytes.gzip} gzip (separate files).`);
+  const bytes = total(files), cap = ceilings[label];
+  const over = cap !== undefined && bytes.gzip > cap;
+  console.log(`${label}: ${bytes.raw} bytes; ${bytes.gzip} gzip (separate files).${cap ? ` Ceiling ${cap}${over ? ': OVER' : ''}.` : ''}`);
+  if (over) process.exitCode = 1;
 }
