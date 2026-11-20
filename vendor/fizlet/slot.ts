@@ -1,6 +1,9 @@
 /**
- * fizlet/slot: mount a Fizlet scene into an astro-base-engine slot,
- *   <figure class="ae-slot" data-slot-target="<page>#<slot>" role="img" aria-label="…">.
+ * @fzlt/core/slot: mount a Fizlet scene into an Astro page engine slot: the element carrying
+ *   class="ae-slot" data-slot-target="<page>#<slot>" role="img" aria-label="…". Both shapes the engine
+ *   has rendered are found: the figure itself (`<figure class="ae-slot">`), or a box inside one
+ *   (`<figure class="ae-slot-figure"><div class="ae-slot">…</div><figcaption class="ae-slot__fallback">`,
+ *   where the caption sits outside the role="img" box and stays: it is not over the scene).
  * - Lazy: nothing loads or runs until the slot comes near the viewport, and then only once the
  *   main thread is idle (or `idle` ms have passed), so the page's own work goes first.
  * - Safe first tap: a tap on the slot before the scene is up loads it at once and is handed to the
@@ -8,16 +11,22 @@
  * - Reduced motion: the slot keeps its placeholder and fallback; the scene never loads. If the
  *   setting turns on while a scene runs, the scene goes and the fallback comes back.
  * - Accessible: role="img" + aria-label stay unless the scene says it renders real accessible
- *   content (`accessible: true`); until then the stage is aria-hidden.
+ *   content (`accessible: true`): then role="img" becomes role="figure" (a <figure>'s own role, so
+ *   the label stays on a role that takes one) in place, and Recall puts "img" back in the same
+ *   spot, byte for byte. Until then the stage is aria-hidden.
  * - Contained: the scene gets its own stage inside the slot (contain: strict). Every change the
  *   slot makes goes through a Ledger, so destroy() gives the page back exactly.
+ * - Off screen, off the page's frame: the stage is content-visibility: auto, so a scene scrolled
+ *   away is skipped for style, layout, paint and layers. Without it a 3D scene's composited
+ *   layers stayed in every repaint elsewhere on the page (Chromium layerizes the whole document).
  */
 import { Ledger } from "./kernel/ledger";
 
+/** What a slot's mount function returns: the scene, with `destroy()` to remove it. */
 export interface SlotScene {
   /** Remove the scene (its engine's destroy() restores what it changed). */
   destroy(): void;
-  /** True when the scene renders real accessible content: the slot drops role="img". */
+  /** True when the scene renders real accessible content: the slot's role="img" becomes "figure". */
   accessible?: boolean;
 }
 /** A tap on the slot before the scene was up: where (px from the slot's top left) and when. */
@@ -30,6 +39,7 @@ export interface SlotTap {
 /** Build the scene inside `stage` (sized to the slot). `slot` is the figure, read-only. `first` is
  *  the tap that started the load, if one did: act on it as an intent (aim, fire), not as an event. */
 export type SlotMount = (stage: HTMLElement, slot: HTMLElement, first: SlotTap | null) => SlotScene;
+/** Options for `slot()`: how near the viewport the slot must come before loading, and the idle wait. */
 export interface SlotOptions {
   /** How close to the viewport the slot must come before the scene loads (default "200px"). */
   margin?: string;
@@ -39,10 +49,13 @@ export interface SlotOptions {
 
 const REDUCE = "(prefers-reduced-motion: reduce)";
 
-/** The slot figure for "<page>#<slot>" (or null). */
+/** The slot for "<page>#<slot>" (or null): any `.ae-slot` carrying the target, figure or box. */
 export const findSlot = (target: string, doc: Document = document) =>
-  [...doc.querySelectorAll<HTMLElement>("figure.ae-slot[data-slot-target]")].find((f) => f.dataset.slotTarget === target) ?? null;
+  [...doc.querySelectorAll<HTMLElement>(".ae-slot[data-slot-target]")].find((f) => f.dataset.slotTarget === target) ?? null;
 
+/** Mount a scene into an Astro page engine slot (`target`: its `data-slot-target` or the element).
+ *  `load` runs once the slot nears the viewport and the main thread is idle (or on the first tap);
+ *  with reduced motion it never loads. Returns `el`, `mounted` and `destroy()`. */
 export function slot(target: string | HTMLElement, load: () => Promise<SlotMount> | SlotMount, opts: SlotOptions = {}) {
   const el = typeof target === "string" ? findSlot(target) : target;
   const ctl = new AbortController(), ledger = new Ledger();
@@ -68,10 +81,11 @@ export function slot(target: string | HTMLElement, load: () => Promise<SlotMount
     const id = ++run;
     if (wait > 0 && !first)
       await new Promise<void>((done) => {
-        const t = typeof requestIdleCallback === "function" ? requestIdleCallback(() => go?.(), { timeout: wait }) : setTimeout(() => go?.(), 1);
+        // One test for the pair: a page with requestIdleCallback has cancelIdleCallback.
+        const idle = typeof requestIdleCallback === "function", t = idle ? requestIdleCallback(() => go?.(), { timeout: wait }) : setTimeout(() => go?.(), 1);
         go = () => {
           go = null;
-          typeof cancelIdleCallback === "function" ? cancelIdleCallback(t) : clearTimeout(t);
+          idle ? cancelIdleCallback(t) : clearTimeout(t);
           done();
         };
         ctl.signal.addEventListener("abort", go, { once: true });
@@ -80,14 +94,16 @@ export function slot(target: string | HTMLElement, load: () => Promise<SlotMount
     const make = await load();
     if (id !== run || !el || ctl.signal.aborted || motion.matches) return;
     if (getComputedStyle(el).position === "static") ledger.style(el, "position", "relative");
-    for (const c of el.querySelectorAll<HTMLElement>(":scope > .ae-slot__placeholder, :scope > .ae-slot__fallback")) ledger.style(c, "display", "none");
+    for (const c of el.querySelectorAll<HTMLElement>(":scope>.ae-slot__placeholder,:scope>.ae-slot__fallback")) ledger.style(c, "display", "none");
     const stage = ledger.add(document.createElement("div"));
     stage.setAttribute("data-fizlet-slot", el.dataset.slotTarget ?? "");
-    stage.style.cssText = "position:absolute;inset:0;contain:strict;overflow:hidden";
+    stage.style.cssText = "position:absolute;inset:0;contain:strict;overflow:hidden;content-visibility:auto";
     el.append(stage);
     scene = make(stage, el, first);
     first = null;
-    if (scene.accessible) ledger.attr(el, "role", null);
+    // Changed in place, not removed: a removed attribute set again goes last, and Recall would not
+    // be byte-exact (the attribute order would differ).
+    if (scene.accessible) ledger.attr(el, "role", "figure");
     else stage.setAttribute("aria-hidden", "true");
   }
   function arm() {

@@ -43,6 +43,16 @@
   --team-ink: var(--team);
   /* Derived (never passed in): a control's hard base is its own colour, deep. */
   --k-cmd-base: color-mix(in srgb, var(--k-cmd) 50%, var(--rim));
+  /* The command face under white text (back tab, pills): cmd one shade deeper, AA for #f6f3ff. */
+  --k-cmd-deep: color-mix(in srgb, var(--k-cmd) 80%, var(--rim));
+  /* The shortcut chip's fade: the lowest that keeps rim ink AA (4.5:1) on every arcade face. */
+  --bui-kbd-alpha: 0.88;
+  /* Shadow direction and colour: the DOMAIN's, set once at the site's :root (--shadow-x,
+     --shadow-y unitless, --shadow-color). Never set here: these fallbacks are the default (straight
+     below, on the rim). Every hard shadow is depth x direction; a press travels the same vector. */
+  --bui-sx: var(--shadow-x, 0);
+  --bui-sy: var(--shadow-y, 1);
+  --bui-shadow: var(--shadow-color, var(--rim));
   /* Motion. */
   --bui-spring: cubic-bezier(0.34, 1.7, 0.5, 1);
   --bui-out: cubic-bezier(0.15, 0.8, 0.3, 1);
@@ -57,17 +67,37 @@
   --ink: #1b1636;
   --muted: #5d5684;
   --line: #b9b2e3;
-  --k-sys-ink: #0088b3;
+  --k-sys-ink: #006e91;
   --k-cmd-ink: #6a3ae6;
-  --k-fire-ink: #d4143a;
+  --k-fire-ink: #c01033;
   color-scheme: light;
 }
 .bui[data-side="1"] {
   --team: var(--team-b);
 }
 
+/* Touch (with @fzlt/core/touch's lockTouch for pinch): a tap is a tap, never a double-tap zoom. Game
+   surfaces take every gesture; animation slots let the page scroll up and down through them, but
+   never pan sideways or zoom. */
+.bui {
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+.bui:is([data-fizlet-host], [data-touch-lock]),
+.bui :is([data-fizlet-host], [data-touch-lock]) {
+  touch-action: none;
+  overscroll-behavior: none;
+}
+.bui :is(.ae-slot, [data-fizlet-slot], [data-touch-lock="y"]) {
+  touch-action: pan-y;
+  overscroll-behavior: none;
+}
+
 /* ---------- 2. The 3D key: one family, five states ----------
-   A key is a face over a hard base STRAIGHT BELOW it (never to the side). Families only set the
+   A key is a face over a hard base in the domain's shadow direction (--bui-sx/-sy: straight
+   below unless the site sets --shadow-x/-y); --bx/--by are the base's offset, depth (--py) x
+   direction, and a press travels exactly that. Families only set the
    variables; the state rules below do all the motion, on one curve, so the face and its base
    always travel together (they never snap separately).
      rest    face up, base --py tall
@@ -79,6 +109,8 @@
 .bui .bui-key {
   --py: calc(3 * var(--u));
   --hy: calc(1 * var(--u));
+  --bx: calc(var(--py) * var(--bui-sx));
+  --by: calc(var(--py) * var(--bui-sy));
   --edge: var(--line);
   --edge-hover: var(--k-sys);
   --border-hover: var(--k-sys);
@@ -95,10 +127,17 @@
   padding: calc(8 * var(--u)) calc(13 * var(--u));
   cursor: pointer;
   transform: none;
-  box-shadow: 0 var(--py) 0 var(--edge), var(--glow);
+  box-shadow: var(--bx) var(--by) 0 var(--edge), var(--glow);
   transition: transform 120ms ease-out, box-shadow 120ms ease-out, background-color 140ms, border-color 140ms;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+}
+/* Decoration never takes a touch: an icon in a key or the pad passes the press to its key (an
+   unsized SVG in WebKit is 300 x 150 and would swallow the thumb). */
+.bui button svg,
+.bui .bui-key svg,
+.bui .bui-pad svg {
+  pointer-events: none;
 }
 .bui button svg,
 .bui .bui-key svg {
@@ -115,8 +154,8 @@
   .bui button:not(:disabled, :active, .down, [aria-pressed="true"], [aria-expanded="true"], .active):hover,
   .bui .bui-key:not(:disabled, :active, .down, [aria-disabled="true"], [aria-pressed="true"], [aria-expanded="true"], .active):hover {
     border-color: var(--border-hover);
-    transform: translateY(calc(-1 * var(--hy)));
-    box-shadow: 0 calc(var(--py) + var(--hy)) 0 var(--edge-hover), var(--glow-hover);
+    transform: translate(calc(-1 * var(--hy) * var(--bui-sx)), calc(-1 * var(--hy) * var(--bui-sy)));
+    box-shadow: calc((var(--py) + var(--hy)) * var(--bui-sx)) calc((var(--py) + var(--hy)) * var(--bui-sy)) 0 var(--edge-hover), var(--glow-hover);
   }
 }
 .bui button:not(:disabled):active,
@@ -124,7 +163,7 @@
 .bui button:is([aria-pressed="true"], [aria-expanded="true"], .active),
 .bui .bui-key:not(:disabled, [aria-disabled="true"]):is(:active, .down),
 .bui .bui-key:is([aria-pressed="true"], [aria-expanded="true"], .active) {
-  transform: translateY(var(--py));
+  transform: translate(var(--bx), var(--by));
   box-shadow: 0 0 0 var(--edge), var(--glow-press);
 }
 .bui button:not(:disabled):active,
@@ -149,28 +188,29 @@
 .bui .bui-key::before {
   content: "";
   position: absolute;
-  inset: calc(-4 * var(--u)) 0 calc(-1 * (var(--py) + 4 * var(--u)));
+  /* 4u above and below the face, the base's whole side, and as far again past a side base. */
+  inset: calc(min(0px, var(--by)) - 4 * var(--u)) calc(-2 * max(0px, var(--bx))) calc(-1 * (max(0px, var(--by)) + 4 * var(--u))) calc(2 * min(0px, var(--bx)));
   transition: inherit;
 }
 @media (hover: hover) and (pointer: fine) {
   .bui .bui-key:not(:disabled, :active, .down, [aria-disabled="true"], [aria-pressed="true"], [aria-expanded="true"], .active):hover::before {
-    transform: translateY(var(--hy));
+    transform: translate(calc(var(--hy) * var(--bui-sx)), calc(var(--hy) * var(--bui-sy)));
   }
 }
 .bui .bui-key:not(:disabled, [aria-disabled="true"]):is(:active, .down)::before,
 .bui .bui-key:is([aria-pressed="true"], [aria-expanded="true"], .active)::before {
-  transform: translateY(calc(-1 * var(--py)));
+  transform: translate(calc(-1 * var(--bx)), calc(-1 * var(--by)));
 }
 /* Keyboard focus wraps the face AND its base (an outline stops short of the base). */
 .bui button:focus-visible,
 .bui .bui-key:focus-visible {
   outline: none;
   box-shadow:
-    0 var(--py) 0 var(--edge),
+    var(--bx) var(--by) 0 var(--edge),
     0 0 0 calc(3 * var(--u)) var(--bg),
-    0 var(--py) 0 calc(3 * var(--u)) var(--bg),
+    var(--bx) var(--by) 0 calc(3 * var(--u)) var(--bg),
     0 0 0 calc(6 * var(--u)) var(--k-sys-ink),
-    0 var(--py) 0 calc(6 * var(--u)) var(--k-sys-ink);
+    var(--bx) var(--by) 0 calc(6 * var(--u)) var(--k-sys-ink);
 }
 .bui button:focus-visible:is(:active, .down, .active, [aria-pressed="true"], [aria-expanded="true"]),
 .bui .bui-key:focus-visible:is(:active, .down, .active, [aria-pressed="true"], [aria-expanded="true"]) {
@@ -182,7 +222,7 @@
   --c: var(--k-sys);
   --py: calc(4 * var(--u));
   --hy: calc(2 * var(--u));
-  --edge: color-mix(in srgb, var(--c) 45%, var(--rim));
+  --edge: color-mix(in srgb, var(--c) 45%, var(--bui-shadow));
   --edge-hover: var(--edge);
   --border-hover: var(--rim);
   --glow: 0 0 calc(14 * var(--u)) color-mix(in srgb, var(--c) 40%, transparent);
@@ -226,7 +266,7 @@
   inset: calc(-2 * var(--u));
   z-index: -1;
   border-radius: inherit;
-  translate: 0 var(--py);
+  translate: var(--bx) var(--by);
   border: calc(2 * var(--u)) solid var(--c, var(--k-sys));
   pointer-events: none;
   animation: bui-call 1.4s ease-out infinite;
@@ -236,7 +276,7 @@
 }
 @keyframes bui-call {
   0% { opacity: 0.9; scale: 1; }
-  100% { opacity: 0; scale: 1.45 1.6; translate: 0 calc(var(--py) + 6 * var(--u)); }
+  100% { opacity: 0; scale: 1.45 1.6; translate: calc((var(--py) + 6 * var(--u)) * var(--bui-sx)) calc((var(--py) + 6 * var(--u)) * var(--bui-sy)); }
 }
 /* Roles: one colour per job. Orders and Command lock in the command colour. */
 .bui .bui-sys { --c: var(--k-sys); }
@@ -251,7 +291,7 @@
 .bui .bui-go { --c: var(--k-go); }
 /* Aim keys at rest are dim (on when pressed): a tinted face, aim-coloured ink. */
 .bui .bui-aim:not([aria-pressed="true"]) {
-  --c: color-mix(in srgb, var(--k-aim) 28%, var(--surface));
+  --c: color-mix(in srgb, var(--k-aim) 18%, var(--surface));
   color: var(--k-aim);
 }
 .bui[data-theme="light"] .bui-aim:not([aria-pressed="true"]) {
@@ -265,7 +305,7 @@
   border: calc(1 * var(--u)) solid currentColor;
   padding: calc(1 * var(--u)) calc(4 * var(--u));
   border-radius: calc(3 * var(--u));
-  opacity: 0.7;
+  opacity: var(--bui-kbd-alpha);
 }
 /* Icon key (header, small tools): square, outline style. */
 .bui .bui-icon-key {
@@ -301,7 +341,7 @@
 }
 .bui .bui-unit:disabled {
   --c: #4a4566;
-  transform: translateY(var(--py));
+  transform: translate(var(--bx), var(--by));
   box-shadow: 0 0 0 var(--edge);
 }
 .bui .bui-unit:disabled b {
@@ -436,7 +476,7 @@
   background: var(--k-cmd);
 }
 .bui .bui-sticker-key.bui-plan b {
-  color: #2a1f45;
+  color: var(--rim);
 }
 .bui .bui-sticker-key.bui-second {
   color: var(--ink);
@@ -487,8 +527,10 @@
   contain: layout style; /* rule 8: already positioned and stacked, so nothing moves or clips */
   background: color-mix(in srgb, #2a2d38 82%, transparent);
 }
-.bui .bui-overlay[hidden] {
-  display: none;
+/* [hidden] wins kit-wide: a component's own display (an overlay's flex, coach's inline grid, a game's
+   panel) would beat the browser's [hidden] and leave a hidden part on screen. */
+.bui [hidden] {
+  display: none !important;
 }
 .bui .bui-sticker {
   --tone: var(--k-flag);
@@ -504,7 +546,7 @@
   background: var(--tone);
   border: calc(2.5 * var(--u)) solid var(--rim);
   border-radius: calc(10 * var(--u));
-  box-shadow: 0 calc(5 * var(--u)) 0 var(--rim);
+  box-shadow: calc(5 * var(--u) * var(--bui-sx)) calc(5 * var(--u) * var(--bui-sy)) 0 var(--bui-shadow);
   rotate: -4deg;
   animation: bui-slam 1100ms linear both;
 }
@@ -517,20 +559,20 @@
   font: 900 calc(34 * var(--u)) / 1 ui-monospace, monospace;
   letter-spacing: calc(2 * var(--u));
   white-space: nowrap;
-  text-shadow: 0 calc(3 * var(--u)) 0 color-mix(in srgb, var(--rim) 35%, transparent);
+  text-shadow: calc(3 * var(--u) * var(--bui-sx)) calc(3 * var(--u) * var(--bui-sy)) 0 color-mix(in srgb, var(--bui-shadow) 35%, transparent);
 }
 @keyframes bui-blink { 50% { opacity: 0.45; } }
 /* Drops from above with a soft shadow far below, hits with its hard base, presses in. */
 @keyframes bui-slam {
   0% {
     opacity: 0; scale: 1.9; rotate: 10deg; translate: 0 calc(-24 * var(--u));
-    box-shadow: 0 calc(46 * var(--u)) calc(34 * var(--u)) color-mix(in srgb, var(--rim) 55%, transparent);
+    box-shadow: calc(46 * var(--u) * var(--bui-sx)) calc(46 * var(--u) * var(--bui-sy)) calc(34 * var(--u)) color-mix(in srgb, var(--bui-shadow) 55%, transparent);
     animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45);
   }
-  36% { opacity: 1; scale: 1; rotate: -4deg; translate: 0 0; box-shadow: 0 calc(5 * var(--u)) 0 var(--rim); animation-timing-function: ease-out; }
+  36% { opacity: 1; scale: 1; rotate: -4deg; translate: 0 0; box-shadow: calc(5 * var(--u) * var(--bui-sx)) calc(5 * var(--u) * var(--bui-sy)) 0 var(--bui-shadow); animation-timing-function: ease-out; }
   46% { scale: 1.04; }
-  58%, 72% { scale: 1; translate: 0 0; box-shadow: 0 calc(5 * var(--u)) 0 var(--rim); animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0); }
-  100% { opacity: 1; scale: 1; rotate: -4deg; translate: 0 calc(5 * var(--u)); box-shadow: 0 0 0 var(--rim); }
+  58%, 72% { scale: 1; translate: 0 0; box-shadow: calc(5 * var(--u) * var(--bui-sx)) calc(5 * var(--u) * var(--bui-sy)) 0 var(--bui-shadow); animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0); }
+  100% { opacity: 1; scale: 1; rotate: -4deg; translate: calc(5 * var(--u) * var(--bui-sx)) calc(5 * var(--u) * var(--bui-sy)); box-shadow: 0 0 0 var(--bui-shadow); }
 }
 .bui .bui-overlay-keys {
   position: absolute;
@@ -549,7 +591,7 @@
   background: color-mix(in srgb, var(--card) 94%, transparent);
   border: calc(2.5 * var(--u)) solid var(--k-cmd);
   border-radius: calc(10 * var(--u));
-  box-shadow: 0 calc(5 * var(--u)) 0 var(--k-cmd-base);
+  box-shadow: calc(5 * var(--u) * var(--bui-sx)) calc(5 * var(--u) * var(--bui-sy)) 0 var(--k-cmd-base);
 }
 /* The grip: a flat violet tab centred on the top edge (no rim, no base, it never presses), with a
    short strip of dark dots. Drag a card by it (or any empty part). A wider invisible area catches
@@ -595,7 +637,7 @@
   font: 800 calc(9 * var(--u)) / 1 ui-monospace, monospace;
   letter-spacing: calc(1.2 * var(--u));
   color: #f6f3ff;
-  background: var(--k-cmd);
+  background: var(--k-cmd-deep);
   border: calc(1.5 * var(--u)) solid var(--rim);
   border-radius: calc(6 * var(--u));
 }
@@ -613,7 +655,7 @@
   background: color-mix(in srgb, var(--surface) 70%, transparent);
   border: calc(2 * var(--u)) solid color-mix(in srgb, var(--line) 80%, transparent);
   border-radius: calc(12 * var(--u));
-  box-shadow: 0 calc(4 * var(--u)) 0 color-mix(in srgb, var(--line) 80%, transparent);
+  box-shadow: calc(4 * var(--u) * var(--bui-sx)) calc(4 * var(--u) * var(--bui-sy)) 0 color-mix(in srgb, var(--line) 80%, transparent);
 }
 .bui .bui-dock-title {
   position: absolute;
@@ -678,7 +720,7 @@
   border: calc(1.5 * var(--u)) solid var(--line);
   border-left: calc(4 * var(--u)) solid var(--k-sys);
   border-radius: calc(7 * var(--u));
-  box-shadow: 0 calc(3 * var(--u)) 0 var(--rim), 0 0 calc(18 * var(--u)) color-mix(in srgb, var(--k-sys) 22%, transparent);
+  box-shadow: calc(3 * var(--u) * var(--bui-sx)) calc(3 * var(--u) * var(--bui-sy)) 0 var(--bui-shadow), 0 0 calc(18 * var(--u)) color-mix(in srgb, var(--k-sys) 22%, transparent);
 }
 .bui .bui-toast::before {
   content: "";
@@ -702,7 +744,7 @@
 }
 .bui .bui-tip-label {
   --py: calc(2 * var(--u));
-  --edge: color-mix(in srgb, var(--k-sys) 45%, var(--rim));
+  --edge: color-mix(in srgb, var(--k-sys) 45%, var(--bui-shadow));
   min-height: 0;
   padding: calc(4 * var(--u)) calc(8 * var(--u));
   font-size: calc(10 * var(--u));
@@ -736,7 +778,7 @@
   pointer-events: none;
 }
 
-/* ---------- 11. Pad (fizlet/pad): swappable touch controls ----------
+/* ---------- 11. Pad (@fzlt/core/pad): swappable touch controls ----------
    The move control (stick, d-pad or move keys) under one thumb, round arcade action keys under
    the other (right by default; data-hand="left" swaps). The first action is the big primary key.
    Stick and knob: Battlefield's cockpit stick; round keys: Blitz's pad. */
@@ -828,7 +870,7 @@
   border-radius: 50%;
   background: radial-gradient(circle, transparent 0 34%, color-mix(in srgb, var(--k-sys) 14%, transparent) 34% 35%, transparent 35%), color-mix(in srgb, var(--k-sys) 8%, var(--bg));
   border: calc(2.5 * var(--u)) solid var(--k-sys);
-  box-shadow: 0 calc(4 * var(--u)) 0 color-mix(in srgb, var(--k-sys) 35%, var(--rim)), inset 0 0 calc(18 * var(--u)) color-mix(in srgb, var(--k-sys) 14%, transparent);
+  box-shadow: calc(4 * var(--u) * var(--bui-sx)) calc(4 * var(--u) * var(--bui-sy)) 0 color-mix(in srgb, var(--k-sys) 35%, var(--bui-shadow)), inset 0 0 calc(18 * var(--u)) color-mix(in srgb, var(--k-sys) 14%, transparent);
 }
 .bui .bui-stick::before,
 .bui .bui-stick::after {
@@ -853,13 +895,13 @@
   border-radius: 50%;
   background: var(--k-sys);
   border: calc(2 * var(--u)) solid var(--rim);
-  box-shadow: 0 calc(4 * var(--u)) 0 color-mix(in srgb, var(--k-sys) 45%, var(--rim)), 0 0 calc(14 * var(--u)) color-mix(in srgb, var(--k-sys) 40%, transparent);
+  box-shadow: calc(4 * var(--u) * var(--bui-sx)) calc(4 * var(--u) * var(--bui-sy)) 0 color-mix(in srgb, var(--k-sys) 45%, var(--bui-shadow)), 0 0 calc(14 * var(--u)) color-mix(in srgb, var(--k-sys) 40%, transparent);
   transition: translate 160ms var(--bui-spring);
   pointer-events: none;
 }
 .bui .bui-stick.down .bui-knob {
   transition: none;
-  box-shadow: 0 calc(1 * var(--u)) 0 color-mix(in srgb, var(--k-sys) 45%, var(--rim)), 0 0 calc(22 * var(--u)) color-mix(in srgb, var(--k-sys) 65%, transparent);
+  box-shadow: calc(1 * var(--u) * var(--bui-sx)) calc(1 * var(--u) * var(--bui-sy)) 0 color-mix(in srgb, var(--k-sys) 45%, var(--bui-shadow)), 0 0 calc(22 * var(--u)) color-mix(in srgb, var(--k-sys) 65%, transparent);
 }
 .bui .bui-dpad {
   display: grid;
@@ -899,7 +941,7 @@
 /* ---------- 12. Readouts: DOM Battlefield's metrics (ARMOR, FRIENDLY, HOSTILE, ELAPSED) ----------
    A readout is not a key: flat, no hard shadow, never pressed. A muted caps label over a big value
    (tabular numbers so a ticking clock never jiggles); team and enemy tints come from the palette.
-   readouts() in board-ui.ts builds the markup; fizlet/hud writes the values. */
+   readouts() in board-ui.ts builds the markup; @fzlt/core/hud writes the values. */
 .bui .bui-readouts {
   display: flex;
   gap: calc(30 * var(--u));
