@@ -156,7 +156,7 @@ If your page reports a Content Security Policy or Trusted Types error, test the 
 
 Include the copied files and component in your site's normal release. The site serves the assets itself; there is no separate game server, GitHub download, or package-registry request at runtime.
 
-For a later release, copy its complete versioned folder, update the version in `SwarmDropIn.astro`, and deploy them together. Keep the MIT license and third-party notices with distributed files. Visible credit is appreciated and optional.
+For a later release, copy its complete versioned folder, update the version in `SwarmDropIn.astro`, and deploy them together. Keep LICENSE and THIRD_PARTY_NOTICES.md with the copied files.
 
 To remove the integration, remove the component/tag and copied files, then reload. The participating data attributes are inert without the game and may also be removed.
 

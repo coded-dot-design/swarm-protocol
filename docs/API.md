@@ -4,14 +4,14 @@ A small, opt-in game that turns selected page content into a playground. Bugs ph
 
 The installation is completely hidden. The recommended `./deferred` entry initially loads a small scheduler, waits for page load, a one-second delay, and an idle opportunity, then imports the activation bootstrap. That bootstrap creates no game UI, canvas, audio context, animation loop, or storage reads. The keyboard sequence reveals a small floating target button; a completed footer secret opens the instructions. The engine and full widget load only when the visitor opens or starts the game.
 
-Original game and integration code: **MIT, copyright 2026 Chris Cooley**. The embedded Lucide bug geometry retains its ISC license; see [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md).
+Original game and integration code: **copyright 2026 Chris Cooley, all rights reserved** (versions up to and including 1.4.0 were MIT). The embedded Lucide bug geometry retains its ISC license; see [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md).
 
 ## Install the prepared package
 
 For an npm-managed Astro integration, install the pinned package asset from the GitHub release:
 
 ```sh
-npm install https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.2.3/chriscooley-swarm-protocol-1.2.3.tgz
+npm install https://github.com/fizlet/swarm-protocol/releases/download/v1.2.3/chriscooley-swarm-protocol-1.2.3.tgz
 ```
 
 This records the versioned URL in your package manifest and lockfile. Commit both so CI can install the same package. GitHub is contacted during dependency installation; the deployed game is bundled and served by your own website. Pushing to GitHub does not change an installed version automatically. npm registry publication is still deferred; the package name remains `@chriscooley/swarm-protocol`.
@@ -313,6 +313,4 @@ Tests cover delayed load/idle/visibility scheduling and cancellation, dormant in
 
 ## Attribution
 
-You may use, modify, and redistribute the original code under MIT, including commercial use, while preserving the license notice. Please retain the ISC notice for the embedded Lucide geometry too.
-
-If you enjoy it, a visible credit such as “Swarm Protocol by Chris Cooley” is appreciated. **Visible credit is an optional request, not an additional license condition.**
+The original code is all rights reserved: using, modifying or redistributing it needs written permission from Chris Cooley. Copies of versions up to and including 1.4.0 keep the MIT license they were released under. The ISC notice for the embedded Lucide geometry and the MIT notice for the vendored Fizlet engine stay with any copy ([THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)).

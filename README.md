@@ -84,7 +84,7 @@ Kill scores keep the exact color of the squashed bug in both system themes. A da
 For an integration managed by your site's build, install the versioned npm package asset:
 
 ```sh
-npm install https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.2.3/chriscooley-swarm-protocol-1.2.3.tgz
+npm install https://github.com/fizlet/swarm-protocol/releases/download/v1.2.3/chriscooley-swarm-protocol-1.2.3.tgz
 ```
 
 Use the included `integration/SwarmProtocol.astro` template and the deferred package entry, following [the npm/Astro guide](./docs/API.md#astro). Keep one installer and preserve existing selector/storage configuration when migrating from the drop-in. Commit the package manifest and lockfile. The game is served by your website after building; GitHub is only a package source during installation. npm registry publication is not required.
@@ -96,7 +96,7 @@ Each published release has its own tag, ZIP, and static asset folder. A site usi
 The exact-version download pattern is:
 
 ```text
-https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.2.3/swarm-protocol-drop-in-1.2.3.zip
+https://github.com/fizlet/swarm-protocol/releases/download/v1.2.3/swarm-protocol-drop-in-1.2.3.zip
 ```
 
 That URL becomes available when the release is published. Download once and copy the files into your site; it is not a browser script URL. Avoid a `latest` download URL in automation that must stay pinned.
@@ -129,4 +129,4 @@ The runtime sources are in `src/`; framework adapters are in `integration/`. The
 
 ## License
 
-MIT © 2026 Chris Cooley. Retain [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) when redistributing. A visible credit is appreciated and optional.
+© 2026 Chris Cooley. All rights reserved ([LICENSE](LICENSE)). Versions up to and including 1.4.0 were released under the MIT license, and copies of those keep it. The embedded Lucide bug geometry keeps its ISC license and the vendored Fizlet engine its MIT license ([THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)).

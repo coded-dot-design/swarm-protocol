@@ -2,7 +2,7 @@
   "name": "@chriscooley/swarm-protocol",
   "version": "1.4.0",
   "description": "A small, opt-in DOM defense game with lazy loading and optional React integration.",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "author": "Chris Cooley",
   "type": "module",
   "main": "./dist/index.js",
@@ -96,10 +96,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/coded-dot-design/swarm-protocol.git"
+    "url": "https://github.com/fizlet/swarm-protocol.git"
   },
-  "homepage": "https://github.com/coded-dot-design/swarm-protocol#readme",
+  "homepage": "https://github.com/fizlet/swarm-protocol#readme",
   "bugs": {
-    "url": "https://github.com/coded-dot-design/swarm-protocol/issues"
+    "url": "https://github.com/fizlet/swarm-protocol/issues"
   }
 }

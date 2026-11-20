@@ -1,6 +1,6 @@
 # Releases and version pinning
 
-Repository: `coded-dot-design/swarm-protocol`.
+Repository: `fizlet/swarm-protocol`.
 
 The release asset is a self-hosted drop-in ZIP. GitHub holds the source and downloadable releases; sites copy a specific release into their own assets. They do not need GitHub access at runtime.
 
@@ -99,7 +99,7 @@ Do not change the previous version's folder or assets. Keep release notes specif
 Use an exact release download, for example:
 
 ```text
-https://github.com/coded-dot-design/swarm-protocol/releases/download/v1.0.4/swarm-protocol-drop-in-1.0.4.zip
+https://github.com/fizlet/swarm-protocol/releases/download/v1.0.4/swarm-protocol-drop-in-1.0.4.zip
 ```
 
 The URL becomes available once that release is published. Download the ZIP and its `SHA256SUMS.txt` from the same release. To verify the downloaded ZIP, run the checksum command from their shared directory:

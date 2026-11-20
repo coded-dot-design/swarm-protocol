@@ -1,6 +1,6 @@
 import { transformSync } from 'esbuild';
 /**
- * Swarm Protocol — MIT © 2026 Chris Cooley.
+ * Swarm Protocol — © 2026 Chris Cooley. All rights reserved.
  * Portable post-load scheduler tests, with a controlled clock and lazy import.
  * Run: node qa/deferred-lifecycle.mjs [path/to/src/swarm-deferred.js]
  * Also works from tests/deferred-lifecycle.test.mjs in the standalone package.
