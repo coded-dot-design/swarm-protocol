@@ -76,13 +76,13 @@ for (const item of Object.values(result.metafile.outputs)) {
   if (item.imports.length) throw new Error('The browser test must not import other game files.');
 }
 const header = [
-  `/* Swarm Protocol ${version} — temporary browser test. MIT © 2026 Chris Cooley.`,
+  `/* Swarm Protocol ${version} — temporary browser test. © 2026 Chris Cooley, all rights reserved.`,
   ' * Paste this whole file into Chrome/Edge DevTools > Sources > Snippets.',
   ' * Edit the settings below to match your exact CTA and static text regions.',
   ' * Ctrl+Enter (Windows/Linux) or Cmd+Enter (Mac) runs the snippet.',
   ' * Escape hides/relocks. Refresh removes the injected game.',
   ' * This embeds the whole game; use the public/ folder for production loading.',
-  ' * Retain LICENSE and THIRD_PARTY_NOTICES.md when redistributing.',
+  ' * Keep LICENSE and THIRD_PARTY_NOTICES.md with any copy.',
   ' */',
   '(() => {',
   '  const settings = {',

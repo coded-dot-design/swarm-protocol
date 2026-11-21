@@ -1,6 +1,6 @@
 import { transformSync } from 'esbuild';
 /**
- * Swarm Protocol — MIT © 2026 Chris Cooley.
+ * Swarm Protocol — © 2026 Chris Cooley. All rights reserved.
  * Portable loader lifecycle regression tests; no browser or dependencies needed.
  *
  * Run: node qa/loader-lifecycle.mjs [path/to/src/swarm-loader.js]

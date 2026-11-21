@@ -33,7 +33,7 @@ const result = await build({
   legalComments: 'eof',
   metafile: true,
   banner: {
-    js: `/*! Swarm Protocol ${metadata.version} | Copyright 2026 Chris Cooley | MIT; Lucide bug geometry ISC. See LICENSE and THIRD_PARTY_NOTICES.md. */`,
+    js: `/*! Swarm Protocol ${metadata.version} | Copyright 2026 Chris Cooley. All rights reserved. See LICENSE and THIRD_PARTY_NOTICES.md. */`,
   },
 });
 

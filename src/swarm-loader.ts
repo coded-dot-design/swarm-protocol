@@ -2,7 +2,7 @@ import type { SwarmInstallation, SwarmInstallOptions, SwarmController, SwarmSnap
 
 export type { SwarmInstallation, SwarmInstallOptions } from '../integration/swarm-types.js';
 /**
- * Swarm Protocol — MIT © 2026 Chris Cooley.
+ * Swarm Protocol — © 2026 Chris Cooley. All rights reserved.
  * A small, dormant entry point. The game imports only after open() or start().
  */
 const SEQUENCE = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a', 'Enter'];

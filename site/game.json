@@ -1,7 +1,7 @@
 {
   "id": "swarm-protocol",
   "author": "Chris Cooley",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "name": "Swarm Protocol",
   "kind": "DOM DEFENSE",
   "tagline": "Protect every last byte.",

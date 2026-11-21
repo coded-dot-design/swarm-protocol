@@ -7,7 +7,7 @@ A standalone fictional webpage for testing DOM games away from a production or c
 Use Node **24** (see `.nvmrc`).
 
 ```bash
-git clone https://github.com/coded-dot-design/swarm-protocol.git
+git clone https://github.com/fizlet/swarm-protocol.git
 cd swarm-protocol
 npm ci
 npm run dev:playground

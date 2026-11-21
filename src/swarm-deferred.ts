@@ -18,7 +18,7 @@ export interface SwarmDeferredInstallation {
 
 
 /**
- * Swarm Protocol — MIT © 2026 Chris Cooley.
+ * Swarm Protocol — © 2026 Chris Cooley. All rights reserved.
  * Load only the hidden bootstrap after the page's load, delay, and idle gates.
  */
 

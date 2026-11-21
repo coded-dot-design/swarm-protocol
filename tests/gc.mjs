@@ -1,4 +1,4 @@
-// From coded-dot-design/fizlet tests/gc.mjs (MIT), the same check the engine uses on its bricks.
+// From fizlet/fzlt tests/gc.mjs (MIT), the same check the engine uses on its bricks.
 // Young-generation GC counting for the zero-allocation tests (run node with --expose-gc).
 // A stray scavenge can come from the test runner or JIT work in a busy process, so a check
 // measures several windows and keeps the best one: real per-step allocation shows in every
